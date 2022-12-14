@@ -26,7 +26,43 @@ from enum import Enum
 from typing import List, Tuple, Union
 
 NAME = "dlg_paletteGen"
+
+
+class CustomFormatter(logging.Formatter):
+
+    high = "\x1b[34;1m"
+    grey = "\x1b[38;20m"
+    yellow = "\x1b[33;20m"
+    red = "\x1b[31;20m"
+    bold_red = "\x1b[31;1m"
+    reset = "\x1b[0m"
+    base_format = (
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s "
+        + "(%(filename)s:%(lineno)d)"
+    )
+
+    FORMATS = {
+        logging.DEBUG: high + base_format + reset,
+        logging.INFO: grey + base_format + reset,
+        logging.WARNING: yellow + base_format + reset,
+        logging.ERROR: red + base_format + reset,
+        logging.CRITICAL: bold_red + base_format + reset,
+    }
+
+    def format(self, record):
+        log_fmt = self.FORMATS.get(record.levelno)
+        formatter = logging.Formatter(log_fmt, "%Y-%m-%dT%H:%M:%S")
+        return formatter.format(record)
+
+
+# create console handler with a higher log level
+ch = logging.StreamHandler()
+ch.setLevel(logging.DEBUG)
+
+ch.setFormatter(CustomFormatter())
+
 logger = logging.getLogger(__name__)
+logger.addHandler(ch)
 
 next_key = -1
 
@@ -787,8 +823,9 @@ def _typeFix(value_type: str, default_value: str = None) -> str:
                         value_type = "String"
                 except ValueError:
                     try:
-                        val = \
-                            float(default_value)  # type: ignore  # noqa: F841
+                        val = float(  # noqa: F841
+                            default_value  # type: ignore
+                        )
                         value_type = "Float"
                     except ValueError:
                         if default_value and (
@@ -883,7 +920,7 @@ class greatgrandchild:
                 continue
 
             param_name = p_line[:index_of_second_colon].strip()
-            param_description = p_line[index_of_second_colon + 2:].strip()
+            param_description = p_line[index_of_second_colon + 2 :].strip()
             t_ind = param_description.find(":type")
             t_ind = t_ind if t_ind > -1 else None
             param_description = param_description[:t_ind]
@@ -918,7 +955,7 @@ class greatgrandchild:
                 continue
 
             param_name = t_line[:index_of_second_colon].strip()
-            param_type = t_line[index_of_second_colon + 2:].strip()
+            param_type = t_line[index_of_second_colon + 2 :].strip()
             p_ind = param_type.find(":param")
             p_ind = p_ind if p_ind > -1 else None
             param_type = param_type[:p_ind]
@@ -1012,7 +1049,7 @@ class greatgrandchild:
             rc = re.compile(v)
             if rc.search(ds):
                 return k
-        logger.info("Unknown format of docstring: Not parsing it!")
+        logger.warning("Unknown format of docstring: Not parsing it!")
         return None
 
     def process_descr(self, name: str, dd):
@@ -1040,11 +1077,13 @@ class greatgrandchild:
         """
 
         # logger.debug("Initialized ggchild member: %s", self.member)
-        logger.debug("New greatgrandchild element: %s",
-                     ggchild.tag)  # type: ignore
+        logger.debug(
+            "New greatgrandchild element: %s", ggchild.tag  # type: ignore
+        )
         if ggchild.tag == "name":  # type: ignore
             self.func_name = (
-                ggchild.text if self.func_name == "Unknown"  # type: ignore
+                ggchild.text  # type: ignore
+                if self.func_name == "Unknown"
                 else self.func_name
             )
             self.member["params"].append(
@@ -1067,9 +1106,9 @@ class greatgrandchild:
             # Might not be complete or correct and has to be merged with
             # the information in the param section below.
             if (
-                len(ggchild) > 0 and
-                len(ggchild[0]) > 0 and
-                ggchild[0][0].text is not None
+                len(ggchild) > 0
+                and len(ggchild[0]) > 0
+                and ggchild[0][0].text is not None
             ):
 
                 # get detailed description text
@@ -1168,15 +1207,16 @@ class greatgrandchild:
             )
 
         elif ggchild.tag == "definition":  # type: ignore
-            self.return_type = \
-                ggchild.text.strip().split(" ")[0]  # type: ignore
+            self.return_type = ggchild.text.strip().split(" ")[  # type: ignore
+                0
+            ]
             func_path = ggchild.text.strip().split(" ")[-1]  # type: ignore
             # skip function if it begins with a single underscore,
             # but keep __init__ and __call__
             if func_path.find(".") >= 0:
                 self.func_path, self.func_name = func_path.rsplit(".", 1)
-            logger.debug(
-                "Found func_path '%s' for function '%s'",
+            logger.info(
+                "Found function name: '%s:%s'",
                 self.func_path,
                 self.func_name,
             )
@@ -1212,24 +1252,25 @@ class greatgrandchild:
                     {
                         "key": "input_parser",
                         "direction": None,
-                        "value": "Input Parser/pickle/Select/" +
-                        "ApplicationArgument/readwrite/pickle,eval," +
-                        "npy,path,dataurl/False/False/Input port " +
-                        "parsing technique",
+                        "value": "Input Parser/pickle/Select/"
+                        + "ApplicationArgument/readwrite/pickle,eval,"
+                        + "npy,path,dataurl/False/False/Input port "
+                        + "parsing technique",
                     }
                 )
                 self.member["params"].append(
                     {
                         "key": "output_parser",
                         "direction": None,
-                        "value": "Output Parser/pickle/Select/" +
-                        "ApplicationArgument/readwrite/pickle,eval,npy,path," +
-                        "dataurl/False/False/Output port parsing technique",
+                        "value": "Output Parser/pickle/Select/"
+                        + "ApplicationArgument/readwrite/pickle,eval,npy,path,"
+                        + "dataurl/False/False/Output port parsing technique",
                     }
                 )
         else:
-            logger.debug("Ignored great grandchild element: %s",
-                         ggchild.tag)  # type: ignore
+            logger.debug(
+                "Ignored great grandchild element: %s", ggchild.tag  # type: ignore
+            )
 
 
 def process_compounddef(compounddef: dict) -> list:
@@ -1385,11 +1426,14 @@ def _process_child(child: dict, language: str) -> List[dict]:
             hold_name = "Unknown"
         logger.debug(
             "Found compoundname: %s; extracted: %s",
-            child.text, hold_name  # type: ignore
+            child.text,  # type: ignore
+            hold_name,
         )
-    if (child.tag == "detaileddescription"  # type: ignore
+    if (
+        child.tag == "detaileddescription"  # type: ignore
         and len(child) > 0
-            and casa_mode):
+        and casa_mode
+    ):
         # for child in ggchild:
         dStr = child[0][0].text
         descDict, comp_description = parseCasaDocs(dStr)
@@ -1441,9 +1485,11 @@ def _process_grandchild(
     member: dict = {"params": []}
     # logger.debug("Initialized grandchild member: %s", member)
 
-    if (gchild.tag == "memberdef" and  # type: ignore
-            gchild.get("kind") == "function"):
-        logger.debug("Start processing of function definition.")
+    if (
+        gchild.tag == "memberdef"  # type: ignore
+        and gchild.get("kind") == "function"
+    ):
+        logger.info("Start processing of new function definition.")
 
         # func_path = "Unknown"
         # func_name = hold_name
@@ -1460,9 +1506,9 @@ def _process_grandchild(
                 {
                     "key": "libpath",
                     "direction": None,
-                    "value": "Library Path//String/ComponentParameter/" +
-                    "readwrite//False/False/The location of the shared " +
-                    "object/DLL that implements this application",
+                    "value": "Library Path//String/ComponentParameter/"
+                    + "readwrite//False/False/The location of the shared "
+                    + "object/DLL that implements this application",
                 }
             )
         elif language == Language.PYTHON:
@@ -1473,9 +1519,9 @@ def _process_grandchild(
                 {
                     "key": "appclass",
                     "direction": None,
-                    "value": "Application Class/dlg.apps.pyfunc.PyFuncApp/" +
-                    "String/ComponentParameter/readwrite//False/False/" +
-                    "The python class that implements this application",
+                    "value": "Application Class/dlg.apps.pyfunc.PyFuncApp/"
+                    + "String/ComponentParameter/readwrite//False/False/"
+                    + "The python class that implements this application",
                 }
             )
 
@@ -1483,25 +1529,25 @@ def _process_grandchild(
             {
                 "key": "execution_time",
                 "direction": None,
-                "value": "Execution Time/5/Integer/ComponentParameter/" +
-                "readwrite//False/False/Estimate of execution time " +
-                "(in seconds) for this application.",
+                "value": "Execution Time/5/Integer/ComponentParameter/"
+                + "readwrite//False/False/Estimate of execution time "
+                + "(in seconds) for this application.",
             }
         )
         member["params"].append(
             {
                 "key": "num_cpus",
                 "direction": None,
-                "value": "No. of CPUs/1/Integer/ComponentParameter/readwrite" +
-                "//False/False/Number of CPUs used for this application.",
+                "value": "No. of CPUs/1/Integer/ComponentParameter/readwrite"
+                + "//False/False/Number of CPUs used for this application.",
             }
         )
         member["params"].append(
             {
                 "key": "group_start",
                 "direction": None,
-                "value": "Group start/false/Boolean/ComponentParameter/" +
-                "readwrite//False/False/Is this node the start of a group?",
+                "value": "Group start/false/Boolean/ComponentParameter/"
+                + "readwrite//False/False/Is this node the start of a group?",
             }
         )
 
@@ -1516,8 +1562,10 @@ def _process_grandchild(
         if gg.member != member and gg.member["params"] not in [None, []]:
             member["params"].extend(gg.member["params"])
             logger.debug("member after adding gg_members: %s", member)
-        logger.debug(
-            "Finished processing of function definition: %s", gg.func_name
+        logger.info(
+            "Finished processing of function definition: '%s:%s'",
+            gg.func_path,
+            gg.func_name,
         )
         del gg
 
@@ -1650,7 +1698,7 @@ def params_to_nodes(params: dict) -> list:
         # if the node tag matches the command line tag, or no tag was specified
         # on the command line, add the node to the list to output
         if data["tag"] == tag or tag == "":  # type: ignore
-            logger.info("Adding component: " + node["text"])
+            logger.debug("Adding component: " + node["text"])
             result.append(node)
 
             # if a construct is found, add to nodes
@@ -1728,7 +1776,7 @@ def parseCasaDocs(dStr: str) -> Tuple[dict, str]:
         if paramsSidx[i] < paramsEidx[i]:
             pl = [
                 p.strip()
-                for p in paramsList[paramsSidx[i]: paramsEidx[i] - 1]
+                for p in paramsList[paramsSidx[i] : paramsEidx[i] - 1]
                 if len(p.strip()) > 0
             ]
             paramDocs[i] = paramDocs[i] + " " + " ".join(pl)

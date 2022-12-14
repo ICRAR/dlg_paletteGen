@@ -23,14 +23,13 @@ from dlg_paletteGen.base import (
     DOXYGEN_SETTINGS_C,
     DOXYGEN_SETTINGS_PYTHON,
     Language,
+    logger,
     modify_doxygen_options,
     params_to_nodes,
     process_compounddef,
     process_compounddef_default,
     write_palette_json,
 )
-
-logger = logging.getLogger(__name__)
 
 
 def get_args():
@@ -82,6 +81,7 @@ def get_args():
         action="store_true",
     )
     args = parser.parse_args()
+    logger.setLevel(logging.INFO)
     if args.verbose:
         logger.setLevel(logging.DEBUG)
     logger.debug("DEBUG logging switched on")
@@ -137,27 +137,7 @@ def main():  # pragma: no cover
     """
     The main function executes on commands:
     `python -m dlg_paletteGen` and `$ dlg_paletteGen `.
-
-    This is your program's entry point.
-
-    You can change this function to do whatever you want.
-    Examples:
-        * Run a test suite
-        * Run a server
-        * Do some other stuff
-        * Run a command line application (Click, Typer, ArgParse)
-        * List all available tasks
-        * Run an application (Flask, FastAPI, Django, etc.)
     """
-    FORMAT = \
-        "%(asctime)s [  %(filename)s  ] [  %(lineno)s  ] " + \
-        "[  %(funcName)s  ] || %(message)s ||"
-    logging.basicConfig(
-        format=FORMAT,
-        datefmt="%d-%b-%yT%H:%M:%S",
-        level=logging.INFO,
-    )
-
     # read environment variables
     if not check_environment_variables():
         sys.exit(1)
@@ -169,7 +149,6 @@ def main():  # pragma: no cover
         module_path,
         language,
     ) = get_args()
-
     logger.info("PROJECT_NAME:" + os.environ.get("PROJECT_NAME"))
     logger.info("PROJECT_VERSION:" + os.environ.get("PROJECT_VERSION"))
     logger.info("GIT_REPO:" + os.environ.get("GIT_REPO"))
