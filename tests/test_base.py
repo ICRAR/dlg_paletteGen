@@ -1,5 +1,5 @@
-from dlg_gen_pal.base import NAME
+from dlg_paletteGen.base import NAME
 
 
 def test_base():
-    assert NAME == "dlg_gen_pal"
+    assert NAME == "dlg_paletteGen"

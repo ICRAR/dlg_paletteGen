@@ -1,6 +1,6 @@
 # How to develop on this project
 
-dlg_gen_pal welcomes contributions from the community.
+dlg_paletteGen welcomes contributions from the community.
 
 **You need PYTHON3!**
 
