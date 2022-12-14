@@ -1,4 +1,4 @@
-"""Python setup.py for daliuge_gen_pal package"""
+"""Python setup.py for dlg_gen_pal package"""
 import io
 import os
 from setuptools import find_packages, setup
@@ -6,7 +6,7 @@ from setuptools import find_packages, setup
 
 def read(*paths, **kwargs):
     """Read the contents of a text file safely.
-    >>> read("daliuge_gen_pal", "VERSION")
+    >>> read("dlg_gen_pal", "VERSION")
     '0.1.0'
     >>> read("README.md")
     ...
@@ -30,9 +30,9 @@ def read_requirements(path):
 
 
 setup(
-    name="daliuge_gen_pal",
-    version=read("daliuge_gen_pal", "VERSION"),
-    description="Awesome daliuge_gen_pal created by ICRAR",
+    name="dlg_gen_pal",
+    version=read("dlg_gen_pal", "VERSION"),
+    description="Awesome dlg_gen_pal created by ICRAR",
     url="https://github.com/ICRAR/daliuge-gen-pal/",
     long_description=read("README.md"),
     long_description_content_type="text/markdown",
@@ -40,7 +40,7 @@ setup(
     packages=find_packages(exclude=["tests", ".github"]),
     install_requires=read_requirements("requirements.txt"),
     entry_points={
-        "console_scripts": ["daliuge_gen_pal = daliuge_gen_pal.__main__:main"]
+        "console_scripts": ["dlg_gen_pal = dlg_gen_pal.__main__:main"]
     },
     extras_require={"test": read_requirements("requirements-test.txt")},
 )

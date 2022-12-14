@@ -1,7 +1,7 @@
 """
-daliuge_gen_pal base module.
+dlg_gen_pal base module.
 
-This is the principal module of the daliuge_gen_pal project.
+This is the principal module of the dlg_gen_pal project.
 here you put your main classes and objects.
 
 Be creative! do whatever you want!
@@ -14,4 +14,4 @@ and then choose `flask` as template.
 """
 
 # example constant variable
-NAME = "daliuge_gen_pal"
+NAME = "dlg_gen_pal"

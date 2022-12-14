@@ -1,4 +1,4 @@
-"""Entry point for daliuge_gen_pal."""
+"""Entry point for dlg_gen_pal."""
 
 from .cli import main  # pragma: no cover
 

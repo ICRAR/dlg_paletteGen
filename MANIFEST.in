@@ -2,4 +2,4 @@ include LICENSE
 include HISTORY.md
 include Containerfile
 graft tests
-graft daliuge_gen_pal
+graft dlg_gen_pal

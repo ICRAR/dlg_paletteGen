@@ -17,9 +17,9 @@ echo "Description: $description";
 echo "Renaming project..."
 
 original_author="ICRAR"
-original_name="daliuge_gen_pal"
+original_name="dlg_gen_pal"
 original_urlname="daliuge-gen-pal"
-original_description="Awesome daliuge_gen_pal created by ICRAR"
+original_description="Awesome dlg_gen_pal created by ICRAR"
 # for filename in $(find . -name "*.*") 
 for filename in $(git ls-files) 
 do
@@ -30,7 +30,7 @@ do
     echo "Renamed $filename"
 done
 
-mv daliuge_gen_pal $name
+mv dlg_gen_pal $name
 
 # This command runs only once on GHA!
 rm -rf .github/template.yml
