@@ -21,11 +21,15 @@ git clone https://github.com/ICRAR/dlg_paletteGen
 cd dlg_paletteGen
 make virtualenv
 ```
+
 and then
+
 ```
 make install
 ```
+
 or
+
 ```
 source .venv/bin/activate
 pip install .
