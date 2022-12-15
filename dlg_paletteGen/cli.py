@@ -1,11 +1,11 @@
-"""CLI interface for dlg_paletteGen project.
+"""This is the palette generator of the DALiuGE system.
 
-Be creative! do whatever you want!
+It processes a file or a directory of source files and
+produces a DALiuGE compatible palette file containing the
+information required to use functions and components in graphs.
+For more information please refer to the documentation
+https://daliuge.readthedocs.io/en/latest/development/app_development/eagle_app_integration.html#automatic-eagle-palette-generation
 
-- Install click or typer and create a CLI app
-- Use builtin argparse
-- Start a web application
-- Import things from your .base module
 """
 import argparse
 import logging
@@ -17,6 +17,7 @@ import xml.etree.ElementTree as ET
 
 from blockdag import build_block_dag
 
+# isort: ignore
 from dlg_paletteGen.base import (
     BLOCKDAG_DATA_FIELDS,
     DOXYGEN_SETTINGS,
@@ -47,7 +48,8 @@ def get_args():
     # inputdir, tag, outputfile, allow_missing_eagle_start, module_path,
     # language
     parser = argparse.ArgumentParser(
-        epilog=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument("idir", help="input directory path or file name")
     parser.add_argument("ofile", help="output file name")
@@ -80,6 +82,12 @@ def get_args():
         help="increase output verbosity",
         action="store_true",
     )
+    if len(sys.argv) == 1:
+        print(
+            "\x1b[31;20mInsufficient number of arguments provided!!!\n\x1b[0m"
+        )
+        parser.print_help(sys.stderr)
+        sys.exit(1)
     args = parser.parse_args()
     logger.setLevel(logging.INFO)
     if args.verbose:

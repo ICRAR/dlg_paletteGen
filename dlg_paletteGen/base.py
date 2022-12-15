@@ -1,13 +1,6 @@
 """
 dlg_paletteGen base module.
 
-It processes a file or a directory of source files and
-produces a DALiuGE compatible palette file containing the
-information required to use functions and components in graphs.
-For more information please refer to the documentation
-https://daliuge.readthedocs.io/en/latest/development/app_development/eagle_app_integration.html#automatic-eagle-palette-generation
-
-
 TODO: This whole tool needs re-factoring into separate class files
 (compound, child, grandchild, grandgrandchild, node, param, pluggable parsers)
 Should also be made separate sub-repo with proper installation and entry point.
@@ -1053,7 +1046,11 @@ class greatgrandchild:
             rc = re.compile(v)
             if rc.search(ds):
                 return k
-        logger.warning("Unknown format of docstring: Not parsing it!")
+        logger.warning(
+            "Unknown param desc format for function '%s:%s'!",
+            self.func_path,
+            self.func_name,
+        )
         return None
 
     def process_descr(self, name: str, dd):
@@ -1219,7 +1216,7 @@ class greatgrandchild:
             # but keep __init__ and __call__
             if func_path.find(".") >= 0:
                 self.func_path, self.func_name = func_path.rsplit(".", 1)
-            logger.info(
+            logger.debug(
                 "Found function name: '%s:%s'",
                 self.func_path,
                 self.func_name,
@@ -1494,7 +1491,7 @@ def _process_grandchild(
         gchild.tag == "memberdef"  # type: ignore
         and gchild.get("kind") == "function"
     ):
-        logger.info("Start processing of new function definition.")
+        logger.debug("Start processing of new function definition.")
 
         if language == Language.C:
             member["params"].append(
