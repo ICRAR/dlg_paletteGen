@@ -1,0 +1,23 @@
+name: Build documentation
+
+on: [push, pull_request]
+
+jobs:
+  build_docs:
+    name: Build RTD documentation
+    runs-on: ubuntu-20.04
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-python@v4
+        name: Install Python
+        with:
+          python-version: "3.9"
+
+      - name: Install documentation dependencies
+        run: |
+          pip install -r docs/requirements.txt
+      - name: Build documentation
+        run: |
+          READTHEDOCS=True make docs
