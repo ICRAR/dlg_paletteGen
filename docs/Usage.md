@@ -1,5 +1,5 @@
 # Usage
-
+After Installation the tool is available on the command line and as a module inside the virtual environment.
 ```bash
 $ python -m dlg_paletteGen
 
