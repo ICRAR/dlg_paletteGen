@@ -22,9 +22,13 @@ pip install dlg_paletteGen
 
 ```bash
 $ python -m dlg_paletteGen
-#or
+
+or
+
 $ dlg_paletteGen -h
-#or
+
+or
+
 $ dlg-paletteGen -h
 
 usage: dlg_paletteGen [-h] [-m MODULE] [-t TAG] [-c] [-r] [-s] [-v] idir ofile
