@@ -20,4 +20,4 @@ jobs:
           pip install -r docs/requirements.txt
       - name: Build documentation
         run: |
-          READTHEDOCS=True mkdocs gh_deploy
+          mkdocs gh_deploy
