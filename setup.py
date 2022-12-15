@@ -32,7 +32,7 @@ def read_requirements(path):
 setup(
     name="dlg_paletteGen",
     version=read("dlg_paletteGen", "VERSION"),
-    description="Awesome dlg_paletteGen created by ICRAR",
+    description="DALiuGE palette generator tool",
     url="https://github.com/ICRAR/dlg_paletteGen/",
     long_description=read("README.md"),
     long_description_content_type="text/markdown",
