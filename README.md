@@ -1,8 +1,8 @@
 
 # dlg_paletteGen
 
-[![codecov](https://codecov.io/gh/ICRAR/dlg-gen-pal/branch/main/graph/badge.svg?token=dlg-gen-pal_token_here)](https://codecov.io/gh/ICRAR/dlg-gen-pal)
-[![CI](https://github.com/ICRAR/dlg-gen-pal/actions/workflows/main.yml/badge.svg)](https://github.com/ICRAR/dlg-gen-pal/actions/workflows/main.yml)
+[![codecov](https://codecov.io/gh/ICRAR/dlg_paletteGen/branch/main/graph/badge.svg?token=dlg_paletteGen_token_here)](https://codecov.io/gh/ICRAR/dlg_paletteGen)
+[![CI](https://github.com/ICRAR/dlg_paletteGen/actions/workflows/main.yml/badge.svg)](https://github.com/ICRAR/dlg_paletteGen/actions/workflows/main.yml)
 
 Awesome dlg_paletteGen created by ICRAR
 
