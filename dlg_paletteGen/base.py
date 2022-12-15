@@ -749,7 +749,7 @@ def write_palette_json(
         json.dump(palette, outfile, indent=4)
 
 
-def _typeFix(value_type: str, default_value: str = None) -> str:
+def _typeFix(value_type: str, default_value: str = "") -> str:
     """
     Trying to fix or guess the type of a parameter
 
@@ -836,7 +836,7 @@ def _typeFix(value_type: str, default_value: str = None) -> str:
                             default_value = default_value.lower()
                         else:
                             value_type = "String"
-        except NameError or TypeError:
+        except (NameError or TypeError):  # type: ignore
             raise
     return value_type
 
@@ -920,7 +920,7 @@ class greatgrandchild:
                 continue
 
             param_name = p_line[:index_of_second_colon].strip()
-            param_description = p_line[index_of_second_colon + 2 :].strip()
+            param_description = p_line[index_of_second_colon + 2:].strip()
             t_ind = param_description.find(":type")
             t_ind = t_ind if t_ind > -1 else None
             param_description = param_description[:t_ind]
@@ -955,7 +955,7 @@ class greatgrandchild:
                 continue
 
             param_name = t_line[:index_of_second_colon].strip()
-            param_type = t_line[index_of_second_colon + 2 :].strip()
+            param_type = t_line[index_of_second_colon + 2:].strip()
             p_ind = param_type.find(":param")
             p_ind = p_ind if p_ind > -1 else None
             param_type = param_type[:p_ind]
@@ -1269,7 +1269,8 @@ class greatgrandchild:
                 )
         else:
             logger.debug(
-                "Ignored great grandchild element: %s", ggchild.tag  # type: ignore
+                "Ignored great grandchild element: %s",
+                ggchild.tag  # type: ignore
             )
 
 
@@ -1491,13 +1492,6 @@ def _process_grandchild(
     ):
         logger.info("Start processing of new function definition.")
 
-        # func_path = "Unknown"
-        # func_name = hold_name
-        # return_type = "Unknown"
-
-        # some defaults
-        # cparam format is (name, default_value, type, access, precious,
-        # options, positional, description)
         if language == Language.C:
             member["params"].append(
                 {"key": "category", "direction": None, "value": "DynlibApp"}
@@ -1776,7 +1770,7 @@ def parseCasaDocs(dStr: str) -> Tuple[dict, str]:
         if paramsSidx[i] < paramsEidx[i]:
             pl = [
                 p.strip()
-                for p in paramsList[paramsSidx[i] : paramsEidx[i] - 1]
+                for p in paramsList[paramsSidx[i]: paramsEidx[i] - 1]
                 if len(p.strip()) > 0
             ]
             paramDocs[i] = paramDocs[i] + " " + " ".join(pl)
