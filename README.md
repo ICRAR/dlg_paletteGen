@@ -1,5 +1,5 @@
 
-# dlg_paletteGen
+# DALiuGE palette generator tool
 
 [![codecov](https://codecov.io/gh/ICRAR/dlg_paletteGen/branch/main/graph/badge.svg?token=dlg_paletteGen_token_here)](https://codecov.io/gh/ICRAR/dlg_paletteGen)
 [![CI](https://github.com/ICRAR/dlg_paletteGen/actions/workflows/main.yml/badge.svg)](https://github.com/ICRAR/dlg_paletteGen/actions/workflows/main.yml)
