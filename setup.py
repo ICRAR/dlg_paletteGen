@@ -33,14 +33,17 @@ setup(
     name="dlg_paletteGen",
     version=read("dlg_paletteGen", "VERSION"),
     description="Awesome dlg_paletteGen created by ICRAR",
-    url="https://github.com/ICRAR/daliuge-gen-pal/",
+    url="https://github.com/ICRAR/dlg_paletteGen/",
     long_description=read("README.md"),
     long_description_content_type="text/markdown",
     author="ICRAR",
     packages=find_packages(exclude=["tests", ".github"]),
     install_requires=read_requirements("requirements.txt"),
     entry_points={
-        "console_scripts": ["dlg_paletteGen = dlg_paletteGen.__main__:main"]
+        "console_scripts": [
+            "dlg_paletteGen = dlg_paletteGen.__main__:main",
+            "dlg-paletteGen = dlg_paletteGen.__main__:main",
+        ]
     },
     extras_require={"test": read_requirements("requirements-test.txt")},
 )
