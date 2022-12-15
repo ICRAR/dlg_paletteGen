@@ -2,6 +2,12 @@ Changelog
 =========
 
 
+(unreleased)
+------------
+- Hanged PYPI token name. [Andreas Wicenec]
+- Release: version 0.1.1 🚀 [Andreas Wicenec]
+
+
 0.1.1 (2022-12-15)
 ------------------
 - Release: version 0.1.1 🚀 [Andreas Wicenec]
