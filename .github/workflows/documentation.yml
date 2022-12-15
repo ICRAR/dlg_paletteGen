@@ -1,23 +1,18 @@
-name: Build documentation
-
+name: Publish docs via GitHub Pages
 on: [push, pull_request]
 
 jobs:
-  build_docs:
-    name: Build RTD documentation
-    runs-on: ubuntu-20.04
-
+  build:
+    name: Deploy docs
+    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout main
+        uses: actions/checkout@v3
 
-      - uses: actions/setup-python@v4
-        name: Install Python
-        with:
-          python-version: "3.9"
-
-      - name: Install documentation dependencies
-        run: |
-          pip install -r docs/requirements.txt
-      - name: Build documentation
-        run: |
-          mkdocs gh-deploy
+      - name: Deploy docs
+        uses: mhausenblas/mkdocs-deploy-gh-pages@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB }}
+          CONFIG_FILE: mkdocs.yml
+          # EXTRA_PACKAGES: build-base
+          REQUIREMENTS: docs/requirements.txt
