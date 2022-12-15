@@ -2,6 +2,12 @@ Changelog
 =========
 
 
+(unreleased)
+------------
+- Removed initial workflow files. [Andreas Wicenec]
+- Release: version 0.1.0 🚀 [Andreas Wicenec]
+
+
 0.1.0 (2022-12-15)
 ------------------
 - Release: version 0.1.0 🚀 [Andreas Wicenec]
