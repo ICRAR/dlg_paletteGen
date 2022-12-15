@@ -1,13 +1,18 @@
-# Welcome to MkDocs
+# Home and Installation
 
-For full documentation visit [mkdocs.org](https://www.mkdocs.org).
+This is the palette generator of the [DALiuGE](https://daliuge.readthedocs.io) system.
 
-## Commands
+It processes a file or a directory of source files and
+produces a DALiuGE compatible palette file containing the
+information required to use the identified functions and classes and methods to construct logical graphs in [EAGLE](https://eagle-dlg.readthedocs.io).
+For more information please refer to the documentation
+https://daliuge.readthedocs.io/en/latest/development/app_development/eagle_app_integration.html#automatic-eagle-palette-generation
 
-* `mkdocs new [dir-name]` - Create a new project.
-* `mkdocs serve` - Start the live-reloading docs server.
-* `mkdocs build` - Build the documentation site.
-* `mkdocs -h` - Print help message and exit.
+## Install it from PyPI
+
+```bash
+pip install dlg_paletteGen
+```
 
 ## Project layout
 
