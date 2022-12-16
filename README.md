@@ -56,6 +56,3 @@ optional arguments:
 
 ```
 
-## Development
-
-Read the [CONTRIBUTING.md](CONTRIBUTING.md) file.
