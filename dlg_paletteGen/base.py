@@ -834,39 +834,26 @@ def _typeFix(value_type: str, default_value: str = "") -> str:
     return value_type
 
 
-class greatgrandchild:
+class DetailedDescription:
     """
-    The great-grandchild class performs most of the parsing to construct the
-    palette nodes from the doxygen XML.
+    Class performs parsing of detailed description elements
     """
 
     KNOWN_FORMATS = {
         "rEST": r"\n:param .*",
         "Google": r"\nArgs:",
         "Numpy": r"\nParameters\n----------",
+        "casa": r"\n-{1,20}? parameter",
     }
 
-    def __init__(
-        self,
-        ggchild: dict = {},
-        func_name: str = "Unknown",
-        return_type: str = "Unknown",
-    ):
+    def __init__(self, descr: str):
         """
-        Constructor of great-grandchild object.
-
-        :param ggchild: dict, if existing great-grandchild
-        :param func_name: str, the function name
-        :param return_type: str, the return type of the component
+        :param descr: Text of the detaileddescription node
         """
-
-        self.func_path = ""
-        self.func_name = func_name
-        self.return_type = return_type
-        if ggchild:
-            self.member = self.process_greatgrandchild(ggchild)
-        else:
-            self.member = {"params": []}
+        self.description = descr
+        self.format = ""
+        self._identify_format()
+        self.process_descr()
 
     def _process_rEST(self, detailed_description) -> tuple:
         """
@@ -1033,27 +1020,41 @@ class greatgrandchild:
         # rai = ret[1] if len(ret) > 1 else ""
         return description, pdict
 
-    def _identify_format(self, descr_string: str) -> Union[str, None]:
-        """
-        :param descr_string: str, the content of the detailed description tag
+    def process_casa(self):
+        dStr = cleanString(dStr)
+        dList = dStr.split("\n")
+        try:
+            start_ind = [
+                idx
+                for idx, s in enumerate(dList)
+                if re.findall(r"-- parameter", s)
+            ][0] + 1
+            end_ind = [
+                idx
+                for idx, s in enumerate(dList)
+                if re.findall("-- example", s)
+            ][0]
+        except IndexError:
+            logger.debug(
+                "Problems finding start or end index for task: {task}"
+            )
+            return {}, ""
 
-        :returns: str, the identified format or None
+    def _identify_format(self):
+        """
+        Identifying format
         """
         logger.debug("Identifying doc_string style format")
-        dd = descr_string.split("\n")
+        dd = self.description.split("\n")
         ds = "\n".join([d.strip() for d in dd])  # remove whitespace from lines
         for k, v in self.KNOWN_FORMATS.items():
             rc = re.compile(v)
             if rc.search(ds):
-                return k
-        logger.warning(
-            "Unknown param desc format for function '%s:%s'!",
-            self.func_path,
-            self.func_name,
-        )
-        return None
+                self.format = k
+        if not self.format:
+            logger.warning("Unknown param desc format!")
 
-    def process_descr(self, name: str, dd):
+    def process_descr(self):
         """
         Helper function to provide plugin style parsers for various
         formats.
@@ -1061,14 +1062,44 @@ class greatgrandchild:
         :param name: str, name of the processor to call
         :param dd: str, the detailed description docstring
         """
-        do = f"_process_{name}"
+        do = f"_process_{self.format}"
         if hasattr(self, do) and callable(func := getattr(self, do)):
             logger.debug("Calling %s parser function", do)
-            return func(dd)
+            return func(self.description)
         else:
             logger.error(
                 "Don't know or can't execute %s",
             )
+            return ("", {})
+
+
+class greatgrandchild:
+    """
+    The great-grandchild class performs most of the parsing to construct the
+    palette nodes from the doxygen XML.
+    """
+
+    def __init__(
+        self,
+        ggchild: dict = {},
+        func_name: str = "Unknown",
+        return_type: str = "Unknown",
+    ):
+        """
+        Constructor of great-grandchild object.
+
+        :param ggchild: dict, if existing great-grandchild
+        :param func_name: str, the function name
+        :param return_type: str, the return type of the component
+        """
+
+        self.func_path = ""
+        self.func_name = func_name
+        self.return_type = return_type
+        if ggchild:
+            self.member = self.process_greatgrandchild(ggchild)
+        else:
+            self.member = {"params": []}
 
     def process_greatgrandchild(self, ggchild: dict):
         """
@@ -1114,9 +1145,10 @@ class greatgrandchild:
 
                 # get detailed description text
                 dd = ggchild[0][0].text
-                d_format = self._identify_format(dd)  # identift docstyle
+                ddO = DetailedDescription(dd)
+                d_format = ddO.format  # identift docstyle
                 if d_format:
-                    (desc, params) = self.process_descr(d_format, dd)
+                    (desc, params) = ddO.process_descr()
                 else:
                     (desc, params) = dd, {}
 
@@ -1410,10 +1442,11 @@ class Child:
         """
         members = []
         member: dict = {"params": []}
+        self.format = ""
         # logger.debug("Initialized child member: %s", member)
 
         logger.debug(
-            "Found child element: %s with tag: %s; kind: %s; text: %s",
+            "Found child element: %s with tag: %s; kind: %s",
             child,
             child.tag,  # type: ignore
             child.get("kind"),
@@ -1425,6 +1458,7 @@ class Child:
             self.hold_name = "Unknown"
             self.casa_mode = False
         if child.tag == "compoundname":  # type: ignore
+            # TODO: This is not a good way to identify casa
             if child.text.find("casatasks::") == 0:  # type: ignore
                 self.casa_mode = True
                 self.hold_name = child.text.split("::")[1]  # type: ignore
@@ -1440,25 +1474,30 @@ class Child:
         if (
             child.tag == "detaileddescription"  # type: ignore
             and len(child) > 0
-            and compound.casa_mode
+            # and compound.casa_mode
         ):
-            logger.debug(">>> Parsing casadoc format!")
+            logger.debug("Parsing detaileddescription")
             # for child in ggchild:
             dStr = child[0][0].text
-            descDict, comp_description = parseCasaDocs(dStr)
-            member["params"].append(
-                {
-                    "key": "description",
-                    "direction": None,
-                    "value": comp_description,
-                }
-            )
+            self.description = dStr
+            ddO = DetailedDescription(dStr)
+            self.format = ddO.format
+            if ddO.format == "casa":
+                self.casa_mode = True
+            # descDict, comp_description = parseCasaDocs(dStr)
+            # member["params"].append(
+            #     {
+            #         "key": "description",
+            #         "direction": None,
+            #         "value": comp_description,
+            #     }
+            # )
 
-            pkeys = {p["key"]: i for i, p in enumerate(member["params"])}
-            for p in descDict.keys():
-                if p in pkeys:
-                    member["params"][pkeys[p]]["value"] += f'"{descDict[p]}"'
-            logger.debug(">>>Params found in casadoc: %s", member)
+            # pkeys = {p["key"]: i for i, p in enumerate(member["params"])}
+            # for p in descDict.keys():
+            #     if p in pkeys:
+            #         member["params"][pkeys[p]]["value"] += f'"{descDict[p]}"'
+            # logger.debug(">>>Params found in casadoc: %s", member)
 
         if child.tag == "sectiondef" and child.get("kind") in [  # type: ignore
             "func",
@@ -1597,8 +1636,10 @@ def process_compounddef_default(compounddef, language):
     if tags.count("detaileddescription") > 0:
         tchild = compounddef[ctags.index("detaileddescription")]
         descr = Child(tchild, language, compound=compound)
+        logger.debug(">>>> description format: %s", descr.format)
         tags.pop(tags.index("detaileddescription"))
     compound.description = descr
+    compound.format = descr.format
 
     for t in enumerate(ctags):
         if t[1] in tags:
