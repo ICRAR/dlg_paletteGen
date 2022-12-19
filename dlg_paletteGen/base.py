@@ -1399,75 +1399,85 @@ def process_compounddef(compounddef: dict) -> list:
     return result
 
 
-def _process_child(child: dict, language: str) -> List[dict]:
-    """
-    Private function to process a child element.
+class Child:
+    def __init__(self, child: dict, language: str, compound=None):
+        """
+        Private function to process a child element.
 
-    :param child: dict, the parsed child element from XML
+        :param child: dict, the parsed child element from XML
 
-    :returns: dict of grandchild element
-    """
-    members = []
-    member: dict = {"params": []}
-    # logger.debug("Initialized child member: %s", member)
+        :returns: dict of grandchild element
+        """
+        members = []
+        member: dict = {"params": []}
+        # logger.debug("Initialized child member: %s", member)
 
-    logger.debug(
-        "Found child element: %s with tag: %s kind: %s",
-        child,
-        child.tag,  # type: ignore
-        child.get("kind"),
-    )
-    hold_name = "Unknown"
-    casa_mode = False
-    if child.tag == "compoundname":  # type: ignore
-        if child.text.find("casatasks:") == 0:  # type: ignore
-            casa_mode = True
-            hold_name = child.text.split("::")[1]  # type: ignore
-        else:
-            casa_mode = False
-            hold_name = "Unknown"
         logger.debug(
-            "Found compoundname: %s; extracted: %s",
-            child.text,  # type: ignore
-            hold_name,
+            "Found child element: %s with tag: %s; kind: %s; text: %s",
+            child,
+            child.tag,  # type: ignore
+            child.get("kind"),
         )
-    if (
-        child.tag == "detaileddescription"  # type: ignore
-        and len(child) > 0
-        and casa_mode
-    ):
-        # for child in ggchild:
-        dStr = child[0][0].text
-        descDict, comp_description = parseCasaDocs(dStr)
-        member["params"].append(
-            {
-                "key": "description",
-                "direction": None,
-                "value": comp_description,
-            }
-        )
+        if compound:
+            self.hold_name = compound.hold_name
+            self.casa_mode = compound.casa_mode
+        else:
+            self.hold_name = "Unknown"
+            self.casa_mode = False
+        if child.tag == "compoundname":  # type: ignore
+            if child.text.find("casatasks::") == 0:  # type: ignore
+                self.casa_mode = True
+                self.hold_name = child.text.split("::")[1]  # type: ignore
+                logger.debug(">>> Found casatask: %s", self.hold_name)
+            else:
+                self.casa_mode = False
+                self.hold_name = "Unknown"
+            logger.debug(
+                "Found compoundname: %s; extracted: %s",
+                child.text,  # type: ignore
+                self.hold_name,
+            )
+        if (
+            child.tag == "detaileddescription"  # type: ignore
+            and len(child) > 0
+            and compound.casa_mode
+        ):
+            logger.debug(">>> Parsing casadoc format!")
+            # for child in ggchild:
+            dStr = child[0][0].text
+            descDict, comp_description = parseCasaDocs(dStr)
+            member["params"].append(
+                {
+                    "key": "description",
+                    "direction": None,
+                    "value": comp_description,
+                }
+            )
 
-        pkeys = {p["key"]: i for i, p in enumerate(member["params"])}
-        for p in descDict.keys():
-            if p in pkeys:
-                member["params"][pkeys[p]]["value"] += f'"{descDict[p]}"'
+            pkeys = {p["key"]: i for i, p in enumerate(member["params"])}
+            for p in descDict.keys():
+                if p in pkeys:
+                    member["params"][pkeys[p]]["value"] += f'"{descDict[p]}"'
+            logger.debug(">>>Params found in casadoc: %s", member)
 
-    if child.tag == "sectiondef" and child.get("kind") in [  # type: ignore
-        "func",
-        "public-func",
-    ]:
-        logger.debug("Processing %d grand children", len(child))
-        for grandchild in child:
-            gmember = _process_grandchild(grandchild, hold_name, language)
-            if gmember is None:
-                logger.debug("Bailing out of grandchild processing!")
-                continue
-            elif gmember != member:
-                # logger.debug("Adding grandchild members: %s", gmember)
-                member["params"].extend(gmember["params"])
-                members.append(gmember)
-        logger.debug("Finished processing grand children")
-    return members
+        if child.tag == "sectiondef" and child.get("kind") in [  # type: ignore
+            "func",
+            "public-func",
+        ]:
+            logger.debug("Processing %d grand children", len(child))
+            for grandchild in child:
+                gmember = _process_grandchild(
+                    grandchild, self.hold_name, language
+                )
+                if gmember is None:
+                    logger.debug("Bailing out of grandchild processing!")
+                    continue
+                elif gmember != member:
+                    # logger.debug("Adding grandchild members: %s", gmember)
+                    member["params"].extend(gmember["params"])
+                    members.append(gmember)
+            logger.debug("Finished processing grand children")
+        self.members = members
 
 
 def _process_grandchild(
@@ -1569,21 +1579,36 @@ def _process_grandchild(
 
 def process_compounddef_default(compounddef, language):
     """
-    Process the all the sub-elements in a compund definition
+    Process a compound definition
 
-    :param compunddef: list of children of compounddef
+    :param compounddef: list of children of compounddef
     :param language: int
     """
     result = []
 
-    # check memberdefs
-    for child in compounddef:
-        logger.debug("Handling child: %s", child)
-        cmember = _process_child(child, language)
-        if cmember not in [None, []]:
-            result.append(cmember)
-        else:
-            continue
+    ctags = [c.tag for c in compounddef]
+    tags = ctags.copy()
+    logger.debug("Child elements found: %s", tags)
+    # initialize the compound object
+    tchild = compounddef[ctags.index("compoundname")]
+    compound = Child(tchild, language)
+    tags.pop(tags.index("compoundname"))
+    # get the detailed description
+    if tags.count("detaileddescription") > 0:
+        tchild = compounddef[ctags.index("detaileddescription")]
+        descr = Child(tchild, language, compound=compound)
+        tags.pop(tags.index("detaileddescription"))
+    compound.description = descr
+
+    for t in enumerate(ctags):
+        if t[1] in tags:
+            child = compounddef[t[0]]
+            logger.debug("Handling child: %s", t)
+            childO = Child(child, language, compound=compound)
+            if childO.members not in [None, []]:
+                result.append(childO.members)
+            else:
+                continue
     return result
 
 
@@ -1747,9 +1772,13 @@ def parseCasaDocs(dStr: str) -> Tuple[dict, str]:
     dList = dStr.split("\n")
     try:
         start_ind = [
-            idx for idx, s in enumerate(dList) if "-- parameter" in s
+            idx
+            for idx, s in enumerate(dList)
+            if re.findall(r"-- parameter", s)
         ][0] + 1
-        end_ind = [idx for idx, s in enumerate(dList) if "-- example" in s][0]
+        end_ind = [
+            idx for idx, s in enumerate(dList) if re.findall("-- example", s)
+        ][0]
     except IndexError:
         logger.debug("Problems finding start or end index for task: {task}")
         return {}, ""

@@ -134,9 +134,6 @@ def check_environment_variables() -> bool:
                 os.environ["PROJECT_VERSION"] = "0.1"
             elif variable == "GIT_REPO":
                 os.environ["GIT_REPO"] = os.environ["PROJECT_NAME"]
-            else:
-                logger.error("No " + variable + " environment variable.")
-                return False
 
     return True
 
