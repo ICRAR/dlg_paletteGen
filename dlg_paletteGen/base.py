@@ -16,7 +16,7 @@ import re
 import types
 import uuid
 from enum import Enum
-from typing import List, Tuple, Union
+from typing import Tuple, Union
 
 NAME = "dlg_paletteGen"
 
@@ -1021,24 +1021,24 @@ class DetailedDescription:
         return description, pdict
 
     def process_casa(self):
-        dStr = cleanString(dStr)
+        dStr = cleanString(self.description)
         dList = dStr.split("\n")
-        try:
-            start_ind = [
-                idx
-                for idx, s in enumerate(dList)
-                if re.findall(r"-- parameter", s)
-            ][0] + 1
-            end_ind = [
-                idx
-                for idx, s in enumerate(dList)
-                if re.findall("-- example", s)
-            ][0]
-        except IndexError:
-            logger.debug(
-                "Problems finding start or end index for task: {task}"
-            )
-            return {}, ""
+        # try:
+        #     start_ind = [
+        #         idx
+        #         for idx, s in enumerate(dList)
+        #         if re.findall(r"-- parameter", s)
+        #     ][0] + 1
+        #     end_ind = [
+        #         idx
+        #         for idx, s in enumerate(dList)
+        #         if re.findall("-- example", s)
+        #     ][0]
+        # except IndexError:
+        #     logger.debug(
+        #         "Problems finding start or end index for task: {task}"
+        #     )
+        #     return {}, ""
 
     def _identify_format(self):
         """
