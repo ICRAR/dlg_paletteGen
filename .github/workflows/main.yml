@@ -45,7 +45,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install doxygen
-        run: apt-get install doxygen
+        run: sudo apt-get install doxygen
       - name: Install project
         run: make install
       - name: Run tests
