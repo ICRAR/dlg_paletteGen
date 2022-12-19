@@ -1021,8 +1021,10 @@ class DetailedDescription:
         return description, pdict
 
     def process_casa(self):
-        dStr = cleanString(self.description)
-        dList = dStr.split("\n")
+        # TODO: implement me
+        return ("", {})
+        # dStr = cleanString(self.description)
+        # dList = dStr.split("\n")
         # try:
         #     start_ind = [
         #         idx
