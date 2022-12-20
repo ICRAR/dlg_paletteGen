@@ -197,7 +197,7 @@ def test_CLI_run_nr(tmpdir: str, shared_datadir: str):
 
 def test_CLI_fail(tmpdir: str, shared_datadir: str):
     """
-    Test the CLI just using input and output.
+    Test the CLI just using no params should return help text
 
     :param tmpdir: the path to the temp directory to use
     :param shared_datadir: the path the the local directory

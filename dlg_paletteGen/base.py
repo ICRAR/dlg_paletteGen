@@ -16,7 +16,7 @@ import re
 import types
 import uuid
 from enum import Enum
-from typing import Tuple, Union
+from typing import Union
 
 NAME = "dlg_paletteGen"
 
@@ -836,7 +836,9 @@ def _typeFix(value_type: str, default_value: str = "") -> str:
 
 class DetailedDescription:
     """
-    Class performs parsing of detailed description elements
+    Class performs parsing of detailed description elements.
+    This class is used for both compound (e.g. class) level descriptions
+    as well as function/method level.
     """
 
     KNOWN_FORMATS = {
@@ -853,7 +855,7 @@ class DetailedDescription:
         self.description = descr
         self.format = ""
         self._identify_format()
-        self.process_descr()
+        self.main_descr, self.params = self.process_descr()
 
     def _process_rEST(self, detailed_description) -> tuple:
         """
@@ -978,8 +980,6 @@ class DetailedDescription:
         logger.debug("numpy_style param dict %r", pdict)
         # extract return documentation
         rest = pds[1] if len(pds) > 1 else ""
-        # ret = re.split("\nRaises\n------\n", rest)
-        # rai = ret[1] if len(ret) > 1 else ""
         return description, pdict
 
     def _process_Google(self, dd: str):
@@ -1016,35 +1016,70 @@ class DetailedDescription:
         }
         # extract return documentation
         rest = pds[1] if len(pds) > 1 else ""
-        # ret = re.split("\nRaises\n------\n", rest)
-        # rai = ret[1] if len(ret) > 1 else ""
         return description, pdict
 
-    def process_casa(self):
-        # TODO: implement me
-        return ("", {})
-        # dStr = cleanString(self.description)
-        # dList = dStr.split("\n")
-        # try:
-        #     start_ind = [
-        #         idx
-        #         for idx, s in enumerate(dList)
-        #         if re.findall(r"-- parameter", s)
-        #     ][0] + 1
-        #     end_ind = [
-        #         idx
-        #         for idx, s in enumerate(dList)
-        #         if re.findall("-- example", s)
-        #     ][0]
-        # except IndexError:
-        #     logger.debug(
-        #         "Problems finding start or end index for task: {task}"
-        #     )
-        #     return {}, ""
+    def _process_casa(self, dd: str):
+        """
+        Parse the special docstring for casatasks
+        Extract the parameters from the casatask doc string.
+
+        :param task: The casatask to derive the parameters from.
+
+        :returns: Dictionary of form {<paramKey>:<paramDoc>}
+        """
+        dStr = cleanString(dd)
+        dList = dStr.split("\n")
+        try:
+            start_ind = [
+                idx
+                for idx, s in enumerate(dList)
+                if re.findall(r"-{1,20} parameter", s)
+            ][0] + 1
+            end_ind = [
+                idx
+                for idx, s in enumerate(dList)
+                if re.findall(r"-{1,20} example", s)
+            ][0]
+        except IndexError:
+            logger.debug(
+                "Problems finding start or end index for task: {task}"
+            )
+            return {}, ""
+        paramsList = dList[start_ind:end_ind]
+        paramsSidx = [
+            idx + 1
+            for idx, p in enumerate(paramsList)
+            if len(p) > 0 and p[0] != " "
+        ]
+        paramsEidx = paramsSidx[1:] + [len(paramsList) - 1]
+        paramFirstLine = [
+            (p.strip().split(" ", 1)[0], p.strip().split(" ", 1)[1].strip())
+            for p in paramsList
+            if len(p) > 0 and p[0] != " "
+        ]
+        paramNames = [p[0] for p in paramFirstLine]
+        paramDocs = [p[1].strip() for p in paramFirstLine]
+        for i in range(len(paramDocs)):
+            if paramsSidx[i] < paramsEidx[i]:
+                pl = [
+                    p.strip()
+                    for p in paramsList[
+                        paramsSidx[i] : paramsEidx[i] - 1  # noqa: E203
+                    ]
+                    if len(p.strip()) > 0
+                ]
+                paramDocs[i] = paramDocs[i] + " " + " ".join(pl)
+        params = dict(zip(paramNames, paramDocs))
+        comp_description = "\n".join(
+            dList[: start_ind - 1]
+        )  # return main description as well
+        logger.debug(">>> CASA: finished processing of descr: %s", params)
+        return (comp_description, params)
 
     def _identify_format(self):
         """
-        Identifying format
+        Identifying docstring format using the format templates
+        defined in KNOWN_FORMATS.
         """
         logger.debug("Identifying doc_string style format")
         dd = self.description.split("\n")
@@ -1060,19 +1095,15 @@ class DetailedDescription:
         """
         Helper function to provide plugin style parsers for various
         formats.
-
-        :param name: str, name of the processor to call
-        :param dd: str, the detailed description docstring
         """
         do = f"_process_{self.format}"
         if hasattr(self, do) and callable(func := getattr(self, do)):
             logger.debug("Calling %s parser function", do)
             return func(self.description)
         else:
-            logger.error(
-                "Don't know or can't execute %s",
-            )
-            return ("", {})
+            logger.warning("Format not recognized or can't execute %s", do)
+            logger.warning("Returning description unparsed!")
+            return (self.description, {})
 
 
 class greatgrandchild:
@@ -1086,6 +1117,7 @@ class greatgrandchild:
         ggchild: dict = {},
         func_name: str = "Unknown",
         return_type: str = "Unknown",
+        parent_member: Union["Child", None] = None,
     ):
         """
         Constructor of great-grandchild object.
@@ -1093,21 +1125,27 @@ class greatgrandchild:
         :param ggchild: dict, if existing great-grandchild
         :param func_name: str, the function name
         :param return_type: str, the return type of the component
+        :param parent_member: dict, contains the descriptions found in parent
         """
 
         self.func_path = ""
         self.func_name = func_name
         self.return_type = return_type
         if ggchild:
-            self.member = self.process_greatgrandchild(ggchild)
+            self.member = self.process_greatgrandchild(
+                ggchild, parent_member=parent_member
+            )
         else:
             self.member = {"params": []}
 
-    def process_greatgrandchild(self, ggchild: dict):
+    def process_greatgrandchild(
+        self, ggchild: dict, parent_member: Union["Child", None] = None
+    ):
         """
         Process Greatgrandchild
 
         :param ggchild: dict, the great grandchild element
+        :param parent_member: dict, member dict from parent class
         """
 
         # logger.debug("Initialized ggchild member: %s", self.member)
@@ -1131,7 +1169,8 @@ class greatgrandchild:
                 class_name = self.func_path.rsplit(".", 1)[-1]
                 self.func_name = f"{class_name}::{self.func_name}"
                 logger.debug(
-                    "Class function --> modified name: %s", self.func_name
+                    "Class function --> modified name: %s",
+                    self.func_name,
                 )
 
         elif ggchild.tag == "detaileddescription":  # type: ignore
@@ -1147,10 +1186,10 @@ class greatgrandchild:
 
                 # get detailed description text
                 dd = ggchild[0][0].text
+                logger.debug(">>> Parsing description")
                 ddO = DetailedDescription(dd)
-                d_format = ddO.format  # identift docstyle
-                if d_format:
-                    (desc, params) = ddO.process_descr()
+                if ddO.format:
+                    (desc, params) = (ddO.main_descr, ddO.params)
                 else:
                     (desc, params) = dd, {}
 
@@ -1206,8 +1245,8 @@ class greatgrandchild:
                     self.member["params"][name]["type"],
                 )
                 value_type = self.member["params"][name]["type"]
-            # type recognised?
 
+            # type recognised - else convert?
             value_type = _typeFix(value_type, default_value=default_value)
 
             # add the param
@@ -1215,6 +1254,12 @@ class greatgrandchild:
                 default_value = str(default_value).replace("'", "")
                 if default_value.find("/") >= 0:
                     default_value = f'"{default_value}"'
+            # attach description from parent, if available
+            if parent_member and name in parent_member.member["params"]:
+                member_desc = parent_member.member["params"][name]
+            else:
+                member_desc = ""
+
             logger.debug(
                 "adding param: %s",
                 {
@@ -1225,7 +1270,8 @@ class greatgrandchild:
                     + str(default_value)
                     + "/"
                     + str(value_type)
-                    + "/ApplicationArgument/readwrite//False/False/",
+                    + "/ApplicationArgument/readwrite//False/False/"
+                    + member_desc,
                 },
             )
             self.member["params"].append(
@@ -1237,7 +1283,8 @@ class greatgrandchild:
                     + str(default_value)
                     + "/"
                     + str(value_type)
-                    + "/ApplicationArgument/readwrite//False/False/",
+                    + "/ApplicationArgument/readwrite//False/False/"
+                    + member_desc,
                 }
             )
 
@@ -1434,102 +1481,85 @@ def process_compounddef(compounddef: dict) -> list:
 
 
 class Child:
-    def __init__(self, child: dict, language: str, compound=None):
+    def __init__(
+        self, child: dict, language: str, parent: Union["Child", None] = None
+    ):
         """
         Private function to process a child element.
 
         :param child: dict, the parsed child element from XML
-
-        :returns: dict of grandchild element
+        :param language, str, hint to the coding language used
+        :param parent, Child object or None
         """
         members = []
-        member: dict = {"params": []}
+        self.type = "generic"
+        self.member: dict = {"params": []}
         self.format = ""
+        self.description = ""
+        self.casa_mode: bool = False
         # logger.debug("Initialized child member: %s", member)
 
         logger.debug(
-            "Found child element: %s with tag: %s; kind: %s",
+            "Found child element: %s with tag: %s; kind: %s; parent: %s",
             child,
             child.tag,  # type: ignore
             child.get("kind"),
+            parent.type if parent else "<unavailable>",
         )
-        if compound:
-            self.hold_name = compound.hold_name
-            self.casa_mode = compound.casa_mode
-        else:
-            self.hold_name = "Unknown"
-            self.casa_mode = False
-        if child.tag == "compoundname":  # type: ignore
-            # TODO: This is not a good way to identify casa
-            if child.text.find("casatasks::") == 0:  # type: ignore
-                self.casa_mode = True
-                self.hold_name = child.text.split("::")[1]  # type: ignore
-                logger.debug(">>> Found casatask: %s", self.hold_name)
-            else:
-                self.casa_mode = False
-                self.hold_name = "Unknown"
-            logger.debug(
-                "Found compoundname: %s; extracted: %s",
-                child.text,  # type: ignore
-                self.hold_name,
-            )
+        if parent and hasattr(parent, "casa_mode"):
+            self.casa_mode = parent.casa_mode
         if (
             child.tag == "detaileddescription"  # type: ignore
             and len(child) > 0
-            # and compound.casa_mode
         ):
             logger.debug("Parsing detaileddescription")
-            # for child in ggchild:
+            self.type = "description"
             dStr = child[0][0].text
             self.description = dStr
             ddO = DetailedDescription(dStr)
             self.format = ddO.format
-            if ddO.format == "casa":
+            if self.format == "casa":
                 self.casa_mode = True
-            # descDict, comp_description = parseCasaDocs(dStr)
-            # member["params"].append(
-            #     {
-            #         "key": "description",
-            #         "direction": None,
-            #         "value": comp_description,
-            #     }
-            # )
-
-            # pkeys = {p["key"]: i for i, p in enumerate(member["params"])}
-            # for p in descDict.keys():
-            #     if p in pkeys:
-            #         member["params"][pkeys[p]]["value"] += f'"{descDict[p]}"'
-            # logger.debug(">>>Params found in casadoc: %s", member)
+                self.description, self.member["params"] = (
+                    ddO.main_descr,
+                    ddO.params,
+                )
 
         if child.tag == "sectiondef" and child.get("kind") in [  # type: ignore
             "func",
             "public-func",
         ]:
-            logger.debug("Processing %d grand children", len(child))
+            self.type = "function"
+            logger.debug(
+                "Processing %d grand children; parent: %s",
+                len(child),
+                parent.member if parent else "<undefined>",
+            )
             for grandchild in child:
                 gmember = _process_grandchild(
-                    grandchild, self.hold_name, language
+                    grandchild, language, parent=parent
                 )
                 if gmember is None:
                     logger.debug("Bailing out of grandchild processing!")
                     continue
-                elif gmember != member:
+                elif gmember != self.member:
                     # logger.debug("Adding grandchild members: %s", gmember)
-                    member["params"].extend(gmember["params"])
+                    self.member["params"].extend(gmember["params"])
                     members.append(gmember)
             logger.debug("Finished processing grand children")
         self.members = members
 
 
 def _process_grandchild(
-    gchild: dict, hold_name: str, language: str
+    gchild: dict,
+    language: str,
+    parent: Union[Child, None] = None,
 ) -> Union[dict, None]:
     """
     Private function to process a grandchild element
     Starts the construction of the member data structure
 
     :param gchild: dict, the parsed grandchild element from XML
-    :param hold_name: str, the initial name of a function
     :param language: int, the languange indicator flag,
                      0 unknown, 1: Python, 2: C
 
@@ -1600,7 +1630,7 @@ def _process_grandchild(
         logger.debug("Processing %d great grand children", len(gchild))
         gg = greatgrandchild()
         for ggchild in gchild:
-            gg.process_greatgrandchild(ggchild)
+            gg.process_greatgrandchild(ggchild, parent_member=parent)
             if gg.member is None:
                 logger.debug("Bailing out ggchild processing: %s", gg.member)
                 del gg
@@ -1630,24 +1660,30 @@ def process_compounddef_default(compounddef, language):
     ctags = [c.tag for c in compounddef]
     tags = ctags.copy()
     logger.debug("Child elements found: %s", tags)
+
     # initialize the compound object
     tchild = compounddef[ctags.index("compoundname")]
     compound = Child(tchild, language)
     tags.pop(tags.index("compoundname"))
-    # get the detailed description
+
+    # get the compound's detailed description
+    # NOTE: This may contain all param information, e.g. for classes
+    # and has to be merged with the descriptions found in sectiondef elements
     if tags.count("detaileddescription") > 0:
         tchild = compounddef[ctags.index("detaileddescription")]
-        descr = Child(tchild, language, compound=compound)
-        logger.debug(">>>> description format: %s", descr.format)
+        cdescrObj = Child(tchild, language, parent=compound)
         tags.pop(tags.index("detaileddescription"))
-    compound.description = descr
-    compound.format = descr.format
+    compound.description = cdescrObj.description
+    compound.format = cdescrObj.format
 
+    # Handle all the other child elements
     for t in enumerate(ctags):
         if t[1] in tags:
             child = compounddef[t[0]]
-            logger.debug("Handling child: %s", t)
-            childO = Child(child, language, compound=compound)
+            logger.debug(
+                "Handling child: %s; using parent: %s", t, compound.type
+            )
+            childO = Child(child, language, parent=cdescrObj)
             if childO.members not in [None, []]:
                 result.append(childO.members)
             else:
@@ -1800,57 +1836,3 @@ def cleanString(input_text: str) -> str:
     # ansi_escape = re.compile(r'[@-Z\\-_]|\[[0-?]*[ -/]*[@-~]')
     ansi_escape = re.compile(r"\[[0-?]*[ -/]*[@-~]")
     return ansi_escape.sub("", input_text)
-
-
-def parseCasaDocs(dStr: str) -> Tuple[dict, str]:
-    """
-    Parse the special docstring for casatasks
-    Extract the parameters from the casatask doc string.
-
-    :param task: The casatask to derive the parameters from.
-
-    :returns: Dictionary of form {<paramKey>:<paramDoc>}
-    """
-    dStr = cleanString(dStr)
-    dList = dStr.split("\n")
-    try:
-        start_ind = [
-            idx
-            for idx, s in enumerate(dList)
-            if re.findall(r"-- parameter", s)
-        ][0] + 1
-        end_ind = [
-            idx for idx, s in enumerate(dList) if re.findall("-- example", s)
-        ][0]
-    except IndexError:
-        logger.debug("Problems finding start or end index for task: {task}")
-        return {}, ""
-    paramsList = dList[start_ind:end_ind]
-    paramsSidx = [
-        idx + 1
-        for idx, p in enumerate(paramsList)
-        if len(p) > 0 and p[0] != " "
-    ]
-    paramsEidx = paramsSidx[1:] + [len(paramsList) - 1]
-    paramFirstLine = [
-        (p.strip().split(" ", 1)[0], p.strip().split(" ", 1)[1].strip())
-        for p in paramsList
-        if len(p) > 0 and p[0] != " "
-    ]
-    paramNames = [p[0] for p in paramFirstLine]
-    paramDocs = [p[1].strip() for p in paramFirstLine]
-    for i in range(len(paramDocs)):
-        if paramsSidx[i] < paramsEidx[i]:
-            pl = [
-                p.strip()
-                for p in paramsList[
-                    paramsSidx[i] : paramsEidx[i] - 1  # noqa: E203
-                ]
-                if len(p.strip()) > 0
-            ]
-            paramDocs[i] = paramDocs[i] + " " + " ".join(pl)
-    params = dict(zip(paramNames, paramDocs))
-    comp_description = "\n".join(
-        dList[: start_ind - 1]
-    )  # return main description as well
-    return params, comp_description
