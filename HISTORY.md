@@ -4,6 +4,18 @@ Changelog
 
 (unreleased)
 ------------
+- Updated Makefile and gitignore. [Andreas Wicenec]
+- Fixed treatment of CASA style docs. [Andreas Wicenec]
+- Another typo. [Andreas Wicenec]
+- Typo. [Andreas Wicenec]
+- Added xsltproc. [Andreas Wicenec]
+- Added sudo. [Andreas Wicenec]
+- Add doxygen to Linux. [Andreas Wicenec]
+
+
+0.1.2 (2022-12-19)
+------------------
+- Release: version 0.1.2 🚀 [Andreas Wicenec]
 - Fixed workflow. [Andreas Wicenec]
 - Add doxygen to MacOSX. [Andreas Wicenec]
 - Adding example data. [Andreas Wicenec]
