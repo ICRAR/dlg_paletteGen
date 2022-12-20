@@ -23,7 +23,7 @@ In practice dlg_paletteGen enables the usage of a very big pool of Python softwa
 
 The reason for this limitation comes from an internal Python limitation that does not allow to inspect such functions and thus the actual detailed signature of such functions is unknown to the Python interpreter. Some larger scale packages, e.g. *numpy* or *AstroPy* are using a mixture between pure C extensions, wrapped C code and plain Python code, thus the latter two will appear as components, the first ones not.
 
-## Component Types
+## Component types
 The tool supports components derived from a number of Python types:
 
    * Classes
@@ -31,7 +31,9 @@ The tool supports components derived from a number of Python types:
    * Plain functions (not associated to any class)
 
 ### Classes and Methods
-In practice, during execution, the engine has to deal with objects and not classes. Thus a component representing a class (e.g. *DummyClass*) is actually exposing the initializer method of the *DummyClass* (usually \_\_init\_\_ or \_\_call\_\_). This allows to initialize an object by placing the initializer component on the graph and then connect any of the class methods to it, where required. In order to aid this, the *self* argument of the initializer method is assigned to an output port of the associated component and the *self* argument of all other class methods is assigned to an input port of those components. The type of those ports is set to *Object.DummyClass* and that allows EAGLE to check and enforce valid connections. This allows EAGLE users to construct object oriented graphs without writing a line of code.
+In practice, during execution, the engine has to deal with objects and not classes. Thus a component representing a class (e.g. *DummyClass*) is actually exposing the initializer method of the *DummyClass* (usually \_\_init\_\_ or \_\_call\_\_). This allows to initialize an object by placing the initializer component on the graph and then connect any of the class methods to it, where required. In order to aid this, the *self* argument of the initializer method is assigned to an output port of the associated component and the *self* argument of all other class methods is assigned to an input port of those components. The type of those ports is set to *Object.DummyClass* and that allows EAGLE to check and enforce valid connections. EAGLE users are thus able to construct object oriented graphs without writing a single line of code. 
+
+*NOTE:* dlg_paletteGen does not expose any *private* functions and methods starting with '\_', except for the initializers \_\_init\_\_ and \_\_call\_\_.
 
 ### Plain Functions
 These are somewhat simpler than the classes and methods and are typically stand-alone functions contained in a set of files.
