@@ -952,10 +952,11 @@ class DetailedDescription:
             if param_name in result:
                 result[param_name]["type"] = param_type
             else:
-                logger.warning("No parameter named %s. Known parameters: %s",
-                               param_name,
-                               ', '.join(str(key) for key in result.keys())
-                               )
+                logger.warning(
+                    "No parameter named %s. Known parameters: %s",
+                    param_name,
+                    ', '.join(str(key) for key in result.keys()),
+                )
 
         return detailed_description.split(":param")[0], result
 
