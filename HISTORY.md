@@ -4,6 +4,15 @@ Changelog
 
 (unreleased)
 ------------
+- Fixed RASCIL and C style issues. [Andreas Wicenec]
+- Fixed issues with RASCIL processing. [Andreas Wicenec]
+- Better coverage in rest and eagle. [Andreas Wicenec]
+- Renamed test file to example_eagle.py. [Andreas Wicenec]
+
+
+0.1.4 (2022-12-22)
+------------------
+- Release: version 0.1.4 🚀 [Andreas Wicenec]
 - Added example_rest.py to git. [Andreas Wicenec]
 - Added rEST example; code restructuring. [Andreas Wicenec]
 - Removed one test and associated code. [Andreas Wicenec]
