@@ -114,6 +114,28 @@ class MainClass1(object):
         """
         return arg1 / arg2 + arg3
 
+    def func_with_types(
+        self,
+        arg1,
+        arg2,
+        arg3="1.0",
+        arg4="True",
+        arg5="1",
+    ) -> float:
+        """
+        Get a few more types tested
+
+        :param arg1: bool, just a bool argument
+        :param arg2: float, just a float argument
+        :param arg3: string, conversion test
+        :param arg4: string, conversion test
+        :param arg5: conversion test
+
+        :returns: a float value
+        :rtype: float
+        """
+        return arg2 / int(arg3)
+
 
 if __name__ == "__main__":
     import doctest

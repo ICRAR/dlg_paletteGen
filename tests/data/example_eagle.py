@@ -73,6 +73,7 @@ class NullBarrierApp(BarrierAppDROP):
 # @details A placeholder APP to aid construction of new applications.
 # This is mainly useful (and used) when starting a new workflow from scratch.
 # @par EAGLE_START
+# @param briefdescription
 # @param category PythonApp
 # @param tag template
 # @param appclass Application Class//String/ComponentParameter/readonly//False/False/Application class
