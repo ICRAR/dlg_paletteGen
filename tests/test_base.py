@@ -139,6 +139,34 @@ def test_CLI_run_rest(tmpdir: str, shared_datadir: str):
     assert len(newcontent["nodeDataArray"][0]["fields"]) == 11
 
 
+def test_CLI_run_rascil(tmpdir: str, shared_datadir: str):
+    """
+    Test the CLI just using input and output.
+
+    :param tmpdir: the path to the temp directory to use
+    :param shared_datadir: the path the the local directory
+    """
+    input = str(shared_datadir.absolute()) + "/example_rascil.py"
+    logging.info("path: %s", input)
+    output = tmpdir + "t.palette"
+    p = start_process(
+        ("-sr", input, output),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    out, err = p.communicate()
+    assert p.returncode == 0
+    # logging.info("Captured output: %s", err)
+    with open(input, "r") as f:
+        content = f.read()
+    logging.info("INPUT: %s", content)
+    with open(output, "r") as f:
+        newcontent = json.load(f)
+    logging.info("OUTPUT: %s", newcontent)
+    # can't use a hash, since output contains hashed keys
+    assert len(newcontent["nodeDataArray"][0]["fields"]) == 14
+
+
 def test_CLI_run_casatask(tmpdir: str, shared_datadir: str):
     """
     Test the CLI just using input and output.

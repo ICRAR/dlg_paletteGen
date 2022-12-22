@@ -18,6 +18,8 @@ import uuid
 from enum import Enum
 from typing import Union
 
+# import xml.etree.ElementTree as ET
+
 NAME = "dlg_paletteGen"
 
 
@@ -1286,7 +1288,7 @@ class GreatGrandChild:
             # but keep __init__ and __call__
             if func_path.find(".") >= 0:
                 self.func_path, self.func_name = func_path.rsplit(".", 1)
-            logger.debug(
+            logger.info(
                 "Found function name: '%s:%s'",
                 self.func_path,
                 self.func_name,
@@ -1400,8 +1402,12 @@ class Child:
             and len(child) > 0
         ):
             logger.debug("Parsing detaileddescription")
+            # logger.debug("Child: %s", ET.tostring(child, encoding="unicode"))
             self.type = "description"
-            dStr = child[0][0].text
+            # TODO: The following likely means that we are dealing with a C
+            #       module and this is just a dirty workaround rather than
+            #        a fix probably need to add a plain C parser.
+            dStr = child[0][0].text if len(child[0]) > 0 else child[0]
             self.description = dStr
             ddO = DetailedDescription(dStr)
             self.format = ddO.format
@@ -1461,7 +1467,7 @@ class Child:
             gchild.tag == "memberdef"  # type: ignore
             and gchild.get("kind") == "function"
         ):
-            logger.info("Start processing of new function definition.")
+            logger.debug("Start processing of new function definition.")
 
             if language == Language.C:
                 member["params"].append(

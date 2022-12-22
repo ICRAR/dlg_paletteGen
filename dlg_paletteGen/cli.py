@@ -27,8 +27,8 @@ from dlg_paletteGen.base import (
     logger,
     modify_doxygen_options,
     params_to_nodes,
-    process_compounddef_eagle,
     process_compounddef_default,
+    process_compounddef_eagle,
     write_palette_json,
 )
 
@@ -244,7 +244,9 @@ def main():  # pragma: no cover
             nodes.extend(ns)
 
         else:  # not eagle node
-            logger.debug("Handling compound: %s", compounddef)
+            logger.info("Handling compound: %s", compounddef)
+            # ET.tostring(compounddef, encoding="unicode"),
+            # )
             functions = process_compounddef_default(compounddef, language)
             functions = functions[0] if len(functions) > 0 else functions
             logger.debug("Number of functions in compound: %d", len(functions))
