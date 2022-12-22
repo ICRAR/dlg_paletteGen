@@ -90,7 +90,7 @@ def test_CLI_run_eagle(tmpdir: str, shared_datadir: str):
     :param tmpdir: the path to the temp directory to use
     :param shared_datadir: the path the the local directory
     """
-    input = str(shared_datadir.absolute()) + "/simple.py"
+    input = str(shared_datadir.absolute()) + "/example_eagle.py"
     logging.info("path: %s", input)
     output = tmpdir + "t.palette"
     p = start_process(
