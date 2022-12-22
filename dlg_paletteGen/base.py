@@ -503,30 +503,6 @@ def parse_value(message: str, value: str) -> tuple:
     )
 
 
-def parse_description(value: str) -> str:
-    """
-    Parse the description from a EAGLE formatted csv string.
-
-    :param value: str, csv string to be parsed
-
-    :returns: str, last item from parsed csv
-
-    TODO: This parser should be pluggable
-    """
-    # parse the value as csv (delimited by '/')
-    parts = []
-    reader = csv.reader([value], delimiter="/", quotechar='"')
-    for row in reader:
-        parts = row
-
-    # if parts is empty
-    if len(parts) == 0:
-        logger.warning("unable to parse description from: " + value)
-        return ""
-
-    return parts[-1]
-
-
 # NOTE: color, x, y, width, height are not specified in palette node,
 # they will be set by the EAGLE importer
 def create_palette_node_from_params(params) -> tuple:
@@ -845,7 +821,7 @@ class DetailedDescription:
         "rEST": r"\n:param .*",
         "Google": r"\nArgs:",
         "Numpy": r"\nParameters\n----------",
-        "casa": r"\n-{1,20}? parameter",
+        "casa": r"\n-{2,20}? parameter",
     }
 
     def __init__(self, descr: str):
@@ -946,8 +922,14 @@ class DetailedDescription:
             p_ind = p_ind if p_ind > -1 else None
             param_type = param_type[:p_ind]
             param_type = _typeFix(param_type)
-            # logger.debug("%s type after fix: %s", param_name, param_type)
-            result[param_name]["type"] = param_type
+
+            # if param exists, update type
+            if param_name in result:
+                result[param_name]["type"] = param_type
+            else:
+                logger.warning(
+                    "Type spec without matching description %s", param_name
+                )
 
         return detailed_description.split(":param")[0], result
 
@@ -1026,6 +1008,12 @@ class DetailedDescription:
         :param task: The casatask to derive the parameters from.
 
         :returns: Dictionary of form {<paramKey>:<paramDoc>}
+
+        TODO: Description of component still missing in palette!
+        TODO: ports are not populated
+        TODO: type of self is not Object.ClassName
+        TODO: self arg should show brief description of component
+        TODO: multi-line argument doc-strings are scrambled
         """
         dStr = cleanString(dd)
         dList = dStr.split("\n")
@@ -1106,7 +1094,7 @@ class DetailedDescription:
             return (self.description, {})
 
 
-class greatgrandchild:
+class GreatGrandChild:
     """
     The great-grandchild class performs most of the parsing to construct the
     palette nodes from the doxygen XML.
@@ -1132,17 +1120,17 @@ class greatgrandchild:
         self.func_name = func_name
         self.return_type = return_type
         if ggchild:
-            self.member = self.process_greatgrandchild(
+            self.member = self.process_GreatGrandChild(
                 ggchild, parent_member=parent_member
             )
         else:
             self.member = {"params": []}
 
-    def process_greatgrandchild(
+    def process_GreatGrandChild(
         self, ggchild: dict, parent_member: Union["Child", None] = None
     ):
         """
-        Process Greatgrandchild
+        Process GreatGrandChild
 
         :param ggchild: dict, the great grandchild element
         :param parent_member: dict, member dict from parent class
@@ -1150,7 +1138,7 @@ class greatgrandchild:
 
         # logger.debug("Initialized ggchild member: %s", self.member)
         logger.debug(
-            "New greatgrandchild element: %s", ggchild.tag  # type: ignore
+            "New GreatGrandChild element: %s", ggchild.tag  # type: ignore
         )
         if ggchild.tag == "name":  # type: ignore
             self.func_name = (
@@ -1186,7 +1174,6 @@ class greatgrandchild:
 
                 # get detailed description text
                 dd = ggchild[0][0].text
-                logger.debug(">>> Parsing description")
                 ddO = DetailedDescription(dd)
                 if ddO.format:
                     (desc, params) = (ddO.main_descr, ddO.params)
@@ -1195,7 +1182,7 @@ class greatgrandchild:
 
                 # use the params above
                 for (p_key, p_value) in params.items():
-                    set_param_description(
+                    self.set_param_description(
                         p_key,
                         p_value["desc"],
                         p_value["type"],
@@ -1355,8 +1342,254 @@ class greatgrandchild:
                 ggchild.tag,  # type: ignore
             )
 
+    def set_param_description(
+        self, name: str, description: str, p_type: str, params: dict
+    ):
+        """
+        Set the description field of a of parameter <name> from parameters.
+        TODO: This should really be part of a class
 
-def process_compounddef(compounddef: dict) -> list:
+        :param name: str, the parameter to set the description
+        :param descrition: str, the description to add to the existing string
+        :param p_type: str, the type of the parameter if known
+        :param params: dict, the set of parameters
+        """
+        p_type = "" if not p_type else p_type
+        for p in params:
+            if p["key"] == name:
+                p["value"] = p["value"] + description
+                # insert the type
+                pp = p["value"].split("/", 3)
+                p["value"] = "/".join(pp[:2] + [p_type] + pp[3:])
+                p["type"] = p_type
+                break
+
+
+class Child:
+    def __init__(
+        self, child: dict, language: str, parent: Union["Child", None] = None
+    ):
+        """
+        Private function to process a child element.
+
+        :param child: dict, the parsed child element from XML
+        :param language, str, hint to the coding language used
+        :param parent, Child, parent object or None
+        """
+        members = []
+        self.type = "generic"
+        self.member: dict = {"params": []}
+        self.format = ""
+        self.description = ""
+        self.casa_mode: bool = False
+        # logger.debug("Initialized child member: %s", member)
+
+        logger.debug(
+            "Found child element: %s with tag: %s; kind: %s; parent: %s",
+            child,
+            child.tag,  # type: ignore
+            child.get("kind"),
+            parent.type if parent else "<unavailable>",
+        )
+        if parent and hasattr(parent, "casa_mode"):
+            self.casa_mode = parent.casa_mode
+        if (
+            child.tag == "detaileddescription"  # type: ignore
+            and len(child) > 0
+        ):
+            logger.debug("Parsing detaileddescription")
+            self.type = "description"
+            dStr = child[0][0].text
+            self.description = dStr
+            ddO = DetailedDescription(dStr)
+            self.format = ddO.format
+            if self.format == "casa":
+                self.casa_mode = True
+                self.description, self.member["params"] = (
+                    ddO.main_descr,
+                    ddO.params,
+                )
+
+        if child.tag == "sectiondef" and child.get("kind") in [  # type: ignore
+            "func",
+            "public-func",
+        ]:
+            self.type = "function"
+            logger.debug(
+                "Processing %d grand children; parent: %s",
+                len(child),
+                parent.member if parent else "<undefined>",
+            )
+            for grandchild in child:
+                gmember = self._process_grandchild(
+                    grandchild,
+                    language,
+                    # parent=self
+                )
+                if gmember is None:
+                    logger.debug("Bailing out of grandchild processing!")
+                    continue
+                elif gmember != self.member:
+                    # logger.debug("Adding grandchild members: %s", gmember)
+                    self.member["params"].extend(gmember["params"])
+                    members.append(gmember)
+            logger.debug("Finished processing grand children")
+        self.members = members
+
+    def _process_grandchild(
+        self,
+        gchild: dict,
+        language: str,
+        # parent: Union["Child", None] = None,
+    ) -> Union[dict, None]:
+        """
+        Private function to process a grandchild element
+        Starts the construction of the member data structure
+
+        :param gchild: dict, the parsed grandchild element from XML
+        :param language: int, the languange indicator flag,
+                        0 unknown, 1: Python, 2: C
+
+        :returns: dict, the member data structure
+        """
+        member: dict = {"params": []}
+        # logger.debug("Initialized grandchild member: %s", member)
+
+        if (
+            gchild.tag == "memberdef"  # type: ignore
+            and gchild.get("kind") == "function"
+        ):
+            logger.debug("Start processing of new function definition.")
+
+            if language == Language.C:
+                member["params"].append(
+                    {
+                        "key": "category",
+                        "direction": None,
+                        "value": "DynlibApp",
+                    }
+                )
+                member["params"].append(
+                    {
+                        "key": "libpath",
+                        "direction": None,
+                        "value": "Library Path//String/ComponentParameter/"
+                        + "readwrite//False/False/The location of the shared "
+                        + "object/DLL that implements this application",
+                    }
+                )
+            elif language == Language.PYTHON:
+                member["params"].append(
+                    {
+                        "key": "category",
+                        "direction": None,
+                        "value": "PythonApp",
+                    }
+                )
+                member["params"].append(
+                    {
+                        "key": "appclass",
+                        "direction": None,
+                        "value": "Application Class/dlg.apps.pyfunc.PyFuncApp/"
+                        + "String/ComponentParameter/readwrite//False/False/"
+                        + "The python class that implements this application",
+                    }
+                )
+
+            member["params"].append(
+                {
+                    "key": "execution_time",
+                    "direction": None,
+                    "value": "Execution Time/5/Integer/ComponentParameter/"
+                    + "readwrite//False/False/Estimate of execution time "
+                    + "(in seconds) for this application.",
+                }
+            )
+            member["params"].append(
+                {
+                    "key": "num_cpus",
+                    "direction": None,
+                    "value": "No. of CPUs/1/Integer/ComponentParameter/"
+                    + "readwrite//False/False/Number of cores used.",
+                }
+            )
+            member["params"].append(
+                {
+                    "key": "group_start",
+                    "direction": None,
+                    "value": "Group start/false/Boolean/ComponentParameter/"
+                    + "readwrite//False/False/Is this node the start of "
+                    + "a group?",
+                }
+            )
+
+            logger.debug("Processing %d great grand children", len(gchild))
+            gg = GreatGrandChild()
+            for ggchild in gchild:
+                gg.process_GreatGrandChild(ggchild, parent_member=self)
+                if gg.member is None:
+                    logger.debug(
+                        "Bailing out ggchild processing: %s", gg.member
+                    )
+                    del gg
+                    return None
+            if gg.member != member and gg.member["params"] not in [None, []]:
+                member["params"].extend(gg.member["params"])
+                logger.debug("member after adding gg_members: %s", member)
+            logger.info(
+                "Finished processing of function definition: '%s:%s'",
+                gg.func_path,
+                gg.func_name,
+            )
+            del gg
+
+        return member
+
+
+def process_compounddef_default(compounddef, language):
+    """
+    Process a compound definition
+
+    :param compounddef: list of children of compounddef
+    :param language: int
+    """
+    result = []
+
+    ctags = [c.tag for c in compounddef]
+    tags = ctags.copy()
+    logger.debug("Child elements found: %s", tags)
+
+    # initialize the compound object
+    tchild = compounddef[ctags.index("compoundname")]
+    compound = Child(tchild, language)
+    tags.pop(tags.index("compoundname"))
+
+    # get the compound's detailed description
+    # NOTE: This may contain all param information, e.g. for classes
+    # and has to be merged with the descriptions found in sectiondef elements
+    if tags.count("detaileddescription") > 0:
+        tchild = compounddef[ctags.index("detaileddescription")]
+        cdescrObj = Child(tchild, language, parent=compound)
+        tags.pop(tags.index("detaileddescription"))
+    compound.description = cdescrObj.description
+    compound.format = cdescrObj.format
+
+    # Handle all the other child elements
+    for t in enumerate(ctags):
+        if t[1] in tags:
+            child = compounddef[t[0]]
+            logger.debug(
+                "Handling child: %s; using parent: %s", t, compound.type
+            )
+            childO = Child(child, language, parent=cdescrObj)
+            if childO.members not in [None, []]:
+                result.append(childO.members)
+            else:
+                continue
+    return result
+
+
+def process_compounddef_eagle(compounddef: dict) -> list:
     """
     Interpret a compound definition element.
 
@@ -1478,242 +1711,6 @@ def process_compounddef(compounddef: dict) -> list:
 
         result.append({"key": key, "direction": direction, "value": value})
     return result
-
-
-class Child:
-    def __init__(
-        self, child: dict, language: str, parent: Union["Child", None] = None
-    ):
-        """
-        Private function to process a child element.
-
-        :param child: dict, the parsed child element from XML
-        :param language, str, hint to the coding language used
-        :param parent, Child object or None
-        """
-        members = []
-        self.type = "generic"
-        self.member: dict = {"params": []}
-        self.format = ""
-        self.description = ""
-        self.casa_mode: bool = False
-        # logger.debug("Initialized child member: %s", member)
-
-        logger.debug(
-            "Found child element: %s with tag: %s; kind: %s; parent: %s",
-            child,
-            child.tag,  # type: ignore
-            child.get("kind"),
-            parent.type if parent else "<unavailable>",
-        )
-        if parent and hasattr(parent, "casa_mode"):
-            self.casa_mode = parent.casa_mode
-        if (
-            child.tag == "detaileddescription"  # type: ignore
-            and len(child) > 0
-        ):
-            logger.debug("Parsing detaileddescription")
-            self.type = "description"
-            dStr = child[0][0].text
-            self.description = dStr
-            ddO = DetailedDescription(dStr)
-            self.format = ddO.format
-            if self.format == "casa":
-                self.casa_mode = True
-                self.description, self.member["params"] = (
-                    ddO.main_descr,
-                    ddO.params,
-                )
-
-        if child.tag == "sectiondef" and child.get("kind") in [  # type: ignore
-            "func",
-            "public-func",
-        ]:
-            self.type = "function"
-            logger.debug(
-                "Processing %d grand children; parent: %s",
-                len(child),
-                parent.member if parent else "<undefined>",
-            )
-            for grandchild in child:
-                gmember = _process_grandchild(
-                    grandchild, language, parent=parent
-                )
-                if gmember is None:
-                    logger.debug("Bailing out of grandchild processing!")
-                    continue
-                elif gmember != self.member:
-                    # logger.debug("Adding grandchild members: %s", gmember)
-                    self.member["params"].extend(gmember["params"])
-                    members.append(gmember)
-            logger.debug("Finished processing grand children")
-        self.members = members
-
-
-def _process_grandchild(
-    gchild: dict,
-    language: str,
-    parent: Union[Child, None] = None,
-) -> Union[dict, None]:
-    """
-    Private function to process a grandchild element
-    Starts the construction of the member data structure
-
-    :param gchild: dict, the parsed grandchild element from XML
-    :param language: int, the languange indicator flag,
-                     0 unknown, 1: Python, 2: C
-
-    :returns: dict, the member data structure
-    """
-    member: dict = {"params": []}
-    # logger.debug("Initialized grandchild member: %s", member)
-
-    if (
-        gchild.tag == "memberdef"  # type: ignore
-        and gchild.get("kind") == "function"
-    ):
-        logger.debug("Start processing of new function definition.")
-
-        if language == Language.C:
-            member["params"].append(
-                {"key": "category", "direction": None, "value": "DynlibApp"}
-            )
-            member["params"].append(
-                {
-                    "key": "libpath",
-                    "direction": None,
-                    "value": "Library Path//String/ComponentParameter/"
-                    + "readwrite//False/False/The location of the shared "
-                    + "object/DLL that implements this application",
-                }
-            )
-        elif language == Language.PYTHON:
-            member["params"].append(
-                {"key": "category", "direction": None, "value": "PythonApp"}
-            )
-            member["params"].append(
-                {
-                    "key": "appclass",
-                    "direction": None,
-                    "value": "Application Class/dlg.apps.pyfunc.PyFuncApp/"
-                    + "String/ComponentParameter/readwrite//False/False/"
-                    + "The python class that implements this application",
-                }
-            )
-
-        member["params"].append(
-            {
-                "key": "execution_time",
-                "direction": None,
-                "value": "Execution Time/5/Integer/ComponentParameter/"
-                + "readwrite//False/False/Estimate of execution time "
-                + "(in seconds) for this application.",
-            }
-        )
-        member["params"].append(
-            {
-                "key": "num_cpus",
-                "direction": None,
-                "value": "No. of CPUs/1/Integer/ComponentParameter/readwrite"
-                + "//False/False/Number of CPUs used for this application.",
-            }
-        )
-        member["params"].append(
-            {
-                "key": "group_start",
-                "direction": None,
-                "value": "Group start/false/Boolean/ComponentParameter/"
-                + "readwrite//False/False/Is this node the start of a group?",
-            }
-        )
-
-        logger.debug("Processing %d great grand children", len(gchild))
-        gg = greatgrandchild()
-        for ggchild in gchild:
-            gg.process_greatgrandchild(ggchild, parent_member=parent)
-            if gg.member is None:
-                logger.debug("Bailing out ggchild processing: %s", gg.member)
-                del gg
-                return None
-        if gg.member != member and gg.member["params"] not in [None, []]:
-            member["params"].extend(gg.member["params"])
-            logger.debug("member after adding gg_members: %s", member)
-        logger.info(
-            "Finished processing of function definition: '%s:%s'",
-            gg.func_path,
-            gg.func_name,
-        )
-        del gg
-
-    return member
-
-
-def process_compounddef_default(compounddef, language):
-    """
-    Process a compound definition
-
-    :param compounddef: list of children of compounddef
-    :param language: int
-    """
-    result = []
-
-    ctags = [c.tag for c in compounddef]
-    tags = ctags.copy()
-    logger.debug("Child elements found: %s", tags)
-
-    # initialize the compound object
-    tchild = compounddef[ctags.index("compoundname")]
-    compound = Child(tchild, language)
-    tags.pop(tags.index("compoundname"))
-
-    # get the compound's detailed description
-    # NOTE: This may contain all param information, e.g. for classes
-    # and has to be merged with the descriptions found in sectiondef elements
-    if tags.count("detaileddescription") > 0:
-        tchild = compounddef[ctags.index("detaileddescription")]
-        cdescrObj = Child(tchild, language, parent=compound)
-        tags.pop(tags.index("detaileddescription"))
-    compound.description = cdescrObj.description
-    compound.format = cdescrObj.format
-
-    # Handle all the other child elements
-    for t in enumerate(ctags):
-        if t[1] in tags:
-            child = compounddef[t[0]]
-            logger.debug(
-                "Handling child: %s; using parent: %s", t, compound.type
-            )
-            childO = Child(child, language, parent=cdescrObj)
-            if childO.members not in [None, []]:
-                result.append(childO.members)
-            else:
-                continue
-    return result
-
-
-# find the named aparam in params, and update the description
-def set_param_description(
-    name: str, description: str, p_type: str, params: dict
-):
-    """
-    Set the description field of a of parameter <name> from parameters.
-    TODO: This should really be part of a class
-
-    :param name: str, the parameter to set the description
-    :param descrition: str, the description to add to the existing string
-    :param p_type: str, the type of the parameter if known
-    :param params: dict, the set of parameters
-    """
-    # print("set_param_description():" + str(name) + ":" + str(description))
-    p_type = "" if not p_type else p_type
-    for p in params:
-        if p["key"] == name:
-            p["value"] = p["value"] + description
-            # insert the type
-            pp = p["value"].split("/", 3)
-            p["value"] = "/".join(pp[:2] + [p_type] + pp[3:])
-            p["type"] = p_type
-            break
 
 
 def create_construct_node(node_type: str, node: dict) -> dict:

@@ -27,7 +27,7 @@ from dlg_paletteGen.base import (
     logger,
     modify_doxygen_options,
     params_to_nodes,
-    process_compounddef,
+    process_compounddef_eagle,
     process_compounddef_default,
     write_palette_json,
 )
@@ -238,7 +238,7 @@ def main():  # pragma: no cover
         is_eagle_node = False
 
         if is_eagle_node or not allow_missing_eagle_start:
-            params = process_compounddef(compounddef)
+            params = process_compounddef_eagle(compounddef)
 
             ns = params_to_nodes(params)
             nodes.extend(ns)
