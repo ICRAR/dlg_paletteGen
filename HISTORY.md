@@ -4,6 +4,15 @@ Changelog
 
 (unreleased)
 ------------
+- Added example_rest.py to git. [Andreas Wicenec]
+- Added rEST example; code restructuring. [Andreas Wicenec]
+- Removed one test and associated code. [Andreas Wicenec]
+- Updated documentation. [Andreas Wicenec]
+
+
+0.1.3 (2022-12-20)
+------------------
+- Release: version 0.1.3 🚀 [Andreas Wicenec]
 - Updated Makefile and gitignore. [Andreas Wicenec]
 - Fixed treatment of CASA style docs. [Andreas Wicenec]
 - Another typo. [Andreas Wicenec]
