@@ -1070,8 +1070,10 @@ class DetailedDescription:
         defined in KNOWN_FORMATS.
         """
         logger.debug("Identifying doc_string style format")
-        dd = self.description.split("\n")
-        ds = "\n".join([d.strip() for d in dd])  # remove whitespace from lines
+        ds = self.description if self.description else ""
+        if ds and ds.count("\n") > 0:
+            dd = self.description.split("\n")
+            ds = "\n".join([d.strip() for d in dd])
         for k, v in self.KNOWN_FORMATS.items():
             rc = re.compile(v)
             if rc.search(ds):
@@ -1459,7 +1461,7 @@ class Child:
             gchild.tag == "memberdef"  # type: ignore
             and gchild.get("kind") == "function"
         ):
-            logger.debug("Start processing of new function definition.")
+            logger.info("Start processing of new function definition.")
 
             if language == Language.C:
                 member["params"].append(
