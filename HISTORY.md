@@ -4,6 +4,12 @@ Changelog
 
 (unreleased)
 ------------
+- Fixed issue with missing constructs default params. [Andreas Wicenec]
+
+
+0.1.5 (2022-12-22)
+------------------
+- Release: version 0.1.5 🚀 [Andreas Wicenec]
 - Fixed RASCIL and C style issues. [Andreas Wicenec]
 - Fixed issues with RASCIL processing. [Andreas Wicenec]
 - Better coverage in rest and eagle. [Andreas Wicenec]
