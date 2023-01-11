@@ -1730,16 +1730,57 @@ def create_construct_node(node_type: str, node: dict) -> dict:
 
     :returns dict of the construct node
     """
-
     # check that type is in the list of known types
-    if type not in KNOWN_CONSTRUCT_TYPES:
+    if node_type not in KNOWN_CONSTRUCT_TYPES:
         logger.warning(
             " construct for node'"
             + node["text"]
             + "' has unknown type: "
             + node_type
         )
+        logger.info("Kown types are: %s", KNOWN_CONSTRUCT_TYPES)
         pass
+
+    if node_type in ["Scatter", "MKN"]:
+        add_fields = [
+            {
+                "text": "Scatter dimension",
+                "name": "num_of_copies",
+                "value": 4,
+                "defaultValue": 4,
+                "description": "Specifies the number of replications "
+                "that will be generated of the scatter construct's "
+                "contents.",
+                "readonly": False,
+                "type": "Integer",
+                "precious": False,
+                "options": [],
+                "positional": False,
+                "keyAttribute": False,
+            }
+        ]
+    elif node_type == "Gather":
+        add_fields = [
+            {
+                "text": "Gather power",
+                "name": "num_of_inputs",
+                "value": 4,
+                "defaultValue": 4,
+                "description": "Specifies the number of inputs "
+                "that that the gather construct will merge. "
+                "If it is less than the available number of "
+                "inputs, the translator will automatically "
+                "generate additional gathers.",
+                "readonly": False,
+                "type": "Integer",
+                "precious": False,
+                "options": [],
+                "positional": False,
+                "keyAttribute": False,
+            }
+        ]
+    else:
+        add_fields = []  # don't add anything at this point.
 
     construct_node = {
         "category": node_type,
@@ -1748,7 +1789,7 @@ def create_construct_node(node_type: str, node: dict) -> dict:
         + " construct for the "
         + node["text"]
         + " component.",
-        "fields": [],
+        "fields": add_fields,
         "applicationArgs": [],
         "repositoryUrl": gitrepo,
         "commitHash": version,
@@ -1758,7 +1799,7 @@ def create_construct_node(node_type: str, node: dict) -> dict:
         "text": node_type + "/" + node["text"],
     }
 
-    if node_type == "Scatter" or node_type == "Gather":
+    if node_type in ["Scatter", "Gather", "MKN"]:
         construct_node["inputAppFields"] = node["fields"]
         construct_node["inputAppArgs"] = node["applicationArgs"]
         construct_node["inputApplicationKey"] = node["key"]
@@ -1776,7 +1817,7 @@ def create_construct_node(node_type: str, node: dict) -> dict:
         construct_node["outputLocalPorts"] = []
         construct_node["outputPorts"] = []
     else:
-        pass  # not sure what to do for other types like MKN yet
+        pass  # not sure what to do for branch
 
     return construct_node
 
