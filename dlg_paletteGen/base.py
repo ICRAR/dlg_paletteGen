@@ -15,6 +15,8 @@ import random
 import re
 import types
 import uuid
+import subprocess
+import tempfile
 from enum import Enum
 from typing import Union
 
@@ -68,28 +70,28 @@ gitrepo = os.environ.get("GIT_REPO")
 version = os.environ.get("PROJECT_VERSION")
 
 
-DOXYGEN_SETTINGS = [
-    ("OPTIMIZE_OUTPUT_JAVA", "YES"),
-    ("AUTOLINK_SUPPORT", "NO"),
-    ("IDL_PROPERTY_SUPPORT", "NO"),
-    ("EXCLUDE_PATTERNS", "*/web/*, CMakeLists.txt"),
-    ("VERBATIM_HEADERS", "NO"),
-    ("GENERATE_HTML", "NO"),
-    ("GENERATE_LATEX", "NO"),
-    ("GENERATE_XML", "YES"),
-    ("XML_PROGRAMLISTING", "NO"),
-    ("ENABLE_PREPROCESSING", "NO"),
-    ("CLASS_DIAGRAMS", "NO"),
-]
+DOXYGEN_SETTINGS = {
+    "OPTIMIZE_OUTPUT_JAVA": "YES",
+    "AUTOLINK_SUPPORT": "NO",
+    "IDL_PROPERTY_SUPPORT": "NO",
+    "EXCLUDE_PATTERNS": "*/web/*, CMakeLists.txt",
+    "VERBATIM_HEADERS": "NO",
+    "GENERATE_HTML": "NO",
+    "GENERATE_LATEX": "NO",
+    "GENERATE_XML": "YES",
+    "XML_PROGRAMLISTING": "NO",
+    "ENABLE_PREPROCESSING": "NO",
+    "CLASS_DIAGRAMS": "NO",
+}
 
 # extra doxygen setting for C repositories
-DOXYGEN_SETTINGS_C = [
+DOXYGEN_SETTINGS_C = {
     ("FILE_PATTERNS", "*.h, *.hpp"),
-]
+}
 
-DOXYGEN_SETTINGS_PYTHON = [
-    ("FILE_PATTERNS", "*.py"),
-]
+DOXYGEN_SETTINGS_PYTHON = {
+    "FILE_PATTERNS": "*.py",
+}
 
 KNOWN_PARAM_DATA_TYPES = [
     "String",
@@ -168,7 +170,7 @@ def modify_doxygen_options(doxygen_filename: str, options: dict):
             first_part = parts[0].strip()
             written = False
 
-            for key, value in options:
+            for key, value in options.items():
                 if first_part == key:
                     dfile.write(key + " = " + value + "\n")
                     written = True
@@ -1606,7 +1608,7 @@ def process_compounddef_eagle(compounddef: dict) -> list:
 
     :returns list of dictionaries
 
-    TODO: This should be split up.
+    TODO: This should be split up and make use of XPath expressions
     """
     result = []
     found_eagle_start = False
@@ -1882,3 +1884,65 @@ def cleanString(input_text: str) -> str:
     # ansi_escape = re.compile(r'[@-Z\\-_]|\[[0-?]*[ -/]*[@-~]')
     ansi_escape = re.compile(r"\[[0-?]*[ -/]*[@-~]")
     return ansi_escape.sub("", input_text)
+
+
+def process_doxygen(language: int = Language.PYTHON):
+    """
+    Run doxygen
+    """
+    # create a temp file to contain the Doxyfile
+    doxygen_file = tempfile.NamedTemporaryFile()
+    doxygen_filename = doxygen_file.name
+    doxygen_file.close()
+
+    # create a default Doxyfile
+    subprocess.call(
+        ["doxygen", "-g", doxygen_filename],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    logger.info(
+        "Wrote doxygen configuration file (Doxyfile) to " + doxygen_filename
+    )
+
+    # modify options in the Doxyfile
+    modify_doxygen_options(doxygen_filename, DOXYGEN_SETTINGS)
+
+    if language == Language.C:
+        modify_doxygen_options(doxygen_filename, DOXYGEN_SETTINGS_C)
+    elif language == Language.PYTHON:
+        modify_doxygen_options(doxygen_filename, DOXYGEN_SETTINGS_PYTHON)
+
+    # run doxygen
+    # os.system("doxygen " + doxygen_filename)
+    subprocess.call(
+        ["doxygen", doxygen_filename],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+
+
+def process_xml():
+    """
+    Run xsltproc
+    """
+    # run xsltproc
+    outdir = DOXYGEN_SETTINGS["OUTPUT_DIRECTORY"]
+    output_xml_filename = outdir + "/xml/doxygen.xml"
+
+    with open(output_xml_filename, "w") as outfile:
+        subprocess.call(
+            [
+                "xsltproc",
+                outdir + "/xml/combine.xslt",
+                outdir + "/xml/index.xml",
+            ],
+            stdout=outfile,
+            stderr=subprocess.DEVNULL,
+        )
+
+    # debug - copy output xml to local dir
+    # TODO: do this only if DEBUG is enabled
+    os.system("cp " + output_xml_filename + " output.xml")
+    logger.info("Wrote doxygen XML to output.xml")
+    return output_xml_filename

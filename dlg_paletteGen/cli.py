@@ -30,6 +30,8 @@ from dlg_paletteGen.base import (
     process_compounddef_default,
     process_compounddef_eagle,
     write_palette_json,
+    process_doxygen,
+    process_xml,
 )
 
 
@@ -73,7 +75,7 @@ def get_args():
     parser.add_argument(
         "-s",
         "--parse_all",
-        help="Try to parse non DAliuGE compliant functions and methods",
+        help="Parse non DAliuGE compliant functions and methods",
         action="store_true",
     )
     parser.add_argument(
@@ -94,10 +96,10 @@ def get_args():
         logger.setLevel(logging.DEBUG)
     logger.debug("DEBUG logging switched on")
     if args.recursive:
-        DOXYGEN_SETTINGS.append(("RECURSIVE", "YES"))
+        DOXYGEN_SETTINGS.update({"RECURSIVE": "YES"})
         logger.info("Recursive flag ON")
     else:
-        DOXYGEN_SETTINGS.append(("RECURSIVE", "NO"))
+        DOXYGEN_SETTINGS.update({"RECURSIVE": "NO"})
         logger.info("Recursive flag OFF")
     language = Language.C if args.c else Language.PYTHON
     return (
@@ -168,58 +170,12 @@ def main():  # pragma: no cover
     output_directory = tempfile.TemporaryDirectory()
 
     # add extra doxygen setting for input and output locations
-    DOXYGEN_SETTINGS.append(("PROJECT_NAME", os.environ.get("PROJECT_NAME")))
-    DOXYGEN_SETTINGS.append(("INPUT", inputdir))
-    DOXYGEN_SETTINGS.append(("OUTPUT_DIRECTORY", output_directory.name))
+    DOXYGEN_SETTINGS.update({"PROJECT_NAME": os.environ.get("PROJECT_NAME")})
+    DOXYGEN_SETTINGS.update({"INPUT": inputdir})
+    DOXYGEN_SETTINGS.update({"OUTPUT_DIRECTORY": output_directory.name})
 
-    # create a temp file to contain the Doxyfile
-    doxygen_file = tempfile.NamedTemporaryFile()
-    doxygen_filename = doxygen_file.name
-    doxygen_file.close()
-
-    # create a default Doxyfile
-    subprocess.call(
-        ["doxygen", "-g", doxygen_filename],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-    )
-    logger.info(
-        "Wrote doxygen configuration file (Doxyfile) to " + doxygen_filename
-    )
-
-    # modify options in the Doxyfile
-    modify_doxygen_options(doxygen_filename, DOXYGEN_SETTINGS)
-
-    if language == Language.C:
-        modify_doxygen_options(doxygen_filename, DOXYGEN_SETTINGS_C)
-    elif language == Language.PYTHON:
-        modify_doxygen_options(doxygen_filename, DOXYGEN_SETTINGS_PYTHON)
-
-    # run doxygen
-    # os.system("doxygen " + doxygen_filename)
-    subprocess.call(
-        ["doxygen", doxygen_filename],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-    )
-
-    # run xsltproc
-    output_xml_filename = output_directory.name + "/xml/doxygen.xml"
-
-    with open(output_xml_filename, "w") as outfile:
-        subprocess.call(
-            [
-                "xsltproc",
-                output_directory.name + "/xml/combine.xslt",
-                output_directory.name + "/xml/index.xml",
-            ],
-            stdout=outfile,
-            stderr=subprocess.DEVNULL,
-        )
-
-    # debug - copy output xml to local dir
-    os.system("cp " + output_xml_filename + " output.xml")
-    logger.info("Wrote doxygen XML to output.xml")
+    process_doxygen(language=language)
+    output_xml_filename = process_xml()
 
     # get environment variables
     gitrepo = os.environ.get("GIT_REPO")
