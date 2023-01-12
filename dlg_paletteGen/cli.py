@@ -13,9 +13,6 @@ import os
 import subprocess
 import sys
 import tempfile
-import xml.etree.ElementTree as ET
-
-from blockdag import build_block_dag
 
 # isort: ignore
 from dlg_paletteGen.base import (
@@ -32,6 +29,8 @@ from dlg_paletteGen.base import (
     write_palette_json,
     process_doxygen,
     process_xml,
+    process_compounddefs,
+    prepare_and_write_palette,
 )
 
 
@@ -181,67 +180,9 @@ def main():  # pragma: no cover
     gitrepo = os.environ.get("GIT_REPO")
     version = os.environ.get("PROJECT_VERSION")
 
-    # init nodes array
-    nodes = []
-
-    # load the input xml file
-    tree = ET.parse(output_xml_filename)
-    xml_root = tree.getroot()
-
-    for compounddef in xml_root:
-
-        # debug - we need to determine this correctly
-        is_eagle_node = False
-
-        if is_eagle_node or not allow_missing_eagle_start:
-            params = process_compounddef_eagle(compounddef)
-
-            ns = params_to_nodes(params)
-            nodes.extend(ns)
-
-        else:  # not eagle node
-            logger.info("Handling compound: %s", compounddef)
-            # ET.tostring(compounddef, encoding="unicode"),
-            # )
-            functions = process_compounddef_default(compounddef, language)
-            functions = functions[0] if len(functions) > 0 else functions
-            logger.debug("Number of functions in compound: %d", len(functions))
-            for f in functions:
-                f_name = [
-                    k["value"] for k in f["params"] if k["key"] == "text"
-                ]
-                logger.debug("Function names: %s", f_name)
-                if f_name == [".Unknown"]:
-                    continue
-
-                ns = params_to_nodes(f["params"])
-
-                for n in ns:
-                    alreadyPresent = False
-                    for node in nodes:
-                        if node["text"] == n["text"]:
-                            alreadyPresent = True
-
-                    # print("component " + n["text"] + " alreadyPresent " +
-                    # str(alreadyPresent))
-
-                    if alreadyPresent:
-                        # TODO: Originally this was suppressed, but in reality
-                        # multiple functions with the same name are possible
-                        logger.warning(
-                            "Function has multiple entires: %s", n["text"]
-                        )
-                    nodes.append(n)
-
-    # add signature for whole palette using BlockDAG
-    vertices = {}
-    for i in range(len(nodes)):
-        vertices[i] = nodes[i]
-    block_dag = build_block_dag(vertices, [], data_fields=BLOCKDAG_DATA_FIELDS)
-
-    # write the output json file
-    write_palette_json(outputfile, nodes, gitrepo, version, block_dag)
-    logger.info("Wrote " + str(len(nodes)) + " component(s)")
-
+    nodes = process_compounddefs(
+        output_xml_filename, allow_missing_eagle_start, language
+    )
+    prepare_and_write_palette(nodes, outputfile)
     # cleanup the output directory
     output_directory.cleanup()

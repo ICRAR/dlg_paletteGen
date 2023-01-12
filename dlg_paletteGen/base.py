@@ -19,8 +19,9 @@ import subprocess
 import tempfile
 from enum import Enum
 from typing import Union
+import xml.etree.ElementTree as ET
+from blockdag import build_block_dag
 
-# import xml.etree.ElementTree as ET
 
 NAME = "dlg_paletteGen"
 
@@ -147,6 +148,18 @@ class Language(Enum):
     UNKNOWN = 0
     C = 1
     PYTHON = 2
+
+
+def _check_text_element(xml_element: ET.Element, sub_element: str):
+    """
+    Check a xml_element for the existence of sub_element and return
+    it's text content.
+    """
+    sub = xml_element.find(sub_element)
+    try:
+        return sub.text
+    except AttributeError:
+        return "Unknown"
 
 
 def modify_doxygen_options(doxygen_filename: str, options: dict):
@@ -1556,6 +1569,84 @@ class Child:
         return member
 
 
+def process_compounddefs(
+    output_xml_filename: str,
+    allow_missing_eagle_start: bool = True,
+    language: int = Language.PYTHON,
+):
+    """
+    Extract and process the compounddef elements
+    """
+    # load and parse the input xml file
+    tree = ET.parse(output_xml_filename)
+
+    xml_root = tree.getroot()
+    # init nodes array
+    nodes = []
+    compounds = xml_root.findall("./compounddef")
+    for compounddef in compounds:
+
+        # are we processing an EAGLE component?
+        eagle_tags = compounddef.findall(
+            "./detaileddescription/para/simplesect/title"
+        )
+        is_eagle_node = False
+        if (
+            len(eagle_tags) == 2
+            and eagle_tags[0].text == "EAGLE_START"
+            and eagle_tags[1].text == "EAGLE_END"
+        ):
+            is_eagle_node = True
+        compoundname = _check_text_element(compounddef, "./compoundname")
+        brief = _check_text_element(compounddef, "./briefdescription/para")
+
+        if is_eagle_node:
+            params = process_compounddef_eagle(compounddef)
+
+            ns = params_to_nodes(params)
+            nodes.extend(ns)
+
+        if not is_eagle_node and allow_missing_eagle_start:  # not eagle node
+            logger.info("Handling compound: %s", compoundname)
+            # ET.tostring(compounddef, encoding="unicode"),
+            # )
+            functions = process_compounddef_default(compounddef, language)
+            functions = functions[0] if len(functions) > 0 else functions
+            logger.debug("Number of functions in compound: %d", len(functions))
+            for f in functions:
+                f_name = [
+                    k["value"] for k in f["params"] if k["key"] == "text"
+                ]
+                logger.debug("Function names: %s", f_name)
+                if f_name == [".Unknown"]:
+                    continue
+
+                ns = params_to_nodes(f["params"])
+
+                for n in ns:
+                    alreadyPresent = False
+                    for node in nodes:
+                        if node["text"] == n["text"]:
+                            alreadyPresent = True
+
+                    # print("component " + n["text"] + " alreadyPresent " +
+                    # str(alreadyPresent))
+
+                    if alreadyPresent:
+                        # TODO: Originally this was suppressed, but in reality
+                        # multiple functions with the same name are possible
+                        logger.warning(
+                            "Function has multiple entires: %s", n["text"]
+                        )
+                    nodes.append(n)
+        if not is_eagle_node and not allow_missing_eagle_start:
+            logger.warning(
+                "None EAGLE tagged component '%s' identified. Not parsing it due to setting",
+                compoundname,
+            )
+    return nodes
+
+
 def process_compounddef_default(compounddef, language):
     """
     Process a compound definition
@@ -1946,3 +2037,18 @@ def process_xml():
     os.system("cp " + output_xml_filename + " output.xml")
     logger.info("Wrote doxygen XML to output.xml")
     return output_xml_filename
+
+
+def prepare_and_write_palette(nodes: list, outputfile: str):
+    """
+    Prepare and write the palette in JSON format
+    """
+    # add signature for whole palette using BlockDAG
+    vertices = {}
+    for i in range(len(nodes)):
+        vertices[i] = nodes[i]
+    block_dag = build_block_dag(vertices, [], data_fields=BLOCKDAG_DATA_FIELDS)
+
+    # write the output json file
+    write_palette_json(outputfile, nodes, gitrepo, version, block_dag)
+    logger.info("Wrote " + str(len(nodes)) + " component(s)")
