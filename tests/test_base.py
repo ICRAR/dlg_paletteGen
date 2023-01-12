@@ -178,7 +178,7 @@ def test_CLI_run_casatask(tmpdir: str, shared_datadir: str):
     logging.info("path: %s", input)
     output = tmpdir + "t.palette"
     p = start_process(
-        ("-r", input, output),
+        ("-rs", input, output),
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
     )

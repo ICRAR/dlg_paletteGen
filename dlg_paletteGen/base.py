@@ -19,7 +19,7 @@ import types
 import uuid
 import xml.etree.ElementTree as ET
 from enum import Enum
-from typing import Union, Any
+from typing import Any, Union
 
 from blockdag import build_block_dag
 
@@ -67,9 +67,6 @@ next_key = -1
 # NOTE: not sure if all of these are actually required
 #       make sure to retrieve some of these from environment variables
 
-gitrepo = os.environ.get("GIT_REPO")
-version = os.environ.get("PROJECT_VERSION")
-
 
 DOXYGEN_SETTINGS = {
     "OPTIMIZE_OUTPUT_JAVA": "YES",
@@ -87,7 +84,7 @@ DOXYGEN_SETTINGS = {
 
 # extra doxygen setting for C repositories
 DOXYGEN_SETTINGS_C = {
-    ("FILE_PATTERNS", "*.h, *.hpp"),
+    "FILE_PATTERNS": "*.h, *.hpp",
 }
 
 DOXYGEN_SETTINGS_PYTHON = {
@@ -158,10 +155,10 @@ def _check_text_element(xml_element: ET.Element, sub_element: str):
     text = ""
     sub = xml_element.find(sub_element)
     try:
-        text += sub.text
+        text += sub.text  # type: ignore
     except (AttributeError, TypeError):
         text = "Unknown"
-    return text  # type: ignore
+    return text
 
 
 def modify_doxygen_options(doxygen_filename: str, options: dict):
@@ -405,7 +402,7 @@ def create_field(
 
 def alert_if_missing(message: str, fields: list, internal_name: str):
     """
-    Produce a warning message using <text> if a field with <internal_name>
+    Produce a warning message using `text` if a field with `internal_name`
     does not exist.
 
     :param message: str, message text to be used
@@ -668,6 +665,8 @@ def create_palette_node_from_params(params) -> tuple:
     # category
     _check_required_fields_for_category(text, fields, category)
     # create and return the node
+    GITREPO = os.environ.get("GIT_REPO")
+    VERSION = os.environ.get("PROJECT_VERSION")
     return (
         {"tag": tag, "construct": construct},
         {
@@ -693,8 +692,8 @@ def create_palette_node_from_params(params) -> tuple:
             "outputAppFields": [],
             "fields": fields,
             "applicationArgs": applicationArgs,
-            "repositoryUrl": gitrepo,
-            "commitHash": version,
+            "repositoryUrl": GITREPO,
+            "commitHash": VERSION,
             "paletteDownloadUrl": "",
             "dataHash": "",
         },
@@ -837,7 +836,7 @@ class DetailedDescription:
     """
 
     KNOWN_FORMATS = {
-        "rEST": r"\n:param .*",
+        "rEST": r"\n(:param|:returns) .*",
         "Google": r"\nArgs:",
         "Numpy": r"\nParameters\n----------",
         "casa": r"\n-{2,20}? parameter",
@@ -1123,7 +1122,7 @@ class GreatGrandChild:
 
     def __init__(
         self,
-        ggchild: dict = {},
+        ggchild: ET.Element = ET.Element("dummy"),
         func_name: str = "Unknown",
         return_type: str = "Unknown",
         parent_member: Union["Child", None] = None,
@@ -1148,7 +1147,7 @@ class GreatGrandChild:
             self.member = {"params": []}
 
     def process_GreatGrandChild(
-        self, ggchild: dict, parent_member: Union["Child", None] = None
+        self, ggchild: ET.Element, parent_member: Union["Child", None] = None
     ):
         """
         Process GreatGrandChild
@@ -1230,19 +1229,19 @@ class GreatGrandChild:
 
             for gggchild in ggchild:
                 if gggchild.tag == "type":
-                    value_type = gggchild.text
+                    value_type = gggchild.text  # type:ignore
                     if value_type not in VALUE_TYPES.values():
                         value_type = f"Object.{value_type}"
                     # also look at children with ref tag
                     for ggggchild in gggchild:
                         if ggggchild.tag == "ref":
-                            value_type = ggggchild.text
+                            value_type = ggggchild.text  # type:ignore
                 if gggchild.tag == "declname":
-                    name = gggchild.text
+                    name = gggchild.text  # type:ignore
                 if gggchild.tag == "defname":
-                    name = gggchild.text
+                    name = gggchild.text  # type:ignore
                 if gggchild.tag == "defval":
-                    default_value = gggchild.text
+                    default_value = gggchild.text  # type:ignore
             if (
                 name in self.member["params"]
                 and "type" in self.member["params"][name]
@@ -1388,13 +1387,16 @@ class GreatGrandChild:
 
 class Child:
     def __init__(
-        self, child: dict, language: str, parent: Union["Child", None] = None
+        self,
+        child: ET.Element,
+        language: Language,
+        parent: Union["Child", None] = None,
     ):
         """
         Private function to process a child element.
 
         :param child: dict, the parsed child element from XML
-        :param language, str, hint to the coding language used
+        :param language,
         :param parent, Child, parent object or None
         """
         members = []
@@ -1425,8 +1427,8 @@ class Child:
             #       module and this is just a dirty workaround rather than
             #        a fix probably need to add a plain C parser.
             dStr = child[0][0].text if len(child[0]) > 0 else child[0]
-            self.description = dStr
-            ddO = DetailedDescription(dStr)
+            self.description = dStr  # type: ignore
+            ddO = DetailedDescription(dStr)  # type: ignore
             self.format = ddO.format
             if self.format == "casa":
                 self.casa_mode = True
@@ -1463,8 +1465,8 @@ class Child:
 
     def _process_grandchild(
         self,
-        gchild: dict,
-        language: str,
+        gchild: ET.Element,
+        language: Language,
         # parent: Union["Child", None] = None,
     ) -> Union[dict, None]:
         """
@@ -1575,9 +1577,17 @@ def process_compounddefs(
     output_xml_filename: str,
     allow_missing_eagle_start: bool = True,
     language: Language = Language.PYTHON,
-):
+) -> list:
     """
-    Extract and process the compounddef elements
+    Extract and process the compounddef elements.
+
+    :param output_xml_filename: str, File name for the XML file produced by
+        doxygen
+    :param allow_missing_eagle_start: bool, Treat non-daliuge tagged classes
+        and functions
+    :param language: Language, can be [2] for Python, 1 for C or 0 for Unknown
+
+    :returns nodes
     """
     # load and parse the input xml file
     tree = ET.parse(output_xml_filename)
@@ -1601,7 +1611,7 @@ def process_compounddefs(
             is_eagle_node = True
         compoundname = _check_text_element(compounddef, "./compoundname")
         kind = compounddef.attrib["kind"]
-        if kind not in ["class", "function"]:
+        if kind not in ["class", "namespace"]:
             # we'll ignore this compound
             continue
 
@@ -1654,12 +1664,14 @@ def process_compounddefs(
     return nodes
 
 
-def process_compounddef_default(compounddef, language):
+def process_compounddef_default(
+    compounddef: ET.Element, language: Language
+) -> list:
     """
     Process a compound definition
 
     :param compounddef: list of children of compounddef
-    :param language: int
+    :param language: Language, can be [2] for Python, 1 for C or 0 for Unknown
     """
     result = []
 
@@ -1709,7 +1721,6 @@ def process_compounddef_eagle(compounddef: Union[ET.Element, Any]) -> list:
     TODO: This should be split up and make use of XPath expressions
     """
     result = []
-    found_eagle_start = False
 
     # get child of compounddef called "briefdescription"
     briefdescription = None
@@ -1743,7 +1754,7 @@ def process_compounddef_eagle(compounddef: Union[ET.Element, Any]) -> list:
         para = detaileddescription.findall("./para")  # get para elements
         description = _check_text_element(para[0], ".")
         para = para[-1]
-        if description != None:
+        if description is not None:
             result.append(
                 {
                     "key": "description",
@@ -1757,17 +1768,14 @@ def process_compounddef_eagle(compounddef: Union[ET.Element, Any]) -> list:
         return result
 
     # find parameterlist child of para
-    parameterlist = None
-    for pchild in para:
-        if pchild.tag == "parameterlist":
-            parameterlist = pchild
-            break
+    parameterlist = para.find("./parameterlist")  # type: ignore
 
     # check that we found a parameterlist
     if parameterlist is None:
         return result
 
     # read the parameters from the parameter list
+    # TODO: refactor this as well
     for parameteritem in parameterlist:
         key = None
         direction = None
@@ -1859,6 +1867,8 @@ def create_construct_node(node_type: str, node: dict) -> dict:
         ]
     else:
         add_fields = []  # don't add anything at this point.
+    GITREPO = os.environ.get("GIT_REPO")
+    VERSION = os.environ.get("PROJECT_VERSION")
 
     construct_node = {
         "category": node_type,
@@ -1869,8 +1879,8 @@ def create_construct_node(node_type: str, node: dict) -> dict:
         + " component.",
         "fields": add_fields,
         "applicationArgs": [],
-        "repositoryUrl": gitrepo,
-        "commitHash": version,
+        "repositoryUrl": GITREPO,
+        "commitHash": VERSION,
         "paletteDownloadUrl": "",
         "dataHash": "",
         "key": get_next_key(),
@@ -1904,18 +1914,33 @@ def params_to_nodes(params: list) -> list:
     """
     Generate a list of nodes from the params found
 
-    :param params: dict, the parameters to be converted
+    :param params: list, the parameters to be converted
 
     :returns list of node dictionaries
     """
     # logger.debug("params_to_nodes: %s", params)
     result = []
     tag = ""
+    gitrepo = ""
+    version = "0.1"
 
     # if no params were found, or only the name and description were found,
     # then don't bother creating a node
     if len(params) > 2:
         # create a node
+
+        # check if gitrepo and version params were found and cache the values
+        # TODO: This seems unneccessary remove?
+        for param in params:
+            logger.debug("param: %s", param)
+            if not param:
+                continue
+            key, value = (param["key"], param["value"])
+            if key == "gitrepo":
+                gitrepo = value
+            elif key == "version":
+                version = value
+
         data, node = create_palette_node_from_params(params)
 
         # if the node tag matches the command line tag, or no tag was specified
@@ -1933,18 +1958,9 @@ def params_to_nodes(params: list) -> list:
                     + node["text"]
                 )
                 construct_node = create_construct_node(data["construct"], node)
+                construct_node["repositoryUrl"] = gitrepo
+                construct_node["commitHash"] = version
                 result.append(construct_node)
-
-    # check if gitrepo and version params were found and cache the values
-    # TODO: This seems unneccessary remove?
-    # for param in params:
-    #     key = param["key"]
-    #     value = param["value"]
-
-    #     if key == "gitrepo":
-    #         gitrepo = value
-    #     elif key == "version":
-    #         version = value
 
     return result
 
@@ -1962,9 +1978,11 @@ def cleanString(input_text: str) -> str:
     return ansi_escape.sub("", input_text)
 
 
-def process_doxygen(language: int = Language.PYTHON):
+def process_doxygen(language: Language = Language.PYTHON):
     """
-    Run doxygen
+    Run doxygen on the provided directory/file.
+
+    :param language: Language, can be [2] for Python, 1 for C or 0 for Unknown
     """
     # create a temp file to contain the Doxyfile
     doxygen_file = tempfile.NamedTemporaryFile()
@@ -1998,9 +2016,11 @@ def process_doxygen(language: int = Language.PYTHON):
     )
 
 
-def process_xml():
+def process_xml() -> str:
     """
-    Run xsltproc
+    Run xsltproc on the output produced by doxygen.
+
+    :returns output_xml_filename: str
     """
     # run xsltproc
     outdir = DOXYGEN_SETTINGS["OUTPUT_DIRECTORY"]
@@ -2026,14 +2046,22 @@ def process_xml():
 
 def prepare_and_write_palette(nodes: list, outputfile: str):
     """
-    Prepare and write the palette in JSON format
+    Prepare and write the palette in JSON format.
+
+    :param nodes: the list of nodes
+    :param outputfile: the name of the outputfile
     """
     # add signature for whole palette using BlockDAG
     vertices = {}
+    GITREPO = os.environ.get("GIT_REPO")
+    VERSION = os.environ.get("PROJECT_VERSION")
+
     for i in range(len(nodes)):
         vertices[i] = nodes[i]
     block_dag = build_block_dag(vertices, [], data_fields=BLOCKDAG_DATA_FIELDS)
 
     # write the output json file
-    write_palette_json(outputfile, nodes, gitrepo, version, block_dag)
+    write_palette_json(
+        outputfile, nodes, GITREPO, VERSION, block_dag  # type: ignore
+    )
     logger.info("Wrote " + str(len(nodes)) + " component(s)")
