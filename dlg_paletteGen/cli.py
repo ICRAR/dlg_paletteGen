@@ -10,27 +10,18 @@ https://daliuge.readthedocs.io/en/latest/development/app_development/eagle_app_i
 import argparse
 import logging
 import os
-import subprocess
 import sys
 import tempfile
 
 # isort: ignore
 from dlg_paletteGen.base import (
-    BLOCKDAG_DATA_FIELDS,
     DOXYGEN_SETTINGS,
-    DOXYGEN_SETTINGS_C,
-    DOXYGEN_SETTINGS_PYTHON,
     Language,
     logger,
-    modify_doxygen_options,
-    params_to_nodes,
-    process_compounddef_default,
-    process_compounddef_eagle,
-    write_palette_json,
+    prepare_and_write_palette,
+    process_compounddefs,
     process_doxygen,
     process_xml,
-    process_compounddefs,
-    prepare_and_write_palette,
 )
 
 
@@ -177,8 +168,8 @@ def main():  # pragma: no cover
     output_xml_filename = process_xml()
 
     # get environment variables
-    gitrepo = os.environ.get("GIT_REPO")
-    version = os.environ.get("PROJECT_VERSION")
+    # gitrepo = os.environ.get("GIT_REPO")
+    # version = os.environ.get("PROJECT_VERSION")
 
     nodes = process_compounddefs(
         output_xml_filename, allow_missing_eagle_start, language

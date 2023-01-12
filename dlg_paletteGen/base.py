@@ -13,15 +13,15 @@ import logging
 import os
 import random
 import re
-import types
-import uuid
 import subprocess
 import tempfile
-from enum import Enum
-from typing import Union
+import types
+import uuid
 import xml.etree.ElementTree as ET
-from blockdag import build_block_dag
+from enum import Enum
+from typing import Union, Any
 
+from blockdag import build_block_dag
 
 NAME = "dlg_paletteGen"
 
@@ -152,14 +152,16 @@ class Language(Enum):
 
 def _check_text_element(xml_element: ET.Element, sub_element: str):
     """
-    Check a xml_element for the existence of sub_element and return
-    it's text content.
+    Check a xml_element for the first occurance of sub_elements and return
+    the joined text content of them.
     """
+    text = ""
     sub = xml_element.find(sub_element)
     try:
-        return sub.text
-    except AttributeError:
-        return "Unknown"
+        text += sub.text
+    except (AttributeError, TypeError):
+        text = "Unknown"
+    return text  # type: ignore
 
 
 def modify_doxygen_options(doxygen_filename: str, options: dict):
@@ -1572,7 +1574,7 @@ class Child:
 def process_compounddefs(
     output_xml_filename: str,
     allow_missing_eagle_start: bool = True,
-    language: int = Language.PYTHON,
+    language: Language = Language.PYTHON,
 ):
     """
     Extract and process the compounddef elements
@@ -1598,7 +1600,10 @@ def process_compounddefs(
         ):
             is_eagle_node = True
         compoundname = _check_text_element(compounddef, "./compoundname")
-        brief = _check_text_element(compounddef, "./briefdescription/para")
+        kind = compounddef.attrib["kind"]
+        if kind not in ["class", "function"]:
+            # we'll ignore this compound
+            continue
 
         if is_eagle_node:
             params = process_compounddef_eagle(compounddef)
@@ -1641,7 +1646,9 @@ def process_compounddefs(
                     nodes.append(n)
         if not is_eagle_node and not allow_missing_eagle_start:
             logger.warning(
-                "None EAGLE tagged component '%s' identified. Not parsing it due to setting",
+                "None EAGLE tagged component '%s' identified. "
+                + "Not parsing it due to setting. "
+                + "Consider using the -s flag.",
                 compoundname,
             )
     return nodes
@@ -1690,7 +1697,7 @@ def process_compounddef_default(compounddef, language):
     return result
 
 
-def process_compounddef_eagle(compounddef: dict) -> list:
+def process_compounddef_eagle(compounddef: Union[ET.Element, Any]) -> list:
     """
     Interpret a compound definition element.
 
@@ -1726,34 +1733,17 @@ def process_compounddef_eagle(compounddef: dict) -> list:
                 )
 
     # get child of compounddef called "detaileddescription"
-    detaileddescription = None
-    for child in compounddef:
-        if child.tag == "detaileddescription":
-            detaileddescription = child
-            break
+    detaileddescription = compounddef.find("./detaileddescription")
 
     # check that detailed description was found
     if detaileddescription is not None:
 
-        # search children of detaileddescription node for a para node with
-        # "simplesect" children, who have "title" children with text
-        # "EAGLE_START" and "EAGLE_END"
-        para = None
-        description = ""
-        for ddchild in detaileddescription:
-            if ddchild.tag == "para":
-                if ddchild.text is not None:
-                    description += ddchild.text + "\n"
-                for pchild in ddchild:
-                    if pchild.tag == "simplesect":
-                        for sschild in pchild:
-                            if sschild.tag == "title":
-                                if sschild.text.strip() == "EAGLE_START":
-                                    found_eagle_start = True
+        # We know already that this is an EGALE node
 
-                        para = ddchild
-        # add description
-        if description != "":
+        para = detaileddescription.findall("./para")  # get para elements
+        description = _check_text_element(para[0], ".")
+        para = para[-1]
+        if description != None:
             result.append(
                 {
                     "key": "description",
@@ -1761,11 +1751,6 @@ def process_compounddef_eagle(compounddef: dict) -> list:
                     "value": description.strip(),
                 }
             )
-
-    # check that we found an EAGLE_START, otherwise this is just regular
-    # doxygen, skip it
-    if not found_eagle_start:
-        return []
 
     # check that we found the correct para
     if para is None:
@@ -1915,7 +1900,7 @@ def create_construct_node(node_type: str, node: dict) -> dict:
     return construct_node
 
 
-def params_to_nodes(params: dict) -> list:
+def params_to_nodes(params: list) -> list:
     """
     Generate a list of nodes from the params found
 
