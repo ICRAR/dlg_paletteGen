@@ -87,7 +87,7 @@ def create_port(
                        types)
     :param description: str, short description of the port
 
-    :return dict: {
+    :returns dict: {
                     'Id':uuid,
                     'IdText': internal_name,
                     'text': external_name,
@@ -133,15 +133,17 @@ def find_field_by_name(fields, name):
     return None
 
 
-def check_required_fields_for_category(text: str, fields: list, category: str):
+def check_required_fields_for_category(message: str, fields: list, catg: str):
     """
-    Check if fields have mandatory content and alert with <text> if not.
+    Check if fields have mandatory content and alert with text if not.
 
-    :param text: str, the text to be used for the alert
+    :param message: str, the text to be used for the alert
     :param fields: list of field dicts to be checked
-    :param category: str, category to be checked
+    :param catg: str, category to be checked
+
+    :returns None
     """
-    if category in [
+    if catg in [
         "DynlibApp",
         "PythonApp",
         "Branch",
@@ -149,25 +151,25 @@ def check_required_fields_for_category(text: str, fields: list, category: str):
         "Mpi",
         "Docker",
     ]:
-        alert_if_missing(text, fields, "execution_time")
-        alert_if_missing(text, fields, "num_cpus")
+        alert_if_missing(message, fields, "execution_time")
+        alert_if_missing(message, fields, "num_cpus")
 
-    if category in [
+    if catg in [
         "DynlibApp",
         "PythonApp",
         "Branch",
         "BashShellApp",
         "Docker",
     ]:
-        alert_if_missing(text, fields, "group_start")
+        alert_if_missing(message, fields, "group_start")
 
-    if category == "DynlibApp":
-        alert_if_missing(text, fields, "libpath")
+    if catg == "DynlibApp":
+        alert_if_missing(message, fields, "libpath")
 
-    if category in ["PythonApp", "Branch"]:
-        alert_if_missing(text, fields, "appclass")
+    if catg in ["PythonApp", "Branch"]:
+        alert_if_missing(message, fields, "appclass")
 
-    if category in [
+    if catg in [
         "File",
         "Memory",
         "NGAS",
@@ -176,9 +178,9 @@ def check_required_fields_for_category(text: str, fields: list, category: str):
         "PlasmaFlight",
         "S3",
     ]:
-        alert_if_missing(text, fields, "data_volume")
+        alert_if_missing(message, fields, "data_volume")
 
-    if category in [
+    if catg in [
         "File",
         "Memory",
         "NGAS",
@@ -188,14 +190,14 @@ def check_required_fields_for_category(text: str, fields: list, category: str):
         "S3",
         "Mpi",
     ]:
-        alert_if_missing(text, fields, "group_end")
+        alert_if_missing(message, fields, "group_end")
 
-    if category in ["BashShellApp", "Mpi", "Docker", "Singularity"]:
-        alert_if_missing(text, fields, "input_redirection")
-        alert_if_missing(text, fields, "output_redirection")
-        alert_if_missing(text, fields, "command_line_arguments")
-        alert_if_missing(text, fields, "paramValueSeparator")
-        alert_if_missing(text, fields, "argumentPrefix")
+    if catg in ["BashShellApp", "Mpi", "Docker", "Singularity"]:
+        alert_if_missing(message, fields, "input_redirection")
+        alert_if_missing(message, fields, "output_redirection")
+        alert_if_missing(message, fields, "command_line_arguments")
+        alert_if_missing(message, fields, "paramValueSeparator")
+        alert_if_missing(message, fields, "argumentPrefix")
 
 
 def create_field(
