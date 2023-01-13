@@ -4,7 +4,7 @@ It processes a file or a directory of source files and
 produces a DALiuGE compatible palette file containing the
 information required to use functions and components in graphs.
 For more information please refer to the documentation
-https://daliuge.readthedocs.io/en/latest/development/app_development/eagle_app_integration.html#automatic-eagle-palette-generation
+https://icrar.github.io/dlg_paletteGen/
 
 """
 import argparse
