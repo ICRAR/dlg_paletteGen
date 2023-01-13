@@ -15,11 +15,13 @@ import tempfile
 
 # isort: ignore
 from dlg_paletteGen.base import (
-    DOXYGEN_SETTINGS,
     Language,
     logger,
     prepare_and_write_palette,
     process_compounddefs,
+)
+from dlg_paletteGen.support_functions import (
+    DOXYGEN_SETTINGS,
     process_doxygen,
     process_xml,
 )
