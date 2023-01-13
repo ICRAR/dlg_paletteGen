@@ -4,6 +4,21 @@ Changelog
 
 (unreleased)
 ------------
+- Release: version 0.1.6 🚀 [Andreas Wicenec]
+- Merge pull request #2 from ICRAR/dgen-1. [awicenec]
+
+  Dgen 1
+- Install wheel package. [Andreas Wicenec]
+- Big refactoring. [Andreas Wicenec]
+- Fixed lint and test. [Andreas Wicenec]
+- Mostly done now. [Andreas Wicenec]
+- Use XPath to process compounddefs. [Andreas Wicenec]
+- Started re-factoring for usage a XPath. [Andreas Wicenec]
+
+
+0.1.6 (2023-01-13)
+------------------
+- Release: version 0.1.6 🚀 [Andreas Wicenec]
 - Release: version 0.1.5 🚀 [Andreas Wicenec]
 - Fixed issue with missing constructs default params. [Andreas Wicenec]
 
