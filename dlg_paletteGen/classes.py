@@ -19,7 +19,7 @@ class DetailedDescription:
     """
 
     KNOWN_FORMATS = {
-        "rEST": r"\n(:param|:returns) .*",
+        "rEST": r"\n(:param|:returns|Returns:) .*",
         "Google": r"\nArgs:",
         "Numpy": r"\nParameters\n----------",
         "casa": r"\n-{2,20}? parameter",

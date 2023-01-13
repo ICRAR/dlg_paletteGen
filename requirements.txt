@@ -1,3 +1,4 @@
 blockdag
 docstring_parser
 wheel
+types-setuptools
