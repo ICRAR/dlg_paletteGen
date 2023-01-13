@@ -4,6 +4,7 @@ Changelog
 
 (unreleased)
 ------------
+- Release: version 0.1.5 🚀 [Andreas Wicenec]
 - Fixed issue with missing constructs default params. [Andreas Wicenec]
 
 
