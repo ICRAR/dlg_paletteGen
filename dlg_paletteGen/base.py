@@ -36,6 +36,7 @@ KNOWN_PARAM_DATA_TYPES = [
     "Python",
 ]
 KNOWN_CONSTRUCT_TYPES = ["Scatter", "Gather"]
+
 KNOWN_DATA_CATEGORIES = [
     "File",
     "Memory",
