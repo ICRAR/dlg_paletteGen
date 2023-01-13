@@ -6,90 +6,24 @@ TODO: This whole tool needs re-factoring into separate class files
 Should also be made separate sub-repo with proper installation and entry point.
 
 """
-import ast
 import csv
 import json
-import logging
 import os
-import random
-import re
-import types
-import uuid
-from enum import Enum
-from typing import Union
+import xml.etree.ElementTree as ET
+from typing import Any, Union
 
-# import xml.etree.ElementTree as ET
+from blockdag import build_block_dag
+
+from dlg_paletteGen.classes import Child
+from dlg_paletteGen.support_functions import (
+    Language,
+    check_text_element,
+    create_uuid,
+    get_next_key,
+    logger,
+)
 
 NAME = "dlg_paletteGen"
-
-
-class CustomFormatter(logging.Formatter):
-
-    high = "\x1b[34;1m"
-    grey = "\x1b[38;20m"
-    yellow = "\x1b[33;20m"
-    red = "\x1b[31;20m"
-    bold_red = "\x1b[31;1m"
-    reset = "\x1b[0m"
-    base_format = (
-        "%(asctime)s - %(name)s - %(levelname)s - %(message)s "
-        + "(%(filename)s:%(lineno)d)"
-    )
-
-    FORMATS = {
-        logging.DEBUG: high + base_format + reset,
-        logging.INFO: grey + base_format + reset,
-        logging.WARNING: yellow + base_format + reset,
-        logging.ERROR: red + base_format + reset,
-        logging.CRITICAL: bold_red + base_format + reset,
-    }
-
-    def format(self, record):
-        log_fmt = self.FORMATS.get(record.levelno)
-        formatter = logging.Formatter(log_fmt, "%Y-%m-%dT%H:%M:%S")
-        return formatter.format(record)
-
-
-# create console handler with a higher log level
-ch = logging.StreamHandler()
-ch.setLevel(logging.DEBUG)
-
-ch.setFormatter(CustomFormatter())
-
-logger = logging.getLogger(__name__)
-logger.addHandler(ch)
-
-next_key = -1
-
-# NOTE: not sure if all of these are actually required
-#       make sure to retrieve some of these from environment variables
-
-gitrepo = os.environ.get("GIT_REPO")
-version = os.environ.get("PROJECT_VERSION")
-
-
-DOXYGEN_SETTINGS = [
-    ("OPTIMIZE_OUTPUT_JAVA", "YES"),
-    ("AUTOLINK_SUPPORT", "NO"),
-    ("IDL_PROPERTY_SUPPORT", "NO"),
-    ("EXCLUDE_PATTERNS", "*/web/*, CMakeLists.txt"),
-    ("VERBATIM_HEADERS", "NO"),
-    ("GENERATE_HTML", "NO"),
-    ("GENERATE_LATEX", "NO"),
-    ("GENERATE_XML", "YES"),
-    ("XML_PROGRAMLISTING", "NO"),
-    ("ENABLE_PREPROCESSING", "NO"),
-    ("CLASS_DIAGRAMS", "NO"),
-]
-
-# extra doxygen setting for C repositories
-DOXYGEN_SETTINGS_C = [
-    ("FILE_PATTERNS", "*.h, *.hpp"),
-]
-
-DOXYGEN_SETTINGS_PYTHON = [
-    ("FILE_PATTERNS", "*.py"),
-]
 
 KNOWN_PARAM_DATA_TYPES = [
     "String",
@@ -122,16 +56,6 @@ KNOWN_FIELD_TYPES = [
     "OutputPort",
 ]
 
-VALUE_TYPES = {
-    str: "String",
-    int: "Integer",
-    float: "Float",
-    bool: "Boolean",
-    list: "Json",
-    dict: "Json",
-    tuple: "Json",
-}
-
 BLOCKDAG_DATA_FIELDS = [
     "inputPorts",
     "outputPorts",
@@ -139,70 +63,6 @@ BLOCKDAG_DATA_FIELDS = [
     "category",
     "fields",
 ]
-
-
-class Language(Enum):
-    UNKNOWN = 0
-    C = 1
-    PYTHON = 2
-
-
-def modify_doxygen_options(doxygen_filename: str, options: dict):
-    """
-    Updates default doxygen config for this task
-
-    :param doxygen_filename: str, the file name of the config file
-    :param options: dict, dictionary of the options to be modified
-    """
-    with open(doxygen_filename, "r") as dfile:
-        contents = dfile.readlines()
-
-    with open(doxygen_filename, "w") as dfile:
-        for index, line in enumerate(contents):
-            if line[0] == "#":
-                continue
-            if len(line) <= 1:
-                continue
-
-            parts = line.split("=")
-            first_part = parts[0].strip()
-            written = False
-
-            for key, value in options:
-                if first_part == key:
-                    dfile.write(key + " = " + value + "\n")
-                    written = True
-                    break
-
-            if not written:
-                dfile.write(line)
-
-
-def get_next_key():
-    """
-    TODO: This needs to disappear!!
-    """
-    global next_key
-
-    next_key -= 1
-
-    return next_key + 1
-
-
-def create_uuid(seed):
-    """
-    Simple helper function to create a UUID
-
-    :param seed: [int| str| bytes| bytearray], seed value, if not provided
-                 timestamp is used
-
-    :returns uuid
-    """
-    rnd = random.Random()
-    rnd.seed(seed)
-
-    new_uuid = uuid.UUID(int=rnd.getrandbits(128), version=4)
-    return new_uuid
 
 
 def create_port(
@@ -273,9 +133,7 @@ def find_field_by_name(fields, name):
     return None
 
 
-def _check_required_fields_for_category(
-    text: str, fields: list, category: str
-):
+def check_required_fields_for_category(text: str, fields: list, category: str):
     """
     Check if fields have mandatory content and alert with <text> if not.
 
@@ -388,7 +246,7 @@ def create_field(
 
 def alert_if_missing(message: str, fields: list, internal_name: str):
     """
-    Produce a warning message using <text> if a field with <internal_name>
+    Produce a warning message using `text` if a field with `internal_name`
     does not exist.
 
     :param message: str, message text to be used
@@ -649,8 +507,10 @@ def create_palette_node_from_params(params) -> tuple:
 
     # check for presence of extra fields that must be included for each
     # category
-    _check_required_fields_for_category(text, fields, category)
+    check_required_fields_for_category(text, fields, category)
     # create and return the node
+    GITREPO = os.environ.get("GIT_REPO")
+    VERSION = os.environ.get("PROJECT_VERSION")
     return (
         {"tag": tag, "construct": construct},
         {
@@ -676,8 +536,8 @@ def create_palette_node_from_params(params) -> tuple:
             "outputAppFields": [],
             "fields": fields,
             "applicationArgs": applicationArgs,
-            "repositoryUrl": gitrepo,
-            "commitHash": version,
+            "repositoryUrl": GITREPO,
+            "commitHash": VERSION,
             "paletteDownloadUrl": "",
             "dataHash": "",
         },
@@ -720,846 +580,105 @@ def write_palette_json(
         json.dump(palette, outfile, indent=4)
 
 
-def _typeFix(value_type: str, default_value: str = "") -> str:
+def process_compounddefs(
+    output_xml_filename: str,
+    allow_missing_eagle_start: bool = True,
+    language: Language = Language.PYTHON,
+) -> list:
     """
-    Trying to fix or guess the type of a parameter
+    Extract and process the compounddef elements.
 
-    :param value_type: str, convert type string to something known
+    :param output_xml_filename: str, File name for the XML file produced by
+        doxygen
+    :param allow_missing_eagle_start: bool, Treat non-daliuge tagged classes
+        and functions
+    :param language: Language, can be [2] for Python, 1 for C or 0 for Unknown
 
-    :returns output_type: str, the converted type
+    :returns nodes
     """
-    type_recognised = False
-    # fix some types
-    if value_type == "bool":
-        value_type = "Boolean"
-        if default_value == "":
-            default_value = "False"
-        type_recognised = True
-    if value_type == "int":
-        value_type = "Integer"
-        if default_value == "":
-            default_value = "0"
-        type_recognised = True
-    if value_type == "float":
-        value_type = "Float"
-        if default_value == "":
-            default_value = "0"
-        type_recognised = True
-    if value_type in ["string", "str", "*", "**"]:
-        value_type = "String"
-        type_recognised = True
+    # load and parse the input xml file
+    tree = ET.parse(output_xml_filename)
 
-    # try to guess the type based on the default value
-    # TODO: try to parse default_value as JSON to detect JSON types
+    xml_root = tree.getroot()
+    # init nodes array
+    nodes = []
+    compounds = xml_root.findall("./compounddef")
+    for compounddef in compounds:
 
-    if (
-        not type_recognised
-        and default_value != ""
-        and default_value is not None
-        and default_value != "None"
-    ):
-        try:
-            # we'll try to interpret what the type of the default_value is
-            # using ast
-            l: dict = {}
-            try:
-                eval(
-                    compile(
-                        ast.parse(f"t = {default_value}"),
-                        filename="",
-                        mode="exec",
-                    ),
-                    l,
-                )
-                vt = type(l["t"])
-                if not isinstance(l["t"], type):
-                    default_value = l["t"]
-                else:
-                    vt = str
-            except NameError:
-                vt = str
-            except SyntaxError:
-                vt = str
-
-            value_type = VALUE_TYPES[vt] if vt in VALUE_TYPES else "String"
-            val = None
-            if value_type == "String":
-                # if it is String we need to do a few more tests
-                try:
-                    val = int(default_value)  # type: ignore
-                    value_type = "Integer"
-                    # print("Use Integer")
-                except TypeError:
-                    if isinstance(default_value, types.BuiltinFunctionType):
-                        value_type = "String"
-                except ValueError:
-                    try:
-                        val = float(  # noqa: F841
-                            default_value  # type: ignore
-                        )
-                        value_type = "Float"
-                    except ValueError:
-                        if default_value and (
-                            default_value.lower() == "true"
-                            or default_value.lower() == "false"
-                        ):
-                            value_type = "Boolean"
-                            default_value = default_value.lower()
-                        else:
-                            value_type = "String"
-        except (NameError or TypeError):  # type: ignore
-            raise
-    return value_type
-
-
-class DetailedDescription:
-    """
-    Class performs parsing of detailed description elements.
-    This class is used for both compound (e.g. class) level descriptions
-    as well as function/method level.
-    """
-
-    KNOWN_FORMATS = {
-        "rEST": r"\n:param .*",
-        "Google": r"\nArgs:",
-        "Numpy": r"\nParameters\n----------",
-        "casa": r"\n-{2,20}? parameter",
-    }
-
-    def __init__(self, descr: str):
-        """
-        :param descr: Text of the detaileddescription node
-        """
-        self.description = descr
-        self.format = ""
-        self._identify_format()
-        self.main_descr, self.params = self.process_descr()
-
-    def _process_rEST(self, detailed_description) -> tuple:
-        """
-        Parse parameter descirptions found in a detailed_description tag. This
-        assumes rEST style documentation.
-
-        :param detailed_description: str, the content of the description XML
-                                     node
-
-        :returns: tuple, description and parameter dictionary
-        """
-        logger.debug("Processing rEST style doc_strings")
-        result = {}
-
-        if detailed_description.find("Returns:") >= 0:
-            split_str = "Returns:"
-        elif detailed_description.find(":returns") >= 0:
-            split_str = ":returns"
-        else:
-            split_str = ""
-        detailed_description = (
-            detailed_description.split(split_str)[0]
-            if split_str
-            else detailed_description
+        # are we processing an EAGLE component?
+        eagle_tags = compounddef.findall(
+            "./detaileddescription/para/simplesect/title"
         )
-        param_lines = [
-            p.replace("\n", "").strip()
-            for p in detailed_description.split(":param")[1:]
-        ]
-        type_lines = [
-            p.replace("\n", "").strip()
-            for p in detailed_description.split(":type")[1:]
-        ]
-        # param_lines = [line.strip() for line in detailed_description]
+        is_eagle_node = False
+        if (
+            len(eagle_tags) == 2
+            and eagle_tags[0].text == "EAGLE_START"
+            and eagle_tags[1].text == "EAGLE_END"
+        ):
+            is_eagle_node = True
+        compoundname = check_text_element(compounddef, "./compoundname")
+        kind = compounddef.attrib["kind"]
+        if kind not in ["class", "namespace"]:
+            # we'll ignore this compound
+            continue
 
-        for p_line in param_lines:
-            # logger.debug("p_line: %s", p_line)
+        if is_eagle_node:
+            params = process_compounddef_eagle(compounddef)
 
-            try:
-                index_of_second_colon = p_line.index(":", 0)
-            except ValueError:
-                # didnt find second colon, skip
-                # logger.debug("Skipping this one: %s", p_line)
-                continue
+            ns = params_to_nodes(params)
+            nodes.extend(ns)
 
-            param_name = p_line[:index_of_second_colon].strip()
-            param_description = p_line[
-                index_of_second_colon + 2 :  # noqa: E203
-            ].strip()  # noqa: E203
-            t_ind = param_description.find(":type")
-            t_ind = t_ind if t_ind > -1 else None
-            param_description = param_description[:t_ind]
-            # logger.debug("%s description: %s", param_name, param_description)
-
-            if len(type_lines) != 0:
-                result.update(
-                    {param_name: {"desc": param_description, "type": None}}
-                )
-            else:
-                result.update(
-                    {
-                        param_name: {
-                            "desc": param_description,
-                            "type": _typeFix(
-                                re.split(
-                                    r"[,\s\n]", param_description.strip()
-                                )[0]
-                            ),
-                        }
-                    }
-                )
-
-        for t_line in type_lines:
-            # logger.debug("t_line: %s", t_line)
-
-            try:
-                index_of_second_colon = t_line.index(":", 0)
-            except ValueError:
-                # didnt find second colon, skip
-                # logger.debug("Skipping this one: %s", t_line)
-                continue
-
-            param_name = t_line[:index_of_second_colon].strip()
-            param_type = t_line[
-                index_of_second_colon + 2 :  # noqa: E203
-            ].strip()
-            p_ind = param_type.find(":param")
-            p_ind = p_ind if p_ind > -1 else None
-            param_type = param_type[:p_ind]
-            param_type = _typeFix(param_type)
-
-            # if param exists, update type
-            if param_name in result:
-                result[param_name]["type"] = param_type
-            else:
-                logger.warning(
-                    "Type spec without matching description %s", param_name
-                )
-
-        return detailed_description.split(":param")[0], result
-
-    def _process_Numpy(self, dd: str) -> tuple:
-        """
-        Process the Numpy-style docstring
-
-        :param dd: str, the content of the detailed description tag
-
-        :returns: tuple, description and parameter dictionary
-        """
-        logger.debug("Processing Numpy style doc_strings")
-        ds = "\n".join(
-            [d.strip() for d in dd.split("\n")]
-        )  # remove whitespace from lines
-        # extract main documentation (up to Parameters line)
-        (description, rest) = ds.split("\nParameters\n----------\n")
-        # extract parameter documentation (up to Returns line)
-        pds = rest.split(r"\nReturns\n-------\n")
-        spds = re.split(r"([\w_]+) :", pds[0])[1:]  # split :param lines
-        pdict = dict(zip(spds[::2], spds[1::2]))  # create initial param dict
-        pdict = {
-            k: {
-                "desc": v.replace("\n", " "),
-                # this cryptic line tries to extract the type
-                "type": _typeFix(re.split(r"[,\n\s]", v.strip())[0]),
-            }
-            for k, v in pdict.items()
-        }
-        logger.debug("numpy_style param dict %r", pdict)
-        # extract return documentation
-        rest = pds[1] if len(pds) > 1 else ""
-        return description, pdict
-
-    def _process_Google(self, dd: str):
-        """
-        Process the Google-style docstring
-        TODO: not yet implemented
-
-        :param dd: str, the content of the detailed description tag
-
-        :returns: tuple, description and parameter dictionary
-        """
-        logger.debug("Processing Google style doc_strings")
-        ds = "\n".join(
-            [d.strip() for d in dd.split("\n")]
-        )  # remove whitespace from lines
-        # extract main documentation (up to Parameters line)
-        (description, rest) = ds.split("\nArgs:")
-        # logger.debug("Splitting: %s %s", description, rest)
-        # extract parameter documentation (up to Returns line)
-        pds = rest.split("\nReturns:\n")
-        spds = re.split(r"\n?([\w_]+)\s?\((\w+)\)\s?:", pds[0])[
-            1:
-        ]  # split :param lines
-        pdict = dict(
-            zip(spds[::3], zip(spds[1::3], spds[2::3]))
-        )  # create initial param dict
-        pdict = {
-            k: {
-                "desc": v[1].replace("\n", " "),  # type: ignore
-                # this cryptic line tries to extract the type
-                "type": _typeFix(v[0]),  # type: ignore
-            }
-            for k, v in pdict.items()
-        }
-        # extract return documentation
-        rest = pds[1] if len(pds) > 1 else ""
-        return description, pdict
-
-    def _process_casa(self, dd: str):
-        """
-        Parse the special docstring for casatasks
-        Extract the parameters from the casatask doc string.
-
-        :param task: The casatask to derive the parameters from.
-
-        :returns: Dictionary of form {<paramKey>:<paramDoc>}
-
-        TODO: Description of component still missing in palette!
-        TODO: ports are not populated
-        TODO: type of self is not Object.ClassName
-        TODO: self arg should show brief description of component
-        TODO: multi-line argument doc-strings are scrambled
-        """
-        dStr = cleanString(dd)
-        dList = dStr.split("\n")
-        try:
-            start_ind = [
-                idx
-                for idx, s in enumerate(dList)
-                if re.findall(r"-{1,20} parameter", s)
-            ][0] + 1
-            end_ind = [
-                idx
-                for idx, s in enumerate(dList)
-                if re.findall(r"-{1,20} example", s)
-            ][0]
-        except IndexError:
-            logger.debug(
-                "Problems finding start or end index for task: {task}"
-            )
-            return {}, ""
-        paramsList = dList[start_ind:end_ind]
-        paramsSidx = [
-            idx + 1
-            for idx, p in enumerate(paramsList)
-            if len(p) > 0 and p[0] != " "
-        ]
-        paramsEidx = paramsSidx[1:] + [len(paramsList) - 1]
-        paramFirstLine = [
-            (p.strip().split(" ", 1)[0], p.strip().split(" ", 1)[1].strip())
-            for p in paramsList
-            if len(p) > 0 and p[0] != " "
-        ]
-        paramNames = [p[0] for p in paramFirstLine]
-        paramDocs = [p[1].strip() for p in paramFirstLine]
-        for i in range(len(paramDocs)):
-            if paramsSidx[i] < paramsEidx[i]:
-                pl = [
-                    p.strip()
-                    for p in paramsList[
-                        paramsSidx[i] : paramsEidx[i] - 1  # noqa: E203
-                    ]
-                    if len(p.strip()) > 0
+        if not is_eagle_node and allow_missing_eagle_start:  # not eagle node
+            logger.info("Handling compound: %s", compoundname)
+            # ET.tostring(compounddef, encoding="unicode"),
+            # )
+            functions = process_compounddef_default(compounddef, language)
+            functions = functions[0] if len(functions) > 0 else functions
+            logger.debug("Number of functions in compound: %d", len(functions))
+            for f in functions:
+                f_name = [
+                    k["value"] for k in f["params"] if k["key"] == "text"
                 ]
-                paramDocs[i] = paramDocs[i] + " " + " ".join(pl)
-        params = dict(zip(paramNames, paramDocs))
-        comp_description = "\n".join(
-            dList[: start_ind - 1]
-        )  # return main description as well
-        logger.debug(">>> CASA: finished processing of descr: %s", params)
-        return (comp_description, params)
-
-    def _identify_format(self):
-        """
-        Identifying docstring format using the format templates
-        defined in KNOWN_FORMATS.
-        """
-        logger.debug("Identifying doc_string style format")
-        ds = self.description if self.description else ""
-        if ds and ds.count("\n") > 0:
-            dd = self.description.split("\n")
-            ds = "\n".join([d.strip() for d in dd])
-        for k, v in self.KNOWN_FORMATS.items():
-            rc = re.compile(v)
-            if rc.search(ds):
-                self.format = k
-        if not self.format:
-            logger.warning("Unknown param desc format!")
-
-    def process_descr(self):
-        """
-        Helper function to provide plugin style parsers for various
-        formats.
-        """
-        do = f"_process_{self.format}"
-        if hasattr(self, do) and callable(func := getattr(self, do)):
-            logger.debug("Calling %s parser function", do)
-            return func(self.description)
-        else:
-            logger.warning("Format not recognized or can't execute %s", do)
-            logger.warning("Returning description unparsed!")
-            return (self.description, {})
-
-
-class GreatGrandChild:
-    """
-    The great-grandchild class performs most of the parsing to construct the
-    palette nodes from the doxygen XML.
-    """
-
-    def __init__(
-        self,
-        ggchild: dict = {},
-        func_name: str = "Unknown",
-        return_type: str = "Unknown",
-        parent_member: Union["Child", None] = None,
-    ):
-        """
-        Constructor of great-grandchild object.
-
-        :param ggchild: dict, if existing great-grandchild
-        :param func_name: str, the function name
-        :param return_type: str, the return type of the component
-        :param parent_member: dict, contains the descriptions found in parent
-        """
-
-        self.func_path = ""
-        self.func_name = func_name
-        self.return_type = return_type
-        if ggchild:
-            self.member = self.process_GreatGrandChild(
-                ggchild, parent_member=parent_member
-            )
-        else:
-            self.member = {"params": []}
-
-    def process_GreatGrandChild(
-        self, ggchild: dict, parent_member: Union["Child", None] = None
-    ):
-        """
-        Process GreatGrandChild
-
-        :param ggchild: dict, the great grandchild element
-        :param parent_member: dict, member dict from parent class
-        """
-
-        # logger.debug("Initialized ggchild member: %s", self.member)
-        logger.debug(
-            "New GreatGrandChild element: %s", ggchild.tag  # type: ignore
-        )
-        if ggchild.tag == "name":  # type: ignore
-            self.func_name = (
-                ggchild.text  # type: ignore
-                if self.func_name == "Unknown"
-                else self.func_name
-            )
-            self.member["params"].append(
-                {"key": "text", "direction": None, "value": self.func_name}
-            )
-            logger.debug("Function name: %s", self.func_name)
-        elif ggchild.tag == "argsstring":  # type: ignore
-            args = ggchild.text[1:-1]  # type: ignore
-            args = [a.strip() for a in args.split(",")]
-            if "self" in args:
-                class_name = self.func_path.rsplit(".", 1)[-1]
-                self.func_name = f"{class_name}::{self.func_name}"
-                logger.debug(
-                    "Class function --> modified name: %s",
-                    self.func_name,
-                )
-
-        elif ggchild.tag == "detaileddescription":  # type: ignore
-            # this contains the main description of the function and the
-            # parameters.
-            # Might not be complete or correct and has to be merged with
-            # the information in the param section below.
-            if (
-                len(ggchild) > 0
-                and len(ggchild[0]) > 0
-                and ggchild[0][0].text is not None
-            ):
-
-                # get detailed description text
-                dd = ggchild[0][0].text
-                ddO = DetailedDescription(dd)
-                if ddO.format:
-                    (desc, params) = (ddO.main_descr, ddO.params)
-                else:
-                    (desc, params) = dd, {}
-
-                # use the params above
-                for (p_key, p_value) in params.items():
-                    self.set_param_description(
-                        p_key,
-                        p_value["desc"],
-                        p_value["type"],
-                        self.member["params"],
-                    )
-
-                logger.debug(
-                    "adding description param: %s",
-                    {"key": "description", "direction": None, "value": desc},
-                )
-                self.member["params"].append(
-                    {"key": "description", "direction": None, "value": desc}
-                )
-
-        elif ggchild.tag == "param":  # type: ignore
-            # Depending on the format used this section only contains
-            # parameter names
-            # this should be merged with the detaileddescription element above,
-            # keeping in
-            # mind that the description might be wrong and/or incomplete.
-            value_type = ""
-            name = ""
-            default_value = ""
-
-            for gggchild in ggchild:
-                if gggchild.tag == "type":
-                    value_type = gggchild.text
-                    if value_type not in VALUE_TYPES.values():
-                        value_type = f"Object.{value_type}"
-                    # also look at children with ref tag
-                    for ggggchild in gggchild:
-                        if ggggchild.tag == "ref":
-                            value_type = ggggchild.text
-                if gggchild.tag == "declname":
-                    name = gggchild.text
-                if gggchild.tag == "defname":
-                    name = gggchild.text
-                if gggchild.tag == "defval":
-                    default_value = gggchild.text
-            if (
-                name in self.member["params"]
-                and "type" in self.member["params"][name]
-            ):
-                logger.debug(
-                    "Existing type definition found for %s: %s",
-                    name,
-                    self.member["params"][name]["type"],
-                )
-                value_type = self.member["params"][name]["type"]
-
-            # type recognised - else convert?
-            value_type = _typeFix(value_type, default_value=default_value)
-
-            # add the param
-            if str(value_type) == "String":
-                default_value = str(default_value).replace("'", "")
-                if default_value.find("/") >= 0:
-                    default_value = f'"{default_value}"'
-            # attach description from parent, if available
-            if parent_member and name in parent_member.member["params"]:
-                member_desc = parent_member.member["params"][name]
-            else:
-                member_desc = ""
-
-            logger.debug(
-                "adding param: %s",
-                {
-                    "key": str(name),
-                    "direction": "in",
-                    "value": str(name)
-                    + "/"
-                    + str(default_value)
-                    + "/"
-                    + str(value_type)
-                    + "/ApplicationArgument/readwrite//False/False/"
-                    + member_desc,
-                },
-            )
-            self.member["params"].append(
-                {
-                    "key": str(name),
-                    "direction": "in",
-                    "value": str(name)
-                    + "/"
-                    + str(default_value)
-                    + "/"
-                    + str(value_type)
-                    + "/ApplicationArgument/readwrite//False/False/"
-                    + member_desc,
-                }
-            )
-
-        elif ggchild.tag == "definition":  # type: ignore
-            self.return_type = ggchild.text.strip().split(" ")[  # type: ignore
-                0
-            ]
-            func_path = ggchild.text.strip().split(" ")[-1]  # type: ignore
-            # skip function if it begins with a single underscore,
-            # but keep __init__ and __call__
-            if func_path.find(".") >= 0:
-                self.func_path, self.func_name = func_path.rsplit(".", 1)
-            logger.info(
-                "Found function name: '%s:%s'",
-                self.func_path,
-                self.func_name,
-            )
-
-            if self.func_name in ["__init__", "__call__"]:
-                pass
-                # self.func_name = "OBJ:" + self.func_path.rsplit(".",1)[-1]
-                # logger.debug("Using name %s for %s function",
-                #       self.func_path, self.func_name)
-            elif (
-                self.func_name.startswith("_")
-                or self.func_path.find("._") >= 0
-            ):
-                logger.debug("Skipping %s.%s", self.func_path, self.func_name)
-                self.member = None  # type: ignore
-            # else:
-            # self.func_name = f"{self.func_path}.{self.func_name}"
-            if self.member:
-                self.return_type = (
-                    "None" if self.return_type == "def" else self.return_type
-                )
-                self.member["params"].append(
-                    {
-                        "key": "func_name",
-                        "direction": None,
-                        "value": "Function Name/"
-                        + f"{self.func_path}.{self.func_name}"
-                        + "/String/ApplicationArgument/readonly/"
-                        + "/False/True/Python function name",
-                    }
-                )
-                self.member["params"].append(
-                    {
-                        "key": "input_parser",
-                        "direction": None,
-                        "value": "Input Parser/pickle/Select/"
-                        + "ApplicationArgument/readwrite/pickle,eval,"
-                        + "npy,path,dataurl/False/False/Input port "
-                        + "parsing technique",
-                    }
-                )
-                self.member["params"].append(
-                    {
-                        "key": "output_parser",
-                        "direction": None,
-                        "value": "Output Parser/pickle/Select/"
-                        + "ApplicationArgument/readwrite/pickle,eval,npy,path,"
-                        + "dataurl/False/False/Output port parsing technique",
-                    }
-                )
-        else:
-            logger.debug(
-                "Ignored great grandchild element: %s",
-                ggchild.tag,  # type: ignore
-            )
-
-    def set_param_description(
-        self, name: str, description: str, p_type: str, params: dict
-    ):
-        """
-        Set the description field of a of parameter <name> from parameters.
-        TODO: This should really be part of a class
-
-        :param name: str, the parameter to set the description
-        :param descrition: str, the description to add to the existing string
-        :param p_type: str, the type of the parameter if known
-        :param params: dict, the set of parameters
-        """
-        p_type = "" if not p_type else p_type
-        for p in params:
-            if p["key"] == name:
-                p["value"] = p["value"] + description
-                # insert the type
-                pp = p["value"].split("/", 3)
-                p["value"] = "/".join(pp[:2] + [p_type] + pp[3:])
-                p["type"] = p_type
-                break
-
-
-class Child:
-    def __init__(
-        self, child: dict, language: str, parent: Union["Child", None] = None
-    ):
-        """
-        Private function to process a child element.
-
-        :param child: dict, the parsed child element from XML
-        :param language, str, hint to the coding language used
-        :param parent, Child, parent object or None
-        """
-        members = []
-        self.type = "generic"
-        self.member: dict = {"params": []}
-        self.format = ""
-        self.description = ""
-        self.casa_mode: bool = False
-        # logger.debug("Initialized child member: %s", member)
-
-        logger.debug(
-            "Found child element: %s with tag: %s; kind: %s; parent: %s",
-            child,
-            child.tag,  # type: ignore
-            child.get("kind"),
-            parent.type if parent else "<unavailable>",
-        )
-        if parent and hasattr(parent, "casa_mode"):
-            self.casa_mode = parent.casa_mode
-        if (
-            child.tag == "detaileddescription"  # type: ignore
-            and len(child) > 0
-        ):
-            logger.debug("Parsing detaileddescription")
-            # logger.debug("Child: %s", ET.tostring(child, encoding="unicode"))
-            self.type = "description"
-            # TODO: The following likely means that we are dealing with a C
-            #       module and this is just a dirty workaround rather than
-            #        a fix probably need to add a plain C parser.
-            dStr = child[0][0].text if len(child[0]) > 0 else child[0]
-            self.description = dStr
-            ddO = DetailedDescription(dStr)
-            self.format = ddO.format
-            if self.format == "casa":
-                self.casa_mode = True
-                self.description, self.member["params"] = (
-                    ddO.main_descr,
-                    ddO.params,
-                )
-
-        if child.tag == "sectiondef" and child.get("kind") in [  # type: ignore
-            "func",
-            "public-func",
-        ]:
-            self.type = "function"
-            logger.debug(
-                "Processing %d grand children; parent: %s",
-                len(child),
-                parent.member if parent else "<undefined>",
-            )
-            for grandchild in child:
-                gmember = self._process_grandchild(
-                    grandchild,
-                    language,
-                    # parent=self
-                )
-                if gmember is None:
-                    logger.debug("Bailing out of grandchild processing!")
+                logger.debug("Function names: %s", f_name)
+                if f_name == [".Unknown"]:
                     continue
-                elif gmember != self.member:
-                    # logger.debug("Adding grandchild members: %s", gmember)
-                    self.member["params"].extend(gmember["params"])
-                    members.append(gmember)
-            logger.debug("Finished processing grand children")
-        self.members = members
 
-    def _process_grandchild(
-        self,
-        gchild: dict,
-        language: str,
-        # parent: Union["Child", None] = None,
-    ) -> Union[dict, None]:
-        """
-        Private function to process a grandchild element
-        Starts the construction of the member data structure
+                ns = params_to_nodes(f["params"])
 
-        :param gchild: dict, the parsed grandchild element from XML
-        :param language: int, the languange indicator flag,
-                        0 unknown, 1: Python, 2: C
+                for n in ns:
+                    alreadyPresent = False
+                    for node in nodes:
+                        if node["text"] == n["text"]:
+                            alreadyPresent = True
 
-        :returns: dict, the member data structure
-        """
-        member: dict = {"params": []}
-        # logger.debug("Initialized grandchild member: %s", member)
+                    # print("component " + n["text"] + " alreadyPresent " +
+                    # str(alreadyPresent))
 
-        if (
-            gchild.tag == "memberdef"  # type: ignore
-            and gchild.get("kind") == "function"
-        ):
-            logger.debug("Start processing of new function definition.")
-
-            if language == Language.C:
-                member["params"].append(
-                    {
-                        "key": "category",
-                        "direction": None,
-                        "value": "DynlibApp",
-                    }
-                )
-                member["params"].append(
-                    {
-                        "key": "libpath",
-                        "direction": None,
-                        "value": "Library Path//String/ComponentParameter/"
-                        + "readwrite//False/False/The location of the shared "
-                        + "object/DLL that implements this application",
-                    }
-                )
-            elif language == Language.PYTHON:
-                member["params"].append(
-                    {
-                        "key": "category",
-                        "direction": None,
-                        "value": "PythonApp",
-                    }
-                )
-                member["params"].append(
-                    {
-                        "key": "appclass",
-                        "direction": None,
-                        "value": "Application Class/dlg.apps.pyfunc.PyFuncApp/"
-                        + "String/ComponentParameter/readwrite//False/False/"
-                        + "The python class that implements this application",
-                    }
-                )
-
-            member["params"].append(
-                {
-                    "key": "execution_time",
-                    "direction": None,
-                    "value": "Execution Time/5/Integer/ComponentParameter/"
-                    + "readwrite//False/False/Estimate of execution time "
-                    + "(in seconds) for this application.",
-                }
+                    if alreadyPresent:
+                        # TODO: Originally this was suppressed, but in reality
+                        # multiple functions with the same name are possible
+                        logger.warning(
+                            "Function has multiple entires: %s", n["text"]
+                        )
+                    nodes.append(n)
+        if not is_eagle_node and not allow_missing_eagle_start:
+            logger.warning(
+                "None EAGLE tagged component '%s' identified. "
+                + "Not parsing it due to setting. "
+                + "Consider using the -s flag.",
+                compoundname,
             )
-            member["params"].append(
-                {
-                    "key": "num_cpus",
-                    "direction": None,
-                    "value": "No. of CPUs/1/Integer/ComponentParameter/"
-                    + "readwrite//False/False/Number of cores used.",
-                }
-            )
-            member["params"].append(
-                {
-                    "key": "group_start",
-                    "direction": None,
-                    "value": "Group start/false/Boolean/ComponentParameter/"
-                    + "readwrite//False/False/Is this node the start of "
-                    + "a group?",
-                }
-            )
-
-            logger.debug("Processing %d great grand children", len(gchild))
-            gg = GreatGrandChild()
-            for ggchild in gchild:
-                gg.process_GreatGrandChild(ggchild, parent_member=self)
-                if gg.member is None:
-                    logger.debug(
-                        "Bailing out ggchild processing: %s", gg.member
-                    )
-                    del gg
-                    return None
-            if gg.member != member and gg.member["params"] not in [None, []]:
-                member["params"].extend(gg.member["params"])
-                logger.debug("member after adding gg_members: %s", member)
-            logger.info(
-                "Finished processing of function definition: '%s:%s'",
-                gg.func_path,
-                gg.func_name,
-            )
-            del gg
-
-        return member
+    return nodes
 
 
-def process_compounddef_default(compounddef, language):
+def process_compounddef_default(
+    compounddef: ET.Element, language: Language
+) -> list:
     """
     Process a compound definition
 
     :param compounddef: list of children of compounddef
-    :param language: int
+    :param language: Language, can be [2] for Python, 1 for C or 0 for Unknown
     """
     result = []
 
@@ -1597,7 +716,7 @@ def process_compounddef_default(compounddef, language):
     return result
 
 
-def process_compounddef_eagle(compounddef: dict) -> list:
+def process_compounddef_eagle(compounddef: Union[ET.Element, Any]) -> list:
     """
     Interpret a compound definition element.
 
@@ -1606,10 +725,9 @@ def process_compounddef_eagle(compounddef: dict) -> list:
 
     :returns list of dictionaries
 
-    TODO: This should be split up.
+    TODO: This should be split up and make use of XPath expressions
     """
     result = []
-    found_eagle_start = False
 
     # get child of compounddef called "briefdescription"
     briefdescription = None
@@ -1633,34 +751,17 @@ def process_compounddef_eagle(compounddef: dict) -> list:
                 )
 
     # get child of compounddef called "detaileddescription"
-    detaileddescription = None
-    for child in compounddef:
-        if child.tag == "detaileddescription":
-            detaileddescription = child
-            break
+    detaileddescription = compounddef.find("./detaileddescription")
 
     # check that detailed description was found
     if detaileddescription is not None:
 
-        # search children of detaileddescription node for a para node with
-        # "simplesect" children, who have "title" children with text
-        # "EAGLE_START" and "EAGLE_END"
-        para = None
-        description = ""
-        for ddchild in detaileddescription:
-            if ddchild.tag == "para":
-                if ddchild.text is not None:
-                    description += ddchild.text + "\n"
-                for pchild in ddchild:
-                    if pchild.tag == "simplesect":
-                        for sschild in pchild:
-                            if sschild.tag == "title":
-                                if sschild.text.strip() == "EAGLE_START":
-                                    found_eagle_start = True
+        # We know already that this is an EGALE node
 
-                        para = ddchild
-        # add description
-        if description != "":
+        para = detaileddescription.findall("./para")  # get para elements
+        description = check_text_element(para[0], ".")
+        para = para[-1]
+        if description is not None:
             result.append(
                 {
                     "key": "description",
@@ -1669,27 +770,19 @@ def process_compounddef_eagle(compounddef: dict) -> list:
                 }
             )
 
-    # check that we found an EAGLE_START, otherwise this is just regular
-    # doxygen, skip it
-    if not found_eagle_start:
-        return []
-
     # check that we found the correct para
     if para is None:
         return result
 
     # find parameterlist child of para
-    parameterlist = None
-    for pchild in para:
-        if pchild.tag == "parameterlist":
-            parameterlist = pchild
-            break
+    parameterlist = para.find("./parameterlist")  # type: ignore
 
     # check that we found a parameterlist
     if parameterlist is None:
         return result
 
     # read the parameters from the parameter list
+    # TODO: refactor this as well
     for parameteritem in parameterlist:
         key = None
         direction = None
@@ -1781,6 +874,8 @@ def create_construct_node(node_type: str, node: dict) -> dict:
         ]
     else:
         add_fields = []  # don't add anything at this point.
+    GITREPO = os.environ.get("GIT_REPO")
+    VERSION = os.environ.get("PROJECT_VERSION")
 
     construct_node = {
         "category": node_type,
@@ -1791,8 +886,8 @@ def create_construct_node(node_type: str, node: dict) -> dict:
         + " component.",
         "fields": add_fields,
         "applicationArgs": [],
-        "repositoryUrl": gitrepo,
-        "commitHash": version,
+        "repositoryUrl": GITREPO,
+        "commitHash": VERSION,
         "paletteDownloadUrl": "",
         "dataHash": "",
         "key": get_next_key(),
@@ -1822,22 +917,37 @@ def create_construct_node(node_type: str, node: dict) -> dict:
     return construct_node
 
 
-def params_to_nodes(params: dict) -> list:
+def params_to_nodes(params: list) -> list:
     """
     Generate a list of nodes from the params found
 
-    :param params: dict, the parameters to be converted
+    :param params: list, the parameters to be converted
 
     :returns list of node dictionaries
     """
     # logger.debug("params_to_nodes: %s", params)
     result = []
     tag = ""
+    gitrepo = ""
+    version = "0.1"
 
     # if no params were found, or only the name and description were found,
     # then don't bother creating a node
     if len(params) > 2:
         # create a node
+
+        # check if gitrepo and version params were found and cache the values
+        # TODO: This seems unneccessary remove?
+        for param in params:
+            logger.debug("param: %s", param)
+            if not param:
+                continue
+            key, value = (param["key"], param["value"])
+            if key == "gitrepo":
+                gitrepo = value
+            elif key == "version":
+                version = value
+
         data, node = create_palette_node_from_params(params)
 
         # if the node tag matches the command line tag, or no tag was specified
@@ -1855,30 +965,31 @@ def params_to_nodes(params: dict) -> list:
                     + node["text"]
                 )
                 construct_node = create_construct_node(data["construct"], node)
+                construct_node["repositoryUrl"] = gitrepo
+                construct_node["commitHash"] = version
                 result.append(construct_node)
-
-    # check if gitrepo and version params were found and cache the values
-    # TODO: This seems unneccessary remove?
-    # for param in params:
-    #     key = param["key"]
-    #     value = param["value"]
-
-    #     if key == "gitrepo":
-    #         gitrepo = value
-    #     elif key == "version":
-    #         version = value
 
     return result
 
 
-def cleanString(input_text: str) -> str:
+def prepare_and_write_palette(nodes: list, outputfile: str):
     """
-    Remove ANSI escape strings from input"
+    Prepare and write the palette in JSON format.
 
-    :param input_text: string to clean
-
-    :returns: str, cleaned string
+    :param nodes: the list of nodes
+    :param outputfile: the name of the outputfile
     """
-    # ansi_escape = re.compile(r'[@-Z\\-_]|\[[0-?]*[ -/]*[@-~]')
-    ansi_escape = re.compile(r"\[[0-?]*[ -/]*[@-~]")
-    return ansi_escape.sub("", input_text)
+    # add signature for whole palette using BlockDAG
+    vertices = {}
+    GITREPO = os.environ.get("GIT_REPO")
+    VERSION = os.environ.get("PROJECT_VERSION")
+
+    for i in range(len(nodes)):
+        vertices[i] = nodes[i]
+    block_dag = build_block_dag(vertices, [], data_fields=BLOCKDAG_DATA_FIELDS)
+
+    # write the output json file
+    write_palette_json(
+        outputfile, nodes, GITREPO, VERSION, block_dag  # type: ignore
+    )
+    logger.info("Wrote " + str(len(nodes)) + " component(s)")

@@ -10,26 +10,20 @@ https://daliuge.readthedocs.io/en/latest/development/app_development/eagle_app_i
 import argparse
 import logging
 import os
-import subprocess
 import sys
 import tempfile
-import xml.etree.ElementTree as ET
-
-from blockdag import build_block_dag
 
 # isort: ignore
 from dlg_paletteGen.base import (
-    BLOCKDAG_DATA_FIELDS,
-    DOXYGEN_SETTINGS,
-    DOXYGEN_SETTINGS_C,
-    DOXYGEN_SETTINGS_PYTHON,
     Language,
     logger,
-    modify_doxygen_options,
-    params_to_nodes,
-    process_compounddef_default,
-    process_compounddef_eagle,
-    write_palette_json,
+    prepare_and_write_palette,
+    process_compounddefs,
+)
+from dlg_paletteGen.support_functions import (
+    DOXYGEN_SETTINGS,
+    process_doxygen,
+    process_xml,
 )
 
 
@@ -73,7 +67,7 @@ def get_args():
     parser.add_argument(
         "-s",
         "--parse_all",
-        help="Try to parse non DAliuGE compliant functions and methods",
+        help="Parse non DAliuGE compliant functions and methods",
         action="store_true",
     )
     parser.add_argument(
@@ -94,10 +88,10 @@ def get_args():
         logger.setLevel(logging.DEBUG)
     logger.debug("DEBUG logging switched on")
     if args.recursive:
-        DOXYGEN_SETTINGS.append(("RECURSIVE", "YES"))
+        DOXYGEN_SETTINGS.update({"RECURSIVE": "YES"})
         logger.info("Recursive flag ON")
     else:
-        DOXYGEN_SETTINGS.append(("RECURSIVE", "NO"))
+        DOXYGEN_SETTINGS.update({"RECURSIVE": "NO"})
         logger.info("Recursive flag OFF")
     language = Language.C if args.c else Language.PYTHON
     return (
@@ -168,124 +162,20 @@ def main():  # pragma: no cover
     output_directory = tempfile.TemporaryDirectory()
 
     # add extra doxygen setting for input and output locations
-    DOXYGEN_SETTINGS.append(("PROJECT_NAME", os.environ.get("PROJECT_NAME")))
-    DOXYGEN_SETTINGS.append(("INPUT", inputdir))
-    DOXYGEN_SETTINGS.append(("OUTPUT_DIRECTORY", output_directory.name))
+    DOXYGEN_SETTINGS.update({"PROJECT_NAME": os.environ.get("PROJECT_NAME")})
+    DOXYGEN_SETTINGS.update({"INPUT": inputdir})
+    DOXYGEN_SETTINGS.update({"OUTPUT_DIRECTORY": output_directory.name})
 
-    # create a temp file to contain the Doxyfile
-    doxygen_file = tempfile.NamedTemporaryFile()
-    doxygen_filename = doxygen_file.name
-    doxygen_file.close()
-
-    # create a default Doxyfile
-    subprocess.call(
-        ["doxygen", "-g", doxygen_filename],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-    )
-    logger.info(
-        "Wrote doxygen configuration file (Doxyfile) to " + doxygen_filename
-    )
-
-    # modify options in the Doxyfile
-    modify_doxygen_options(doxygen_filename, DOXYGEN_SETTINGS)
-
-    if language == Language.C:
-        modify_doxygen_options(doxygen_filename, DOXYGEN_SETTINGS_C)
-    elif language == Language.PYTHON:
-        modify_doxygen_options(doxygen_filename, DOXYGEN_SETTINGS_PYTHON)
-
-    # run doxygen
-    # os.system("doxygen " + doxygen_filename)
-    subprocess.call(
-        ["doxygen", doxygen_filename],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-    )
-
-    # run xsltproc
-    output_xml_filename = output_directory.name + "/xml/doxygen.xml"
-
-    with open(output_xml_filename, "w") as outfile:
-        subprocess.call(
-            [
-                "xsltproc",
-                output_directory.name + "/xml/combine.xslt",
-                output_directory.name + "/xml/index.xml",
-            ],
-            stdout=outfile,
-            stderr=subprocess.DEVNULL,
-        )
-
-    # debug - copy output xml to local dir
-    os.system("cp " + output_xml_filename + " output.xml")
-    logger.info("Wrote doxygen XML to output.xml")
+    process_doxygen(language=language)
+    output_xml_filename = process_xml()
 
     # get environment variables
-    gitrepo = os.environ.get("GIT_REPO")
-    version = os.environ.get("PROJECT_VERSION")
+    # gitrepo = os.environ.get("GIT_REPO")
+    # version = os.environ.get("PROJECT_VERSION")
 
-    # init nodes array
-    nodes = []
-
-    # load the input xml file
-    tree = ET.parse(output_xml_filename)
-    xml_root = tree.getroot()
-
-    for compounddef in xml_root:
-
-        # debug - we need to determine this correctly
-        is_eagle_node = False
-
-        if is_eagle_node or not allow_missing_eagle_start:
-            params = process_compounddef_eagle(compounddef)
-
-            ns = params_to_nodes(params)
-            nodes.extend(ns)
-
-        else:  # not eagle node
-            logger.info("Handling compound: %s", compounddef)
-            # ET.tostring(compounddef, encoding="unicode"),
-            # )
-            functions = process_compounddef_default(compounddef, language)
-            functions = functions[0] if len(functions) > 0 else functions
-            logger.debug("Number of functions in compound: %d", len(functions))
-            for f in functions:
-                f_name = [
-                    k["value"] for k in f["params"] if k["key"] == "text"
-                ]
-                logger.debug("Function names: %s", f_name)
-                if f_name == [".Unknown"]:
-                    continue
-
-                ns = params_to_nodes(f["params"])
-
-                for n in ns:
-                    alreadyPresent = False
-                    for node in nodes:
-                        if node["text"] == n["text"]:
-                            alreadyPresent = True
-
-                    # print("component " + n["text"] + " alreadyPresent " +
-                    # str(alreadyPresent))
-
-                    if alreadyPresent:
-                        # TODO: Originally this was suppressed, but in reality
-                        # multiple functions with the same name are possible
-                        logger.warning(
-                            "Function has multiple entires: %s", n["text"]
-                        )
-                    nodes.append(n)
-
-    # add signature for whole palette using BlockDAG
-    vertices = {}
-    for i in range(len(nodes)):
-        vertices[i] = nodes[i]
-    block_dag = build_block_dag(vertices, [], data_fields=BLOCKDAG_DATA_FIELDS)
-
-    # write the output json file
-    write_palette_json(outputfile, nodes, gitrepo, version, block_dag)
-    logger.info("Wrote " + str(len(nodes)) + " component(s)")
-
+    nodes = process_compounddefs(
+        output_xml_filename, allow_missing_eagle_start, language
+    )
+    prepare_and_write_palette(nodes, outputfile)
     # cleanup the output directory
     output_directory.cleanup()
