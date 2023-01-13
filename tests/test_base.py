@@ -4,7 +4,7 @@ import subprocess
 import logging
 from os import path
 import json
-from dlg_paletteGen.base import NAME
+from dlg_paletteGen.cli import NAME
 
 pytest_plugins = ["pytester", "pytest-datadir"]
 

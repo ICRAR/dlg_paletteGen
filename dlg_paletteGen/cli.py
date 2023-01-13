@@ -4,7 +4,7 @@ It processes a file or a directory of source files and
 produces a DALiuGE compatible palette file containing the
 information required to use functions and components in graphs.
 For more information please refer to the documentation
-https://daliuge.readthedocs.io/en/latest/development/app_development/eagle_app_integration.html#automatic-eagle-palette-generation
+https://icrar.github.io/dlg_paletteGen/
 
 """
 import argparse
@@ -12,6 +12,7 @@ import logging
 import os
 import sys
 import tempfile
+import pkg_resources
 
 # isort: ignore
 from dlg_paletteGen.base import (
@@ -25,6 +26,9 @@ from dlg_paletteGen.support_functions import (
     process_doxygen,
     process_xml,
 )
+
+NAME = "dlg_paletteGen"
+VERSION = pkg_resources.require(NAME)[0].version
 
 
 def get_args():
@@ -42,8 +46,15 @@ def get_args():
     # inputdir, tag, outputfile, allow_missing_eagle_start, module_path,
     # language
     parser = argparse.ArgumentParser(
-        description=__doc__,
+        description=__doc__ + f"\nVersion: {VERSION}",
         formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser.add_argument(
+        "-V",
+        "--version",
+        help="show tool version and exit",
+        action="version",
+        version=f"{NAME} version: {VERSION}",
     )
     parser.add_argument("idir", help="input directory path or file name")
     parser.add_argument("ofile", help="output file name")
