@@ -4,6 +4,18 @@ Changelog
 
 (unreleased)
 ------------
+- Fixed some import issues. [Andreas Wicenec]
+- Fixed problem with check_required_fields_for_category. [Andreas
+  Wicenec]
+- Merge pull request #3 from ICRAR/dgen-10. [awicenec]
+
+  Dgen 10
+- Fixed import of NAME. [Andreas Wicenec]
+- Minor format change. [Andreas Wicenec]
+- Changed link to documentation. [Andreas Wicenec]
+- No real change. [Andreas Wicenec]
+- Enabled showing version info. [Andreas Wicenec]
+- Release: version 0.1.6 🚀 [Andreas Wicenec]
 - Release: version 0.1.6 🚀 [Andreas Wicenec]
 - Merge pull request #2 from ICRAR/dgen-1. [awicenec]
 
