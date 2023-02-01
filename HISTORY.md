@@ -2,6 +2,11 @@ Changelog
 =========
 
 
+(unreleased)
+------------
+- Release: version 0.1.7 🚀 [Andreas Wicenec]
+
+
 0.1.7 (2023-02-01)
 ------------------
 - Release: version 0.1.7 🚀 [Andreas Wicenec]
