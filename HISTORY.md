@@ -4,6 +4,12 @@ Changelog
 
 (unreleased)
 ------------
+- More documentation. [Andreas Wicenec]
+
+
+0.1.8 (2023-02-01)
+------------------
+- Release: version 0.1.8 🚀 [Andreas Wicenec]
 - Release: version 0.1.7 🚀 [Andreas Wicenec]
 - Fixed inconsistency between black and isort. [Andreas Wicenec]
 - Release: version 0.1.7 🚀 [Andreas Wicenec]
