@@ -23,7 +23,6 @@ from dlg_paletteGen.support_functions import (
     logger,
 )
 
-
 KNOWN_PARAM_DATA_TYPES = [
     "String",
     "Integer",
