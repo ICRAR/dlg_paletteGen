@@ -1,2 +1,2 @@
 # Examples
-## WIP
+The source code repository of this tool contains a complete set of example code using the supported docstring and type hinting. These examples are also used to test the code itself. Please see the files in the subdirectory ```tests/data```.
