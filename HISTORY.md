@@ -4,6 +4,8 @@ Changelog
 
 (unreleased)
 ------------
+- Fixed inconsistency between black and isort. [Andreas Wicenec]
+- Release: version 0.1.7 🚀 [Andreas Wicenec]
 - Updated links. [Andreas Wicenec]
 - Release: version 0.1.7 🚀 [Andreas Wicenec]
 - Release: version 0.1.7 🚀 [Andreas Wicenec]
