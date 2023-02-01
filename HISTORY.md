@@ -2,8 +2,9 @@ Changelog
 =========
 
 
-(unreleased)
-------------
+0.1.7 (2023-02-01)
+------------------
+- Release: version 0.1.7 🚀 [Andreas Wicenec]
 - Fixed some import issues. [Andreas Wicenec]
 - Fixed problem with check_required_fields_for_category. [Andreas
   Wicenec]
