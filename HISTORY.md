@@ -4,6 +4,8 @@ Changelog
 
 (unreleased)
 ------------
+- Updated links. [Andreas Wicenec]
+- Release: version 0.1.7 🚀 [Andreas Wicenec]
 - Release: version 0.1.7 🚀 [Andreas Wicenec]
 
 
