@@ -85,7 +85,8 @@ class DetailedDescription:
             t_ind = param_description.find(":type")
             t_ind = t_ind if t_ind > -1 else None
             param_description = param_description[:t_ind]
-            # logger.debug("%s description: %s", param_name, param_description)
+            # logger.debug("%s description: %s", param_name,
+            # param_description)
 
             if len(type_lines) != 0:
                 result.update(
@@ -374,7 +375,6 @@ class GreatGrandChild:
                 and len(ggchild[0]) > 0
                 and ggchild[0][0].text is not None
             ):
-
                 # get detailed description text
                 dd = ggchild[0][0].text
                 ddO = DetailedDescription(dd)
@@ -384,7 +384,7 @@ class GreatGrandChild:
                     (desc, params) = dd, {}
 
                 # use the params above
-                for (p_key, p_value) in params.items():
+                for p_key, p_value in params.items():
                     self.set_param_description(
                         p_key,
                         p_value["desc"],
@@ -403,8 +403,8 @@ class GreatGrandChild:
         elif ggchild.tag == "param":  # type: ignore
             # Depending on the format used this section only contains
             # parameter names
-            # this should be merged with the detaileddescription element above,
-            # keeping in
+            # this should be merged with the detaileddescription element
+            # above, keeping in
             # mind that the description might be wrong and/or incomplete.
             value_type = ""
             name = ""

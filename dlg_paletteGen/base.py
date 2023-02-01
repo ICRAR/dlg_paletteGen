@@ -605,7 +605,6 @@ def process_compounddefs(
     nodes = []
     compounds = xml_root.findall("./compounddef")
     for compounddef in compounds:
-
         # are we processing an EAGLE component?
         eagle_tags = compounddef.findall(
             "./detaileddescription/para/simplesect/title"
@@ -756,7 +755,6 @@ def process_compounddef_eagle(compounddef: Union[ET.Element, Any]) -> list:
 
     # check that detailed description was found
     if detaileddescription is not None:
-
         # We know already that this is an EGALE node
 
         para = detaileddescription.findall("./para")  # get para elements

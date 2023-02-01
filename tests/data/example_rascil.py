@@ -54,7 +54,6 @@ def calibrate_list_rsexecute_workflow(
         )
 
     def calibration_solve(vis, modelvis=None, gt=None):
-
         return solve_calibrate_chain(
             vis,
             modelvis,

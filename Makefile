@@ -26,7 +26,7 @@ install:          ## Install the project in dev mode.
 
 .PHONY: fmt
 fmt:              ## Format code using black & isort.
-	$(ENV_PREFIX)isort -m 3 dlg_paletteGen/
+	$(ENV_PREFIX)isort -m 3 dlg_paletteGen/ --tc
 	$(ENV_PREFIX)black -l 79 dlg_paletteGen/
 	$(ENV_PREFIX)black -l 79 tests/
 

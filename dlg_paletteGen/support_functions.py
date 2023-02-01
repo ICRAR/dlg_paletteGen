@@ -35,7 +35,6 @@ DOXYGEN_SETTINGS_PYTHON = {
 
 
 class CustomFormatter(logging.Formatter):
-
     high = "\x1b[34;1m"
     grey = "\x1b[38;20m"
     yellow = "\x1b[33;20m"
@@ -189,7 +188,7 @@ def typeFix(value_type: str, default_value: str = "") -> str:
                             default_value = default_value.lower()
                         else:
                             value_type = "String"
-        except (NameError or TypeError):  # type: ignore
+        except NameError or TypeError:  # type: ignore
             raise
     return value_type
 
