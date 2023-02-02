@@ -4,6 +4,8 @@ Changelog
 
 (unreleased)
 ------------
+- Doc updates. [Andreas Wicenec]
+- Release: version 0.1.8 🚀 [Andreas Wicenec]
 - More documentation. [Andreas Wicenec]
 
 
