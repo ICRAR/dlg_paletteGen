@@ -4,7 +4,7 @@ This is the palette generator of the [DALiuGE](https://daliuge.readthedocs.io) s
 
 It processes a file or a directory of source files and
 produces a DALiuGE compatible palette file containing the
-information required to use the identified functions and classes and methods to construct logical graphs in [EAGLE](https://eagle-dlg.readthedocs.io).
+information required to use the identified functions and classes and methods to construct computational workflows in [EAGLE](https://eagle-dlg.readthedocs.io).
 For more detailed information please refer to the [usage documentation](
 https://ICRAR.github.io/dlg_paletteGen/Usage) and the [detailed documentation](
 https://ICRAR.github.io/dlg_paletteGen/Concept) as well as the main [DALiuGE documentation](https://daliuge.readthedocs.io).

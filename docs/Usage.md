@@ -17,7 +17,7 @@ This is the palette generator of the DALiuGE system.
 
 It processes a file or a directory of source files and
 produces a DALiuGE compatible palette file containing the
-information required to use functions and components in graphs.
+information required to use functions and components in workflows.
 For more information please refer to this documentation.
 
 positional arguments:
