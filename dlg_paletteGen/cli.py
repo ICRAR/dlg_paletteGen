@@ -113,6 +113,7 @@ def get_args():
         args.ofile,
         args.parse_all,
         args.module,
+        args.recursive,
         language,
     )
 
@@ -159,6 +160,7 @@ def main():  # pragma: no cover
         outputfile,
         allow_missing_eagle_start,
         module_path,
+        recursive,
         language,
     ) = get_args()
     logger.info("PROJECT_NAME:" + os.environ.get("PROJECT_NAME"))
@@ -175,7 +177,7 @@ def main():  # pragma: no cover
     output_directory = tempfile.TemporaryDirectory()
 
     if len(module_path) > 0:
-        mod_count = module_hook(module_path)
+        mod_count = module_hook(module_path, recursive=recursive)
         logger.info("Number of modules processed: %d", mod_count)
     else:
         # add extra doxygen setting for input and output locations

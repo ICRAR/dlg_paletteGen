@@ -13,7 +13,7 @@ import sys
 import importlib
 import types
 import xml.etree.ElementTree as ET
-from typing import Any, Union
+from typing import Any, Union, _SpecialForm
 
 from blockdag import build_block_dag
 
@@ -1010,20 +1010,26 @@ def module_get(mod: types.ModuleType):
             # NOTE: PyBind11 classes can have multiple constructors
             continue
         m = getattr(mod, c)
-        if not callable(m):
+        if not callable(m) or isinstance(m, _SpecialForm):
             # TODO: not sure what to do with these. Usually they
             # are class parameters.
             continue
         else:
+            name = (
+                f"{mod.__name__}.{m.__name__}"
+                if hasattr(m, "__name__")
+                else f"{mod.__name__}.Unknown"
+            )
             if m.__doc__ and len(m.__doc__) > 0:
                 dd = DetailedDescription(m.__doc__)
-                logger.debug(f"Description:\n {dd.main_descr}")
+                logger.debug(
+                    f">>> Processing member {name}:\n {dd.main_descr}"
+                )
                 logger.debug(f"Brief description: {dd.brief_descr}")
                 if len(dd.params) > 0:
-                    logger.debug("Parameters:")
-                    logger.debug(dd.params)
+                    logger.debug("Parameters: %s", dd.params)
             elif hasattr(m, "__name__"):
-                logger.warning("Entity '%s' has no description!", m.__name__)
+                logger.warning("Member '%s' has no description!", name)
             else:
                 logger.warning(
                     "Entity '%s' has neither descr. nor __name__", m
@@ -1039,7 +1045,7 @@ def module_get(mod: types.ModuleType):
                 pass
 
 
-def module_hook(mod_name: str) -> int:
+def module_hook(mod_name: str, recursive: bool = True) -> int:
     """
     This is the starting point of a function dissecting the
     docs for an imported module.
@@ -1049,6 +1055,7 @@ def module_hook(mod_name: str) -> int:
     the whole parsing, but means that the module has to be installed.
 
     :param mod_name: str, the name of the module to be treated
+    :param recursive: bool, treat sub-modules [True]
 
     :returns: Number of modules processed
     """
@@ -1059,15 +1066,18 @@ def module_hook(mod_name: str) -> int:
             logger.error("Module %s can't be loaded!", mod_name)
             raise
     module_get(mod)
-    sub_modules = get_submodules(mod)  # should only be called when -r is set
-    sub_mods = [
-        x[1] for x in sub_modules if (x[1][0] != "_" and x[1][:4] != "test")
-    ]  # get the names; ignore test modules
-    if len(sub_mods) > 0:
-        logger.debug("sub_modules of %s: %s", mod_name, sub_mods)
     mod_count = 1
-    for sub_mod in sub_mods:
-        mod_load = f"{mod_name}.{sub_mod}"
-        c = module_hook(mod_load)
-        mod_count += c
+    if recursive:
+        sub_modules = get_submodules(mod)
+        sub_mods = [
+            x[1]
+            for x in sub_modules
+            if (x[1][0] != "_" and x[1][:4] != "test")
+        ]  # get the names; ignore test modules
+        if len(sub_mods) > 0:
+            logger.debug("sub_modules of %s: %s", mod_name, sub_mods)
+        for sub_mod in sub_mods:
+            mod_load = f"{mod_name}.{sub_mod}"
+            c = module_hook(mod_load)
+            mod_count += c
     return mod_count
