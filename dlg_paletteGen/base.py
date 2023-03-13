@@ -9,18 +9,22 @@ Should also be made separate sub-repo with proper installation and entry point.
 import csv
 import json
 import os
+import sys
+import importlib
+import types
 import xml.etree.ElementTree as ET
 from typing import Any, Union
 
 from blockdag import build_block_dag
 
-from dlg_paletteGen.classes import Child
+from dlg_paletteGen.classes import Child, DetailedDescription
 from dlg_paletteGen.support_functions import (
     Language,
     check_text_element,
     create_uuid,
     get_next_key,
     logger,
+    get_submodules,
 )
 
 KNOWN_PARAM_DATA_TYPES = [
@@ -391,7 +395,7 @@ def create_palette_node_from_params(params) -> tuple:
     fields: list = []
     applicationArgs: list = []
 
-    # process the params
+    # process the params into fields for the palette
     for param in params:
         if not isinstance(param, dict):
             logger.error(
@@ -660,6 +664,7 @@ def process_compounddefs(
                         logger.warning(
                             "Function has multiple entires: %s", n["text"]
                         )
+                        n["text"] = f"{compoundname}.{n['text']}"
                     nodes.append(n)
         if not is_eagle_node and not allow_missing_eagle_start:
             logger.warning(
@@ -992,3 +997,77 @@ def prepare_and_write_palette(nodes: list, outputfile: str):
         outputfile, nodes, GITREPO, VERSION, block_dag  # type: ignore
     )
     logger.info("Wrote " + str(len(nodes)) + " component(s)")
+
+
+def module_get(mod: types.ModuleType):
+    """ """
+    logger.debug(f">>>>>>>>> Processing docs for module: {mod.__name__}")
+    content = dir(mod)
+    # logger.info("Content of %s: %s", mod, content)
+    for c in content:
+        if c[0] == "_":
+            # TODO: Deal with __init__
+            # NOTE: PyBind11 classes can have multiple constructors
+            continue
+        m = getattr(mod, c)
+        if not callable(m):
+            # TODO: not sure what to do with these. Usually they
+            # are class parameters.
+            continue
+        else:
+            if m.__doc__ and len(m.__doc__) > 0:
+                dd = DetailedDescription(m.__doc__)
+                logger.debug(f"Description:\n {dd.main_descr}")
+                logger.debug(f"Brief description: {dd.brief_descr}")
+                if len(dd.params) > 0:
+                    logger.debug("Parameters:")
+                    logger.debug(dd.params)
+            elif hasattr(m, "__name__"):
+                logger.warning("Entity '%s' has no description!", m.__name__)
+            else:
+                logger.warning(
+                    "Entity '%s' has neither descr. nor __name__", m
+                )
+
+            if hasattr(m, "__members__"):
+                # this takes care of enum types, but needs some
+                # serious thinking for DALiuGE. Note that enums
+                # from PyBind11 have a generic type, but still
+                # the __members__ dict.
+                # print("\nMembers:")
+                # print(m.__members__)
+                pass
+
+
+def module_hook(mod_name: str) -> int:
+    """
+    This is the starting point of a function dissecting the
+    docs for an imported module.
+
+    TODO: Generate palette from description and params.
+    TODO: At some point this might be the main entry point for
+    the whole parsing, but means that the module has to be installed.
+
+    :param mod_name: str, the name of the module to be treated
+
+    :returns: Number of modules processed
+    """
+    if mod_name not in sys.builtin_module_names:
+        try:
+            mod = importlib.import_module(mod_name)
+        except ImportError:
+            logger.error("Module %s can't be loaded!", mod_name)
+            raise
+    module_get(mod)
+    sub_modules = get_submodules(mod)  # should only be called when -r is set
+    sub_mods = [
+        x[1] for x in sub_modules if (x[1][0] != "_" and x[1][:4] != "test")
+    ]  # get the names; ignore test modules
+    if len(sub_mods) > 0:
+        logger.debug("sub_modules of %s: %s", mod_name, sub_mods)
+    mod_count = 1
+    for sub_mod in sub_mods:
+        mod_load = f"{mod_name}.{sub_mod}"
+        c = module_hook(mod_load)
+        mod_count += c
+    return mod_count

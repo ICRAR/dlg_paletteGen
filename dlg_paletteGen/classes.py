@@ -19,9 +19,9 @@ class DetailedDescription:
     """
 
     KNOWN_FORMATS = {
-        "rEST": r"\n(:param|:returns|Returns:) .*",
-        "Google": r"\nArgs:",
-        "Numpy": r"\nParameters\n----------",
+        "rEST": r"\n\s*(:param|:returns|Returns:) .*",
+        "Google": r"\n\s*Args:",
+        "Numpy": r"\n\s*Parameters\s*\n\s*----------",
         "casa": r"\n-{2,20}? parameter",
     }
 
@@ -33,6 +33,7 @@ class DetailedDescription:
         self.format = ""
         self._identify_format()
         self.main_descr, self.params = self.process_descr()
+        self.brief_descr = self.main_descr.split(".")[0] + "."
 
     def _process_rEST(self, detailed_description) -> tuple:
         """
@@ -145,10 +146,10 @@ class DetailedDescription:
         """
         logger.debug("Processing Numpy style doc_strings")
         ds = "\n".join(
-            [d.strip() for d in dd.split("\n")]
+            [d.strip() for d in dd.split(r"\s*\n")]
         )  # remove whitespace from lines
         # extract main documentation (up to Parameters line)
-        (description, rest) = ds.split("\nParameters\n----------\n")
+        (description, rest) = re.split(self.KNOWN_FORMATS["Numpy"], ds)
         # extract parameter documentation (up to Returns line)
         pds = rest.split(r"\nReturns\n-------\n")
         spds = re.split(r"([\w_]+) :", pds[0])[1:]  # split :param lines
@@ -184,7 +185,7 @@ class DetailedDescription:
         # logger.debug("Splitting: %s %s", description, rest)
         # extract parameter documentation (up to Returns line)
         pds = rest.split("\nReturns:\n")
-        spds = re.split(r"\n?([\w_]+)\s?\((\w+)\)\s?:", pds[0])[
+        spds = re.split(r"\n?([\w_]+)\s?\((.+)\)\s?:", pds[0])[
             1:
         ]  # split :param lines
         pdict = dict(
@@ -280,8 +281,6 @@ class DetailedDescription:
             rc = re.compile(v)
             if rc.search(ds):
                 self.format = k
-        if not self.format:
-            logger.warning("Unknown param desc format!")
 
     def process_descr(self):
         """
@@ -293,8 +292,10 @@ class DetailedDescription:
             logger.debug("Calling %s parser function", do)
             return func(self.description)
         else:
-            logger.warning("Format not recognized or can't execute %s", do)
-            logger.warning("Returning description unparsed!")
+            if do[-1] == "_":
+                logger.debug("Format not recognized.")
+            else:
+                logger.debug("Can't execute %s", do)
             return (self.description, {})
 
 
@@ -610,6 +611,8 @@ class Child:
             #       module and this is just a dirty workaround rather than
             #        a fix probably need to add a plain C parser.
             dStr = child[0][0].text if len(child[0]) > 0 else child[0]
+            if dStr is None:
+                dStr = ""
             self.description = dStr  # type: ignore
             ddO = DetailedDescription(dStr)  # type: ignore
             self.format = ddO.format
