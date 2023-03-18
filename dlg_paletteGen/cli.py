@@ -177,8 +177,10 @@ def main():  # pragma: no cover
     output_directory = tempfile.TemporaryDirectory()
 
     if len(module_path) > 0:
-        mod_count = module_hook(module_path, recursive=recursive)
-        logger.info("Number of modules processed: %d", mod_count)
+        modules = module_hook(module_path, recursive=recursive)
+        member_count = sum([len(m) for m in modules])
+        logger.info(">>>>> Number of modules processed: %d", len(modules))
+        logger.info(">>>>> Number of members found: %d", member_count)
     else:
         # add extra doxygen setting for input and output locations
         DOXYGEN_SETTINGS.update(

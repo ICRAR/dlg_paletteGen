@@ -343,8 +343,13 @@ def get_submodules(module):
 
     :returns iterator[tuple]
     """
-    if isinstance(module, types.ModuleType):
-        logger.warning("Provided %s object is not a module.", module)
+    if not isinstance(module, types.ModuleType):
+        logger.warning(
+            "Provided object %s is not a module: %s",
+            module,
+            type(module),
+        )
+        return iter([])
     if hasattr(module, "__path__"):
         return iter_modules(module.__path__)
     return iter([])

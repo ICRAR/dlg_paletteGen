@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 import re
 import xml.etree.ElementTree as ET
 from typing import Union
@@ -149,7 +150,11 @@ class DetailedDescription:
             [d.strip() for d in dd.split(r"\s*\n")]
         )  # remove whitespace from lines
         # extract main documentation (up to Parameters line)
-        (description, rest) = re.split(self.KNOWN_FORMATS["Numpy"], ds)
+        try:
+            (description, rest) = re.split(self.KNOWN_FORMATS["Numpy"], ds)
+        except ValueError:
+            logger.debug("Problem parsing NumPy format")
+            return (ds, {})
         # extract parameter documentation (up to Returns line)
         pds = rest.split(r"\nReturns\n-------\n")
         spds = re.split(r"([\w_]+) :", pds[0])[1:]  # split :param lines
@@ -757,3 +762,32 @@ class Child:
             del gg
 
         return member
+
+
+@dataclass
+class Field:
+    internal_name: str
+    external_name: str
+    value: str
+    value_type: str
+    field_type: str
+    access: str = "readonly"
+    options: str = ""
+    precious: bool = False
+    positional: bool = False
+    description: str = ""
+
+    def to_dict(self):
+        return {
+            "text": self.external_name,
+            "name": self.internal_name,
+            "value": self.value,
+            "defaultValue": self.value,
+            "description": self.description,
+            "type": self.value_type,
+            "fieldType": self.field_type,
+            "readonly": self.access == "readonly",
+            "options": self.options,
+            "precious": self.precious,
+            "positional": self.positional,
+        }

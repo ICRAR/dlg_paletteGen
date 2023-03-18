@@ -7,6 +7,7 @@ Should also be made separate sub-repo with proper installation and entry point.
 
 """
 import csv
+from dataclasses import dataclass
 import json
 import os
 import sys
@@ -17,7 +18,7 @@ from typing import Any, Union, _SpecialForm
 
 from blockdag import build_block_dag
 
-from dlg_paletteGen.classes import Child, DetailedDescription
+from dlg_paletteGen.classes import Child, DetailedDescription, Field
 from dlg_paletteGen.support_functions import (
     Language,
     check_text_element,
@@ -209,15 +210,14 @@ def create_field(
     value: str,
     value_type: str,
     field_type: str,
-    access: str,
-    options: str,
-    precious: bool,
-    positional: bool,
-    description: str,
+    access: str = "readonly",
+    options: str = "",
+    precious: bool = False,
+    positional: bool = False,
+    description: str = "",
 ):
     """
-    TODO: field should be a dataclass
-    For now just create a dict using the values provided
+    This function creates a new Field object and returns its associated dictionary
 
     :param internal_name: str, the internal name of the parameter
     :param external_name: str, the visible name of the parameter
@@ -234,19 +234,19 @@ def create_field(
 
     :returns field: dict
     """
-    return {
-        "text": external_name,
-        "name": internal_name,
-        "value": value,
-        "defaultValue": value,
-        "description": description,
-        "type": value_type,
-        "fieldType": field_type,
-        "readonly": access == "readonly",
-        "options": options,
-        "precious": precious,
-        "positional": positional,
-    }
+    field = Field(
+        internal_name,
+        external_name,
+        value,
+        value_type,
+        field_type,
+        access,
+        options,
+        precious,
+        positional,
+        description,
+    )
+    return field.to_dict()
 
 
 def alert_if_missing(message: str, fields: list, internal_name: str):
@@ -1001,9 +1001,12 @@ def prepare_and_write_palette(nodes: list, outputfile: str):
 
 def module_get(mod: types.ModuleType):
     """ """
-    logger.debug(f">>>>>>>>> Processing docs for module: {mod.__name__}")
+    logger.debug(f">>>>>>>>> Processing members for module: {mod.__name__}")
     content = dir(mod)
+    count = 0
     # logger.info("Content of %s: %s", mod, content)
+    name = mod
+    members = []
     for c in content:
         if c[0] == "_":
             # TODO: Deal with __init__
@@ -1011,20 +1014,21 @@ def module_get(mod: types.ModuleType):
             continue
         m = getattr(mod, c)
         if not callable(m) or isinstance(m, _SpecialForm):
+            logger.warning("Member %s is not callable", m)
             # TODO: not sure what to do with these. Usually they
             # are class parameters.
             continue
         else:
+            count += 1
             name = (
                 f"{mod.__name__}.{m.__name__}"
                 if hasattr(m, "__name__")
                 else f"{mod.__name__}.Unknown"
             )
+            members.append(name)
             if m.__doc__ and len(m.__doc__) > 0:
                 dd = DetailedDescription(m.__doc__)
-                logger.debug(
-                    f">>> Processing member {name}:\n {dd.main_descr}"
-                )
+                logger.debug(f">>> Processing member {name}")
                 logger.debug(f"Brief description: {dd.brief_descr}")
                 if len(dd.params) > 0:
                     logger.debug("Parameters: %s", dd.params)
@@ -1043,9 +1047,13 @@ def module_get(mod: types.ModuleType):
                 # print("\nMembers:")
                 # print(m.__members__)
                 pass
+    logger.info("Module %s has %d members", name, count)
+    return members
 
 
-def module_hook(mod_name: str, recursive: bool = True) -> int:
+def module_hook(
+    mod_name: str, modules: dict = {}, recursive: bool = True
+) -> int:
     """
     This is the starting point of a function dissecting the
     docs for an imported module.
@@ -1059,14 +1067,16 @@ def module_hook(mod_name: str, recursive: bool = True) -> int:
 
     :returns: Number of modules processed
     """
+    member_count = 0
+    mod_count = 0
     if mod_name not in sys.builtin_module_names:
         try:
             mod = importlib.import_module(mod_name)
         except ImportError:
             logger.error("Module %s can't be loaded!", mod_name)
             raise
-    module_get(mod)
-    mod_count = 1
+    modules.update({mod_name: module_get(mod)})
+    mod_count += 1
     if recursive:
         sub_modules = get_submodules(mod)
         sub_mods = [
@@ -1078,6 +1088,9 @@ def module_hook(mod_name: str, recursive: bool = True) -> int:
             logger.debug("sub_modules of %s: %s", mod_name, sub_mods)
         for sub_mod in sub_mods:
             mod_load = f"{mod_name}.{sub_mod}"
-            c = module_hook(mod_load)
-            mod_count += c
-    return mod_count
+            # modules.update({mod_load: {}})
+            modules = module_hook(mod_load, modules=modules)
+            mod_count += len(modules)
+    member_count = sum([len(m) for m in modules])
+    logger.info("%d, %d", len(modules), member_count)
+    return modules
