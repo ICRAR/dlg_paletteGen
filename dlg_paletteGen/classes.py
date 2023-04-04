@@ -1,6 +1,6 @@
-from dataclasses import dataclass
 import re
 import xml.etree.ElementTree as ET
+from dataclasses import dataclass
 from typing import Union
 
 from dlg_paletteGen.support_functions import (
@@ -315,7 +315,7 @@ class GreatGrandChild:
         ggchild: ET.Element = ET.Element("dummy"),
         func_name: str = "Unknown",
         return_type: str = "Unknown",
-        parent_member: Union["Child", None] = None,
+        parent_member: Union[dict, None] = None,
     ):
         """
         Constructor of great-grandchild object.
@@ -335,9 +335,11 @@ class GreatGrandChild:
             )
         else:
             self.member = {"params": []}
+        self.isclass = False
+        self.usage = "NoPort"
 
     def process_GreatGrandChild(
-        self, ggchild: ET.Element, parent_member: Union["Child", None] = None
+        self, ggchild: ET.Element, parent_member: Union[dict, None] = None
     ):
         """
         Process GreatGrandChild
@@ -364,6 +366,7 @@ class GreatGrandChild:
             args = ggchild.text[1:-1]  # type: ignore
             args = [a.strip() for a in args.split(",")]
             if "self" in args:
+                self.isclass = True
                 class_name = self.func_path.rsplit(".", 1)[-1]
                 self.func_name = f"{class_name}::{self.func_name}"
                 logger.debug(
@@ -431,6 +434,8 @@ class GreatGrandChild:
                     name = gggchild.text  # type:ignore
                 if gggchild.tag == "defval":
                     default_value = gggchild.text  # type:ignore
+            if name == "self":
+                self.usage = "NoPort"
             if (
                 name in self.member["params"]
                 and "type" in self.member["params"][name]
@@ -451,11 +456,21 @@ class GreatGrandChild:
                 if default_value.find("/") >= 0:
                     default_value = f'"{default_value}"'
             # attach description from parent, if available
-            if parent_member and name in parent_member.member["params"]:
-                member_desc = parent_member.member["params"][name]
+            if parent_member and name in parent_member["params"]:
+                member_desc = parent_member["params"][name]
+                logger.debug(
+                    "Parent member: %s", parent_member["params"][name]
+                )
             else:
                 member_desc = ""
-
+            self.usage = (
+                "OutputPort" if self.isclass and name == "self" else "NoPort"
+            )
+            self.usage = (
+                "InputPort"
+                if not self.isclass and name == "self"
+                else "NoPort"
+            )
             logger.debug(
                 "adding param: %s",
                 {
@@ -466,7 +481,8 @@ class GreatGrandChild:
                     + str(default_value)
                     + "/"
                     + str(value_type)
-                    + "/ApplicationArgument/readwrite//False/False/"
+                    + f"/ApplicationArgument,{self.usage}"
+                    + "/readwrite//False/False/"
                     + member_desc,
                 },
             )
@@ -479,7 +495,8 @@ class GreatGrandChild:
                     + str(default_value)
                     + "/"
                     + str(value_type)
-                    + "/ApplicationArgument/readwrite//False/False/"
+                    + f"/ApplicationArgument,{self.usage}"
+                    + "/readwrite//False/False/"
                     + member_desc,
                 }
             )
@@ -522,7 +539,7 @@ class GreatGrandChild:
                         "direction": None,
                         "value": "Function Name/"
                         + f"{self.func_path}.{self.func_name}"
-                        + "/String/ApplicationArgument/readonly/"
+                        + f"/String/ApplicationArgument,{self.usage}/readonly/"
                         + "/False/True/Python function name",
                     }
                 )
@@ -531,7 +548,8 @@ class GreatGrandChild:
                         "key": "input_parser",
                         "direction": None,
                         "value": "Input Parser/pickle/Select/"
-                        + "ApplicationArgument/readwrite/pickle,eval,"
+                        + f"ApplicationArgument,{self.usage}"
+                        + "/readwrite/pickle,eval,"
                         + "npy,path,dataurl/False/False/Input port "
                         + "parsing technique",
                     }
@@ -541,7 +559,8 @@ class GreatGrandChild:
                         "key": "output_parser",
                         "direction": None,
                         "value": "Output Parser/pickle/Select/"
-                        + "ApplicationArgument/readwrite/pickle,eval,npy,path,"
+                        + f"ApplicationArgument,{self.usage}"
+                        + "/readwrite/pickle,eval,npy,path,"
                         + "dataurl/False/False/Output port parsing technique",
                     }
                 )
@@ -633,16 +652,15 @@ class Child:
             "public-func",
         ]:
             self.type = "function"
+            member = parent.member if parent else None
             logger.debug(
                 "Processing %d grand children; parent: %s",
                 len(child),
-                parent.member if parent else "<undefined>",
+                member if member else "<undefined>",
             )
             for grandchild in child:
                 gmember = self._process_grandchild(
-                    grandchild,
-                    language,
-                    # parent=self
+                    grandchild, language, parent_members=member
                 )
                 if gmember is None:
                     logger.debug("Bailing out of grandchild processing!")
@@ -658,7 +676,7 @@ class Child:
         self,
         gchild: ET.Element,
         language: Language,
-        # parent: Union["Child", None] = None,
+        parent_members: Union[dict, None] = None,
     ) -> Union[dict, None]:
         """
         Private function to process a grandchild element
@@ -691,9 +709,10 @@ class Child:
                     {
                         "key": "libpath",
                         "direction": None,
-                        "value": "Library Path//String/ComponentParameter/"
-                        + "readwrite//False/False/The location of the shared "
-                        + "object/DLL that implements this application",
+                        "value": "Library Path//String/ComponentParameter,"
+                        + "NoPort/readwrite//False/False/The location of the"
+                        + " shared object/DLL that implements this"
+                        + " application",
                     }
                 )
             elif language == Language.PYTHON:
@@ -709,7 +728,8 @@ class Child:
                         "key": "appclass",
                         "direction": None,
                         "value": "Application Class/dlg.apps.pyfunc.PyFuncApp/"
-                        + "String/ComponentParameter/readwrite//False/False/"
+                        + "String/ComponentParameter,NoPort/readwrite//False/"
+                        + "False/"
                         + "The python class that implements this application",
                     }
                 )
@@ -718,7 +738,8 @@ class Child:
                 {
                     "key": "execution_time",
                     "direction": None,
-                    "value": "Execution Time/5/Integer/ComponentParameter/"
+                    "value": "Execution Time/5/Integer/ComponentParameter,"
+                    + "NoPort/"
                     + "readwrite//False/False/Estimate of execution time "
                     + "(in seconds) for this application.",
                 }
@@ -727,7 +748,7 @@ class Child:
                 {
                     "key": "num_cpus",
                     "direction": None,
-                    "value": "No. of CPUs/1/Integer/ComponentParameter/"
+                    "value": "No. of CPUs/1/Integer/ComponentParameter,NoPort/"
                     + "readwrite//False/False/Number of cores used.",
                 }
             )
@@ -735,7 +756,8 @@ class Child:
                 {
                     "key": "group_start",
                     "direction": None,
-                    "value": "Group start/false/Boolean/ComponentParameter/"
+                    "value": "Group start/false/Boolean/ComponentParameter,"
+                    + "NoPort/"
                     + "readwrite//False/False/Is this node the start of "
                     + "a group?",
                 }
@@ -744,7 +766,9 @@ class Child:
             logger.debug("Processing %d great grand children", len(gchild))
             gg = GreatGrandChild()
             for ggchild in gchild:
-                gg.process_GreatGrandChild(ggchild, parent_member=self)
+                gg.process_GreatGrandChild(
+                    ggchild, parent_member=parent_members
+                )
                 if gg.member is None:
                     logger.debug(
                         "Bailing out ggchild processing: %s", gg.member
@@ -771,6 +795,7 @@ class Field:
     value: str
     value_type: str
     field_type: str
+    usage: str
     access: str = "readonly"
     options: str = ""
     precious: bool = False
@@ -786,6 +811,7 @@ class Field:
             "description": self.description,
             "type": self.value_type,
             "fieldType": self.field_type,
+            "usage": self.usage,
             "readonly": self.access == "readonly",
             "options": self.options,
             "precious": self.precious,

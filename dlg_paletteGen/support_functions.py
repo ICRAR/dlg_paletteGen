@@ -11,7 +11,6 @@ import xml.etree.ElementTree as ET
 from enum import Enum
 from pkgutil import iter_modules
 
-
 DOXYGEN_SETTINGS = {
     "OPTIMIZE_OUTPUT_JAVA": "YES",
     "AUTOLINK_SUPPORT": "NO",

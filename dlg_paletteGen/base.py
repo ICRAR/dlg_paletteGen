@@ -7,11 +7,10 @@ Should also be made separate sub-repo with proper installation and entry point.
 
 """
 import csv
-from dataclasses import dataclass
+import importlib
 import json
 import os
 import sys
-import importlib
 import types
 import xml.etree.ElementTree as ET
 from typing import Any, Union, _SpecialForm
@@ -24,8 +23,8 @@ from dlg_paletteGen.support_functions import (
     check_text_element,
     create_uuid,
     get_next_key,
-    logger,
     get_submodules,
+    logger,
 )
 
 KNOWN_PARAM_DATA_TYPES = [
@@ -56,9 +55,12 @@ KNOWN_DATA_CATEGORIES = [
 KNOWN_FIELD_TYPES = [
     "ComponentParameter",
     "ApplicationArgument",
+    "ConstructParameter",
     "InputPort",
     "OutputPort",
 ]
+
+KNOWN_USAGE_TYPES = ["NoPort", "InputPort", "OutputPort", "InputOutput"]
 
 BLOCKDAG_DATA_FIELDS = [
     "inputPorts",
@@ -210,6 +212,7 @@ def create_field(
     value: str,
     value_type: str,
     field_type: str,
+    usage: str,
     access: str = "readonly",
     options: str = "",
     precious: bool = False,
@@ -217,13 +220,16 @@ def create_field(
     description: str = "",
 ):
     """
-    This function creates a new Field object and returns its associated dictionary
+    This function creates a new Field object and returns its associated
+    dictionary
 
     :param internal_name: str, the internal name of the parameter
     :param external_name: str, the visible name of the parameter
     :param value: str, the value of the parameter
     :param value_type: str, the type of the value
     :param field_type: str, the type of the field
+    :param usage: str, the usage for this field (NoPort, InputPort, OutputPort,
+    InputOutput)
     :param access: str, readwrite|readonly (default readonly)
     :param options: str, options
     :param precious: bool,
@@ -240,6 +246,7 @@ def create_field(
         value,
         value_type,
         field_type,
+        usage,
         access,
         options,
         precious,
@@ -286,6 +293,7 @@ def parse_value(message: str, value: str) -> tuple:
     default_value = ""
     value_type = "String"
     field_type = "cparam"
+    usage = "NoPort"
     access = "readwrite"
     options: list = []
     precious = False
@@ -294,15 +302,38 @@ def parse_value(message: str, value: str) -> tuple:
 
     # assign attributes (if present)
     if len(parts) > 0:
-        external_name = parts[0]
+        external_name = parts[0].strip()
     if len(parts) > 1:
-        default_value = parts[1]
+        default_value = parts[1].strip()
     if len(parts) > 2:
-        value_type = parts[2]
+        value_type = parts[2].strip()
     if len(parts) > 3:
-        field_type = parts[3]
+        field_type = parts[3].strip()
+        if field_type.count(",") > 0:
+            field_type, usage = parts[3].strip().split(",", 1)
+        field_type = field_type.strip()
+        usage = usage.strip()
+        if field_type not in KNOWN_FIELD_TYPES:
+            logger.warning(
+                message
+                + " "
+                + external_name
+                + " field_type '%s' unknown "
+                + "using ComponentParameter!",
+                field_type,
+            )
+        if usage not in KNOWN_USAGE_TYPES:
+            logger.warning(
+                message
+                + " "
+                + external_name
+                + " %s usage '%s' unknown "
+                + "using NoPort!",
+                field_type,
+                usage,
+            )
     if len(parts) > 4:
-        access = parts[4]
+        access = parts[4].strip()
     else:
         logger.warning(
             message
@@ -360,6 +391,7 @@ def parse_value(message: str, value: str) -> tuple:
         default_value,
         value_type,
         field_type,
+        usage,
         access,
         options,
         precious,
@@ -393,6 +425,7 @@ def create_palette_node_from_params(params) -> tuple:
     inputLocalPorts: list = []
     outputLocalPorts: list = []
     fields: list = []
+    construct_fields = []
     applicationArgs: list = []
 
     # process the params into fields for the palette
@@ -423,6 +456,7 @@ def create_palette_node_from_params(params) -> tuple:
                 default_value,
                 value_type,
                 field_type,
+                usage,
                 access,
                 options,
                 precious,
@@ -490,6 +524,7 @@ def create_palette_node_from_params(params) -> tuple:
                 default_value,
                 value_type,
                 field_type,
+                usage,
                 access,
                 options,
                 precious,
@@ -500,7 +535,10 @@ def create_palette_node_from_params(params) -> tuple:
             # add the field to the correct list in the component, based on
             # fieldType
             if field_type in KNOWN_FIELD_TYPES:
-                fields.append(field)
+                if field_type == "ConstructParameter":
+                    construct_fields.append(field)
+                else:
+                    fields.append(field)
             else:
                 logger.warning(
                     text
@@ -540,6 +578,7 @@ def create_palette_node_from_params(params) -> tuple:
             "inputAppFields": [],
             "outputAppFields": [],
             "fields": fields,
+            "constructFields": construct_fields,
             "applicationArgs": applicationArgs,
             "repositoryUrl": GITREPO,
             "commitHash": VERSION,
@@ -899,6 +938,7 @@ def create_construct_node(node_type: str, node: dict) -> dict:
     }
 
     if node_type in ["Scatter", "Gather", "MKN"]:
+        construct_node["fields"] = node["constructFields"]
         construct_node["inputAppFields"] = node["fields"]
         construct_node["inputAppArgs"] = node["applicationArgs"]
         construct_node["inputApplicationKey"] = node["key"]
@@ -963,7 +1003,7 @@ def params_to_nodes(params: list) -> list:
             # if a construct is found, add to nodes
             if data["construct"] != "":
                 logger.info(
-                    "Adding component: "
+                    "Adding construct component: "
                     + data["construct"]
                     + "/"
                     + node["text"]
@@ -972,6 +1012,9 @@ def params_to_nodes(params: list) -> list:
                 construct_node["repositoryUrl"] = gitrepo
                 construct_node["commitHash"] = version
                 result.append(construct_node)
+            # have to get rid of them for the non-construct nodes
+            if "constructFields" in node:
+                del node["constructFields"]
 
     return result
 
@@ -1005,7 +1048,7 @@ def module_get(mod: types.ModuleType):
     content = dir(mod)
     count = 0
     # logger.info("Content of %s: %s", mod, content)
-    name = mod
+    name = mod.__name__
     members = []
     for c in content:
         if c[0] == "_":
@@ -1053,7 +1096,7 @@ def module_get(mod: types.ModuleType):
 
 def module_hook(
     mod_name: str, modules: dict = {}, recursive: bool = True
-) -> int:
+) -> tuple[dict, int]:
     """
     This is the starting point of a function dissecting the
     docs for an imported module.
@@ -1089,8 +1132,8 @@ def module_hook(
         for sub_mod in sub_mods:
             mod_load = f"{mod_name}.{sub_mod}"
             # modules.update({mod_load: {}})
-            modules = module_hook(mod_load, modules=modules)
+            modules, mod_count = module_hook(mod_load, modules=modules)
             mod_count += len(modules)
     member_count = sum([len(m) for m in modules])
     logger.info("%d, %d", len(modules), member_count)
-    return modules
+    return modules, mod_count

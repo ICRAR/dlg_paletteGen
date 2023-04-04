@@ -19,6 +19,7 @@ def start_process(args=(), **subproc_args):
     cmdline = ["dlg_paletteGen"]
     if args:
         cmdline.extend(args)
+    logging.info("Starting process: %s %s", cmdline, subproc_args)
     return subprocess.Popen(cmdline, **subproc_args)
 
 
@@ -167,27 +168,31 @@ def test_CLI_run_rascil(tmpdir: str, shared_datadir: str):
     assert len(newcontent["nodeDataArray"][0]["fields"]) == 14
 
 
-def test_CLI_run_casatask(tmpdir: str, shared_datadir: str):
+def test_CLI_run_casatask2(tmpdir: str, shared_datadir: str):
     """
     Test the CLI just using input and output.
 
     :param tmpdir: the path to the temp directory to use
     :param shared_datadir: the path the the local directory
     """
-    input = str(shared_datadir.absolute()) + "/example_casatask.py"
+    input = str(shared_datadir.absolute()) + "/hifa_importdata.py"
     logging.info("path: %s", input)
     output = tmpdir + "t.palette"
     p = start_process(
-        ("-rs", input, output),
+        ("-rvs", input, output),
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
     )
     out, err = p.communicate()
     assert p.returncode == 0
-    # logging.info("Captured output: %s", err)
+    logging.info(
+        "===================== Procedure output start ================="
+    )
+    logging.info("Captured output: %s", err.decode())
+    logging.info("===================== Procedure output end ===============")
     with open(input, "r") as f:
         content = f.read()
-    logging.info("INPUT: %s", content)
+    # logging.info("INPUT: %s", content)
     with open(output, "r") as f:
         newcontent = json.load(f)
     logging.info("OUTPUT: %s", newcontent)
@@ -212,7 +217,7 @@ def test_CLI_run_nr(tmpdir: str, shared_datadir: str):
     )
     out, err = p.communicate()
     assert p.returncode == 0
-    # logging.info("Captured output: %s", err)
+    # logging.info("Captured output: %s", out)
     with open(input, "r") as f:
         content = f.read()
     logging.info("INPUT: %s", content)

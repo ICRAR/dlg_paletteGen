@@ -19,9 +19,9 @@ import pkg_resources
 from dlg_paletteGen.base import (
     Language,
     logger,
+    module_hook,
     prepare_and_write_palette,
     process_compounddefs,
-    module_hook,
 )
 from dlg_paletteGen.support_functions import (
     DOXYGEN_SETTINGS,
