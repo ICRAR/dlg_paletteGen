@@ -11,6 +11,7 @@ import json
 import os
 import xml.etree.ElementTree as ET
 from typing import Any, Union
+from enum import Enum
 
 from blockdag import build_block_dag
 
@@ -48,12 +49,25 @@ KNOWN_DATA_CATEGORIES = [
     "EnvironmentVariables",
 ]
 
-KNOWN_FIELD_TYPES = [
-    "ComponentParameter",
-    "ApplicationArgument",
-    "InputPort",
-    "OutputPort",
-]
+class PGenEnum(str, Enum):
+    @classmethod
+    def has_key(cls, key):
+        return key in cls._member_names_
+
+class FieldType(PGenEnum):
+    ComponentParameter = "ComponentParameter"
+    ConstructParameter = "ConstructParameter"
+    ApplicationArgument = "ApplicationArgument"
+
+class FieldUsage(PGenEnum):
+    NoPort = "NoPort"
+    InputPort = "InputPort"
+    OutputPort = "OutputPort"
+    InputOutput = "InputOutput"
+
+class FieldAccess(PGenEnum):
+    ReadOnly = "ReadOnly"
+    ReadWrite = "ReadWrite"
 
 BLOCKDAG_DATA_FIELDS = [
     "inputPorts",
@@ -165,9 +179,6 @@ def check_required_fields_for_category(message: str, fields: list, catg: str):
     if catg == "DynlibApp":
         alert_if_missing(message, fields, "libpath")
 
-    if catg in ["PythonApp", "Branch"]:
-        alert_if_missing(message, fields, "appclass")
-
     if catg in [
         "File",
         "Memory",
@@ -198,15 +209,18 @@ def check_required_fields_for_category(message: str, fields: list, catg: str):
         alert_if_missing(message, fields, "paramValueSeparator")
         alert_if_missing(message, fields, "argumentPrefix")
 
+    # all nodes
+    alert_if_missing(message, fields, "dropclass")
+
 
 def create_field(
     internal_name: str,
-    external_name: str,
     value: str,
     value_type: str,
-    field_type: str,
-    access: str,
-    options: str,
+    field_type: FieldType,
+    field_usage: FieldUsage,
+    access: FieldAccess,
+    options: list,
     precious: bool,
     positional: bool,
     description: str,
@@ -216,12 +230,12 @@ def create_field(
     For now just create a dict using the values provided
 
     :param internal_name: str, the internal name of the parameter
-    :param external_name: str, the visible name of the parameter
     :param value: str, the value of the parameter
     :param value_type: str, the type of the value
-    :param field_type: str, the type of the field
-    :param access: str, readwrite|readonly (default readonly)
-    :param options: str, options
+    :param field_type: FieldType, the type of the field
+    :param field_usage: FieldUsage, type usage of the field
+    :param access: FieldAccess, ReadWrite|ReadOnly (default ReadOnly)
+    :param options: list, list of options
     :param precious: bool,
         should this parameter appear, even if empty or None
     :param positional: bool,
@@ -231,14 +245,14 @@ def create_field(
     :returns field: dict
     """
     return {
-        "text": external_name,
         "name": internal_name,
         "value": value,
         "defaultValue": value,
         "description": description,
         "type": value_type,
         "fieldType": field_type,
-        "readonly": access == "readonly",
+        "fieldUsage": field_usage,
+        "readonly": access == FieldAccess.ReadOnly,
         "options": options,
         "precious": precious,
         "positional": positional,
@@ -256,12 +270,12 @@ def alert_if_missing(message: str, fields: list, internal_name: str):
     """
     if find_field_by_name(fields, internal_name) is None:
         logger.warning(
-            message + " component missing " + internal_name + " cparam"
+            message + " component missing " + internal_name + " field"
         )
         pass
 
 
-def parse_value(message: str, value: str) -> tuple:
+def parse_value(component_name: str, field_name: str, value: str) -> tuple:
     """
     Parse the value from the EAGLE compatible string. These are csv strings
     delimited by '/'
@@ -277,12 +291,21 @@ def parse_value(message: str, value: str) -> tuple:
     for row in reader:
         parts = row
 
+    # check that row contains 9 parts
+    if len(parts) != 9:
+        logger.warning(
+            component_name
+            + " field definition contains the wrong number of parts : "
+            + value
+        )
+        return None
+
     # init attributes of the param
-    external_name = ""
     default_value = ""
-    value_type = "String"
-    field_type = "cparam"
-    access = "readwrite"
+    value_type: str = "String"
+    field_type: FieldType = FieldType.ComponentParameter
+    field_usage: FieldUsage = FieldUsage.NoPort
+    access: FieldAccess = FieldAccess.ReadWrite
     options: list = []
     precious = False
     positional = False
@@ -290,22 +313,22 @@ def parse_value(message: str, value: str) -> tuple:
 
     # assign attributes (if present)
     if len(parts) > 0:
-        external_name = parts[0]
+        default_value = parts[0]
     if len(parts) > 1:
-        default_value = parts[1]
+        value_type = parts[1]
     if len(parts) > 2:
-        value_type = parts[2]
+        field_type = parts[2]
     if len(parts) > 3:
-        field_type = parts[3]
+        field_usage = parts[3]    
     if len(parts) > 4:
         access = parts[4]
     else:
         logger.warning(
-            message
+            component_name
             + " "
             + field_type
             + " ("
-            + external_name
+            + field_name
             + ") has no 'access' descriptor, using default (readwrite) : "
             + value
         )
@@ -316,11 +339,11 @@ def parse_value(message: str, value: str) -> tuple:
             options = parts[5].strip().split(",")
     else:
         logger.warning(
-            message
+            component_name
             + " "
             + field_type
             + " ("
-            + external_name
+            + field_name
             + ") has no 'options', using default ([]) : "
             + value
         )
@@ -328,11 +351,11 @@ def parse_value(message: str, value: str) -> tuple:
         precious = parts[6].lower() == "true"
     else:
         logger.warning(
-            message
+            component_name
             + " "
             + field_type
             + " ("
-            + external_name
+            + field_name
             + ") has no 'precious' descriptor, using default (False) : "
             + value
         )
@@ -340,11 +363,11 @@ def parse_value(message: str, value: str) -> tuple:
         positional = parts[7].lower() == "true"
     else:
         logger.warning(
-            message
+            component_name
             + " "
             + field_type
             + " ("
-            + external_name
+            + field_name
             + ") has no 'positional', using default (False) : "
             + value
         )
@@ -352,10 +375,10 @@ def parse_value(message: str, value: str) -> tuple:
         description = parts[8]
 
     return (
-        external_name,
         default_value,
         value_type,
         field_type,
+        field_usage,
         access,
         options,
         precious,
@@ -393,20 +416,22 @@ def create_palette_node_from_params(params) -> tuple:
 
     # process the params
     for param in params:
+        # abort if param is not a dictionary
         if not isinstance(param, dict):
             logger.error(
                 "param %s has wrong type %s. Ignoring!", param, type(param)
             )
             continue
+
+        # read data from param
         key = param["key"]
-        # direction = param["direction"]
         value = param["value"]
 
         if key == "category":
             category = value
         elif key == "construct":
             construct = value
-        elif key == "tag" and not any(s in value for s in KNOWN_FIELD_TYPES):
+        elif key == "tag":# and not any(s in value for s in KNOWN_FIELD_TYPES):
             tag = value
         elif key == "text":
             text = value
@@ -414,23 +439,23 @@ def create_palette_node_from_params(params) -> tuple:
             comp_description = value
         else:
             internal_name = key
+
+            # check if value can be correctly parsed
+            field_data = parse_value(text, internal_name, value)
+            if field_data is None:
+                continue
+
             (
-                external_name,
-                default_value,
+                default_value,  
                 value_type,
                 field_type,
+                field_usage,
                 access,
                 options,
                 precious,
                 positional,
                 description,
-            ) = parse_value(text, value)
-
-            # check that type is in the list of known types
-            if value_type not in KNOWN_PARAM_DATA_TYPES:
-                # logger.warning(text + " " + field_type + " '" + name + "' has
-                #  unknown type: " + type)
-                pass
+            ) = field_data
 
             # check that a param of type "Select" has some options specified,
             # and check that every param with some options specified is of type
@@ -441,7 +466,7 @@ def create_palette_node_from_params(params) -> tuple:
                     + " "
                     + field_type
                     + " '"
-                    + external_name
+                    + internal_name
                     + "' is of type 'Select' but has no options specified: "
                     + str(options)
                 )
@@ -451,9 +476,8 @@ def create_palette_node_from_params(params) -> tuple:
                     + " "
                     + field_type
                     + " '"
-                    + external_name
-                    + "' has at least one option specified but is not of type "
-                    + "'Select': "
+                    + internal_name
+                    + "' has at least one option specified but is not of type 'Select': "
                     + value_type
                 )
 
@@ -461,20 +485,46 @@ def create_palette_node_from_params(params) -> tuple:
             if "\n" in value:
                 logger.info(
                     text
-                    + " description ("
+                    + " "
+                    + field_type
+                    + " '"
+                    + internal_name
+                    + "' description ("
                     + value
                     + ") contains a newline character, removing."
                 )
                 value = value.replace("\n", " ")
 
-            # check that access is a known value
-            if access != "readonly" and access != "readwrite":
+            # check that type is a known value
+            if not FieldType.has_key(field_type):
+                logger.warning(
+                    text
+                    + " '"
+                    + internal_name
+                    + "' field_type is Unknown: "
+                    + field_type
+                )
+
+            # check that usage is a known value
+            if not FieldUsage.has_key(field_usage):
                 logger.warning(
                     text
                     + " "
                     + field_type
                     + " '"
-                    + external_name
+                    + internal_name
+                    + "' has unknown 'usage' descriptor: "
+                    + field_usage
+                )
+
+            # check that access is a known value
+            if not FieldAccess.has_key(access):
+                logger.warning(
+                    text
+                    + " "
+                    + field_type
+                    + " '"
+                    + internal_name
                     + "' has unknown 'access' descriptor: "
                     + access
                 )
@@ -482,10 +532,10 @@ def create_palette_node_from_params(params) -> tuple:
             # create a field from this data
             field = create_field(
                 internal_name,
-                external_name,
                 default_value,
                 value_type,
                 field_type,
+                field_usage,
                 access,
                 options,
                 precious,
@@ -493,18 +543,9 @@ def create_palette_node_from_params(params) -> tuple:
                 description,
             )
 
-            # add the field to the correct list in the component, based on
-            # fieldType
-            if field_type in KNOWN_FIELD_TYPES:
-                fields.append(field)
-            else:
-                logger.warning(
-                    text
-                    + " '"
-                    + external_name
-                    + "' field_type is Unknown: "
-                    + field_type
-                )
+            # add the field to the fields list
+            fields.append(field)
+
 
     # check for presence of extra fields that must be included for each
     # category
@@ -516,27 +557,10 @@ def create_palette_node_from_params(params) -> tuple:
         {"tag": tag, "construct": construct},
         {
             "category": category,
-            "drawOrderHint": 0,
             "key": get_next_key(),
             "text": text,
             "description": comp_description,
-            "collapsed": False,
-            "showPorts": False,
-            "subject": None,
-            "selected": False,
-            "expanded": False,
-            "inputApplicationName": "",
-            "outputApplicationName": "",
-            "inputApplicationType": "None",
-            "outputApplicationType": "None",
-            "inputPorts": inputPorts,
-            "outputPorts": outputPorts,
-            "inputLocalPorts": inputLocalPorts,
-            "outputLocalPorts": outputLocalPorts,
-            "inputAppFields": [],
-            "outputAppFields": [],
             "fields": fields,
-            "applicationArgs": applicationArgs,
             "repositoryUrl": GITREPO,
             "commitHash": VERSION,
             "paletteDownloadUrl": "",
@@ -546,14 +570,14 @@ def create_palette_node_from_params(params) -> tuple:
 
 
 def write_palette_json(
-    outputfile: str, nodes: list, gitrepo: str, version: str, block_dag: list
+    output_filename: str, nodes: list, git_repo: str, version: str, block_dag: list
 ):
     """
     Construct palette header and Write nodes to the output file
 
-    :param outputfile: str, the name of the output file
+    :param output_filename: str, the name of the output file
     :param nodes: list of nodes
-    :param gitrepo: str, the gitrepo URL
+    :param git_repo: str, the git repository URL
     :param version: str, version string to be used
     :param block_dag: list, the reproducibility information
     """
@@ -566,8 +590,8 @@ def write_palette_json(
             "repoBranch": "master",
             "repo": "ICRAR/EAGLE_test_repo",
             "readonly": True,  # type: ignore
-            "filePath": outputfile,
-            "repositoryUrl": gitrepo,
+            "filePath": output_filename,
+            "repositoryUrl": git_repo,
             "commitHash": version,
             "downloadUrl": "",
             "signature": block_dag["signature"],  # type: ignore
@@ -577,7 +601,7 @@ def write_palette_json(
     }  # type: ignore
 
     # write palette to file
-    with open(outputfile, "w") as outfile:
+    with open(output_filename, "w") as outfile:
         json.dump(palette, outfile, indent=4)
 
 
@@ -662,12 +686,13 @@ def process_compounddefs(
                         )
                     nodes.append(n)
         if not is_eagle_node and not allow_missing_eagle_start:
-            logger.warning(
-                "None EAGLE tagged component '%s' identified. "
-                + "Not parsing it due to setting. "
-                + "Consider using the -s flag.",
-                compoundname,
-            )
+            #logger.warning(
+            #    "None EAGLE tagged component '%s' identified. "
+            #    + "Not parsing it due to setting. "
+            #    + "Consider using the -s flag.",
+            #    compoundname,
+            #)
+            pass
     return nodes
 
 
@@ -830,46 +855,49 @@ def create_construct_node(node_type: str, node: dict) -> dict:
             + "' has unknown type: "
             + node_type
         )
-        logger.info("Kown types are: %s", KNOWN_CONSTRUCT_TYPES)
+        logger.info("Known types are: %s", KNOWN_CONSTRUCT_TYPES)
         pass
 
-    if node_type in ["Scatter", "MKN"]:
+    if node_type == "Scatter":
         add_fields = [
-            {
-                "text": "Scatter dimension",
-                "name": "num_of_copies",
-                "value": 4,
-                "defaultValue": 4,
-                "description": "Specifies the number of replications "
+            create_field(
+                "num_of_copies", 4, "Integer", FieldType.ConstructParameter, FieldUsage.NoPort, FieldAccess.ReadWrite, [], False, False,
+                "Specifies the number of replications "
                 "that will be generated of the scatter construct's "
                 "contents.",
-                "readonly": False,
-                "type": "Integer",
-                "precious": False,
-                "options": [],
-                "positional": False,
-                "keyAttribute": False,
-            }
+            ),
+            create_field(
+                "dropclass", "dlg.apps.constructs.ScatterDrop", "String", FieldType.ComponentParameter, FieldUsage.NoPort, FieldAccess.ReadWrite, [], False, False,
+                "Drop class"
+            )
+        ]
+    elif node_type == "MKN":
+        add_fields = [
+            create_field(
+                "num_of_copies", 4, "Integer", FieldType.ConstructParameter, FieldUsage.NoPort, FieldAccess.ReadWrite, [], False, False,
+                "Specifies the number of replications "
+                "that will be generated of the scatter construct's "
+                "contents.",
+            ),
+            create_field(
+                "dropclass", "dlg.apps.constructs.MKNDrop", "String", FieldType.ComponentParameter, FieldUsage.NoPort, FieldAccess.ReadWrite, [], False, False,
+                "Drop class"
+            )
         ]
     elif node_type == "Gather":
         add_fields = [
-            {
-                "text": "Gather power",
-                "name": "num_of_inputs",
-                "value": 4,
-                "defaultValue": 4,
-                "description": "Specifies the number of inputs "
+            create_field(
+                "num_of_inputs", 4, "Integer", FieldType.ConstructParameter, FieldUsage.NoPort, FieldAccess.ReadWrite, [], False, False,
+                "Specifies the number of inputs "
                 "that that the gather construct will merge. "
                 "If it is less than the available number of "
                 "inputs, the translator will automatically "
-                "generate additional gathers.",
-                "readonly": False,
-                "type": "Integer",
-                "precious": False,
-                "options": [],
-                "positional": False,
-                "keyAttribute": False,
-            }
+                "generate additional gathers."
+            ),
+            create_field(
+                "dropclass", "dlg.apps.constructs.GatherDrop", "String", FieldType.ComponentParameter, FieldUsage.NoPort, FieldAccess.ReadWrite, [], False, False,
+                "Drop class"
+            )
         ]
     else:
         add_fields = []  # don't add anything at this point.
@@ -893,26 +921,6 @@ def create_construct_node(node_type: str, node: dict) -> dict:
         "text": node_type + "/" + node["text"],
     }
 
-    if node_type in ["Scatter", "Gather", "MKN"]:
-        construct_node["inputAppFields"] = node["fields"]
-        construct_node["inputAppArgs"] = node["applicationArgs"]
-        construct_node["inputApplicationKey"] = node["key"]
-        construct_node["inputApplicationName"] = node["text"]
-        construct_node["inputApplicationType"] = node["category"]
-        construct_node["inputApplicationDescription"] = node["description"]
-        construct_node["inputLocalPorts"] = node["outputPorts"]
-        construct_node["inputPorts"] = node["inputPorts"]
-        construct_node["outputAppFields"] = []
-        construct_node["outputAppArgs"] = []
-        construct_node["outputApplicationKey"] = None
-        construct_node["outputApplicationName"] = ""
-        construct_node["outputApplicationType"] = "None"
-        construct_node["outputApplicationDescription"] = ""
-        construct_node["outputLocalPorts"] = []
-        construct_node["outputPorts"] = []
-    else:
-        pass  # not sure what to do for branch
-
     return construct_node
 
 
@@ -927,7 +935,7 @@ def params_to_nodes(params: list) -> list:
     # logger.debug("params_to_nodes: %s", params)
     result = []
     tag = ""
-    gitrepo = ""
+    git_repo = ""
     version = "0.1"
 
     # if no params were found, or only the name and description were found,
@@ -935,15 +943,15 @@ def params_to_nodes(params: list) -> list:
     if len(params) > 2:
         # create a node
 
-        # check if gitrepo and version params were found and cache the values
-        # TODO: This seems unneccessary remove?
+        # check if git_repo and version params were found and cache the values
+        # TODO: This seems unnecessary remove?
         for param in params:
             logger.debug("param: %s", param)
             if not param:
                 continue
             key, value = (param["key"], param["value"])
             if key == "gitrepo":
-                gitrepo = value
+                git_repo = value
             elif key == "version":
                 version = value
 
@@ -952,7 +960,7 @@ def params_to_nodes(params: list) -> list:
         # if the node tag matches the command line tag, or no tag was specified
         # on the command line, add the node to the list to output
         if data["tag"] == tag or tag == "":  # type: ignore
-            logger.debug("Adding component: " + node["text"])
+            logger.info("Adding component: " + node["text"])
             result.append(node)
 
             # if a construct is found, add to nodes
@@ -964,19 +972,19 @@ def params_to_nodes(params: list) -> list:
                     + node["text"]
                 )
                 construct_node = create_construct_node(data["construct"], node)
-                construct_node["repositoryUrl"] = gitrepo
+                construct_node["repositoryUrl"] = git_repo
                 construct_node["commitHash"] = version
                 result.append(construct_node)
 
     return result
 
 
-def prepare_and_write_palette(nodes: list, outputfile: str):
+def prepare_and_write_palette(nodes: list, output_filename: str):
     """
     Prepare and write the palette in JSON format.
 
     :param nodes: the list of nodes
-    :param outputfile: the name of the outputfile
+    :param output_filename: the filename of the output
     """
     # add signature for whole palette using BlockDAG
     vertices = {}
@@ -989,6 +997,6 @@ def prepare_and_write_palette(nodes: list, outputfile: str):
 
     # write the output json file
     write_palette_json(
-        outputfile, nodes, GITREPO, VERSION, block_dag  # type: ignore
+        output_filename, nodes, GITREPO, VERSION, block_dag  # type: ignore
     )
     logger.info("Wrote " + str(len(nodes)) + " component(s)")
