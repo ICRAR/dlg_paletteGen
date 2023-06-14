@@ -686,13 +686,12 @@ def process_compounddefs(
                         )
                     nodes.append(n)
         if not is_eagle_node and not allow_missing_eagle_start:
-            #logger.warning(
-            #    "None EAGLE tagged component '%s' identified. "
-            #    + "Not parsing it due to setting. "
-            #    + "Consider using the -s flag.",
-            #    compoundname,
-            #)
-            pass
+            logger.warning(
+                "None EAGLE tagged component '%s' identified. "
+                + "Not parsing it due to setting. "
+                + "Consider using the -s flag.",
+                compoundname,
+            )
     return nodes
 
 
