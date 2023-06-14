@@ -431,7 +431,7 @@ def create_palette_node_from_params(params) -> tuple:
             category = value
         elif key == "construct":
             construct = value
-        elif key == "tag":# and not any(s in value for s in KNOWN_FIELD_TYPES):
+        elif key == "tag":
             tag = value
         elif key == "text":
             text = value
@@ -550,6 +550,7 @@ def create_palette_node_from_params(params) -> tuple:
     # check for presence of extra fields that must be included for each
     # category
     check_required_fields_for_category(text, fields, category)
+
     # create and return the node
     GITREPO = os.environ.get("GIT_REPO")
     VERSION = os.environ.get("PROJECT_VERSION")
@@ -607,14 +608,16 @@ def write_palette_json(
 
 def process_compounddefs(
     output_xml_filename: str,
+    tag: str,
     allow_missing_eagle_start: bool = True,
-    language: Language = Language.PYTHON,
+    language: Language = Language.PYTHON
 ) -> list:
     """
     Extract and process the compounddef elements.
 
     :param output_xml_filename: str, File name for the XML file produced by
         doxygen
+    :param tag: Tag, return only those components matching this tag
     :param allow_missing_eagle_start: bool, Treat non-daliuge tagged classes
         and functions
     :param language: Language, can be [2] for Python, 1 for C or 0 for Unknown
@@ -649,7 +652,7 @@ def process_compounddefs(
         if is_eagle_node:
             params = process_compounddef_eagle(compounddef)
 
-            ns = params_to_nodes(params)
+            ns = params_to_nodes(params, tag)
             nodes.extend(ns)
 
         if not is_eagle_node and allow_missing_eagle_start:  # not eagle node
@@ -667,7 +670,7 @@ def process_compounddefs(
                 if f_name == [".Unknown"]:
                     continue
 
-                ns = params_to_nodes(f["params"])
+                ns = params_to_nodes(f["params"], "")
 
                 for n in ns:
                     alreadyPresent = False
@@ -687,7 +690,7 @@ def process_compounddefs(
                     nodes.append(n)
         if not is_eagle_node and not allow_missing_eagle_start:
             logger.warning(
-                "None EAGLE tagged component '%s' identified. "
+                "Non-EAGLE tagged component '%s' identified. "
                 + "Not parsing it due to setting. "
                 + "Consider using the -s flag.",
                 compoundname,
@@ -923,7 +926,7 @@ def create_construct_node(node_type: str, node: dict) -> dict:
     return construct_node
 
 
-def params_to_nodes(params: list) -> list:
+def params_to_nodes(params: list, tag: str) -> list:
     """
     Generate a list of nodes from the params found
 
@@ -933,7 +936,6 @@ def params_to_nodes(params: list) -> list:
     """
     # logger.debug("params_to_nodes: %s", params)
     result = []
-    tag = ""
     git_repo = ""
     version = "0.1"
 
@@ -959,7 +961,7 @@ def params_to_nodes(params: list) -> list:
         # if the node tag matches the command line tag, or no tag was specified
         # on the command line, add the node to the list to output
         if data["tag"] == tag or tag == "":  # type: ignore
-            logger.info("Adding component: " + node["text"])
+            logger.info("Adding component: " + node["text"] + " with " + str(len(node["fields"])) + " fields.")
             result.append(node)
 
             # if a construct is found, add to nodes
