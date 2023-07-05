@@ -65,6 +65,7 @@ class CustomFormatter(logging.Formatter):
 ch = logging.StreamHandler()
 ch.setLevel(logging.DEBUG)
 
+
 ch.setFormatter(CustomFormatter())
 
 logger = logging.getLogger(__name__)

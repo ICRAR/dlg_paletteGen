@@ -18,7 +18,6 @@ import pkg_resources
 # isort: ignore
 from dlg_paletteGen.base import (
     Language,
-    logger,
     module_hook,
     prepare_and_write_palette,
     process_compounddefs,
@@ -27,6 +26,7 @@ from dlg_paletteGen.support_functions import (
     DOXYGEN_SETTINGS,
     process_doxygen,
     process_xml,
+    logger,
 )
 
 NAME = "dlg_paletteGen"
@@ -177,10 +177,9 @@ def main():  # pragma: no cover
     output_directory = tempfile.TemporaryDirectory()
 
     if len(module_path) > 0:
-        modules = module_hook(module_path, recursive=recursive)
-        member_count = sum([len(m) for m in modules])
-        logger.info(">>>>> Number of modules processed: %d", len(modules))
-        logger.info(">>>>> Number of members found: %d", member_count)
+        modules, mod_count = module_hook(module_path, recursive=recursive)
+        # member_count = sum([len(m) for m in modules])
+        logger.info(">>>>> Number of modules processed: %d", mod_count)
     else:
         # add extra doxygen setting for input and output locations
         DOXYGEN_SETTINGS.update(
@@ -197,7 +196,7 @@ def main():  # pragma: no cover
         # version = os.environ.get("PROJECT_VERSION")
 
         nodes = process_compounddefs(
-            output_xml_filename, allow_missing_eagle_start, language
+            output_xml_filename, allow_missing_eagle_start, language, tag
         )
         prepare_and_write_palette(nodes, outputfile)
         # cleanup the output directory

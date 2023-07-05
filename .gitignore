@@ -118,7 +118,7 @@ venv.bak/
 .ropeproject
 
 # vscode project settings
-.vscode/
+.vscode
 
 # mkdocs documentation
 /site
@@ -136,3 +136,4 @@ dmypy.json
 
 # Custom
 output.xml
+dlg_paletteGen/cli.py

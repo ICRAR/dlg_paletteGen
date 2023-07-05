@@ -628,6 +628,7 @@ def process_compounddefs(
     output_xml_filename: str,
     allow_missing_eagle_start: bool = True,
     language: Language = Language.PYTHON,
+    tag: str = "",
 ) -> list:
     """
     Extract and process the compounddef elements.
@@ -637,6 +638,7 @@ def process_compounddefs(
     :param allow_missing_eagle_start: bool, Treat non-daliuge tagged classes
         and functions
     :param language: Language, can be [2] for Python, 1 for C or 0 for Unknown
+    :param tag: The filter tag to be used for EAGLE components
 
     :returns nodes
     """
@@ -668,7 +670,7 @@ def process_compounddefs(
         if is_eagle_node:
             params = process_compounddef_eagle(compounddef)
 
-            ns = params_to_nodes(params)
+            ns = params_to_nodes(params, tag=tag)
             nodes.extend(ns)
 
         if not is_eagle_node and allow_missing_eagle_start:  # not eagle node
@@ -961,17 +963,17 @@ def create_construct_node(node_type: str, node: dict) -> dict:
     return construct_node
 
 
-def params_to_nodes(params: list) -> list:
+def params_to_nodes(params: list, tag: str = "") -> list:
     """
     Generate a list of nodes from the params found
 
     :param params: list, the parameters to be converted
+    :param tag: The filter taf to be used
 
     :returns list of node dictionaries
     """
     # logger.debug("params_to_nodes: %s", params)
     result = []
-    tag = ""
     gitrepo = ""
     version = "0.1"
 
@@ -1096,7 +1098,7 @@ def module_get(mod: types.ModuleType):
 
 def module_hook(
     mod_name: str, modules: dict = {}, recursive: bool = True
-) -> tuple[dict, int]:
+) -> "tuple[dict, int]":
     """
     This is the starting point of a function dissecting the
     docs for an imported module.
