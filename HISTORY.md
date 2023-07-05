@@ -4,6 +4,14 @@ Changelog
 
 (unreleased)
 ------------
+- Added tag filter. [Andreas Wicenec]
+- Ignore .vscode dir. [Andreas Wicenec]
+- Ignore .vscode. [Andreas Wicenec]
+- Added support for constructParam. [Andreas Wicenec]
+- Refactored Field into dataclass. [Andreas Wicenec]
+- Added recursion into sub-modules. [Andreas Wicenec]
+- Initial support for module parsing. [Andreas Wicenec]
+- Release: version 0.1.8 🚀 [Andreas Wicenec]
 - Doc updates. [Andreas Wicenec]
 - Release: version 0.1.8 🚀 [Andreas Wicenec]
 - More documentation. [Andreas Wicenec]
