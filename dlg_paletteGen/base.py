@@ -257,7 +257,7 @@ def create_field(
         "description": description,
         "type": value_type,
         "fieldType": field_type,
-        "fieldUsage": field_usage,
+        "usage": field_usage,
         "readonly": access == FieldAccess.readonly,
         "options": options,
         "precious": precious,
@@ -599,21 +599,17 @@ def write_palette_json(
             "fileType": "palette",
             "shortDescription": "",
             "detailedDescription": "",
-
             "repoService": "GitHub",
             "repoBranch": "master",
             "repo": "ICRAR/EAGLE_test_repo",
-
             "eagleVersion": "",
             "eagleCommitHash": "",
             "schemaVersion": "AppRef",
             "readonly": True,  # type: ignore
-
             "repositoryUrl": git_repo,
             "commitHash": version,
             "downloadUrl": "",
             "signature": block_dag["signature"],  # type: ignore
-
             "lastModifiedName": "",
             "lastModifiedEmail": "",
             "lastModifiedDatetime": datetime.datetime.now().timestamp() * 1000,
