@@ -7,6 +7,7 @@ Should also be made separate sub-repo with proper installation and entry point.
 
 """
 import csv
+import datetime
 import json
 import os
 import xml.etree.ElementTree as ET
@@ -586,16 +587,29 @@ def write_palette_json(
         nodes[i]["dataHash"] = block_dag[i]["data_hash"]
     palette = {
         "modelData": {
+            "filePath": output_filename,
             "fileType": "palette",
+            
+            "shortDescription": "",
+            "detailedDescription": "",
+
             "repoService": "GitHub",
             "repoBranch": "master",
             "repo": "ICRAR/EAGLE_test_repo",
+
+            "eagleVersion": "",
+            "eagleCommitHash": "",
+            "schemaVersion": "AppRef",
             "readonly": True,  # type: ignore
-            "filePath": output_filename,
+
             "repositoryUrl": git_repo,
             "commitHash": version,
             "downloadUrl": "",
             "signature": block_dag["signature"],  # type: ignore
+
+            "lastModifiedName": "",
+            "lastModifiedEmail": "",
+            "lastModifiedDatetime": datetime.datetime.now().timestamp() * 1000,
         },
         "nodeDataArray": nodes,
         "linkDataArray": [],
