@@ -597,7 +597,6 @@ def write_palette_json(
         "modelData": {
             "filePath": output_filename,
             "fileType": "palette",
-            
             "shortDescription": "",
             "detailedDescription": "",
 
