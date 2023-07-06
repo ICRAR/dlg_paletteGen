@@ -4,6 +4,12 @@ Changelog
 
 (unreleased)
 ------------
+- Fix for missing port definitions. [Andreas Wicenec]
+
+
+0.1.10 (2023-07-06)
+-------------------
+- Release: version 0.1.10 🚀 [Andreas Wicenec]
 - Merge branch 'dgen-12' [Andreas Wicenec]
 - Fixed linting errors. [Andreas Wicenec]
 - Finally got this workling again. [Andreas Wicenec]
