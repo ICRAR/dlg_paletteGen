@@ -75,7 +75,7 @@ class NullBarrierApp(BarrierAppDROP):
 # @par EAGLE_START
 # @param category PythonApp
 # @param tag template
-# @param dropclass /String/ComponentParameter/NoPort/ReadOnly//False/False/Application class
+# @param dropclass dummy/String/ComponentParameter/NoPort/ReadOnly//False/False/Application class
 # @param num_cpus 1/Integer/ComponentParameter/NoPort/ReadOnly//False/False/Number of cores used
 # @param execution_time 5/Float/ComponentParameter/NoPort/ReadOnly//False/False/Estimated execution time
 # @param group_start False/Boolean/ComponentParameter/NoPort/ReadWrite//False/False/Is this node the start of a group?
@@ -136,7 +136,7 @@ class SleepApp(BarrierAppDROP):
 # @param group_start False/Boolean/ComponentParameter/NoPort/ReadWrite//False/False/Is this node the start of a group?
 # @param input_error_threshold 0/Integer/ComponentParameter/NoPort/ReadWrite//False/False/the allowed failure rate of the inputs (in percent), before this component goes to ERROR state and is not executed
 # @param n_tries 1/Integer/ComponentParameter/NoPort/ReadWrite//False/False/Specifies the number of times the 'run' method will be executed before finally giving up
-# @param dummy /Object/ApplicationArgument/InputOutput/ReadWrite//False/False/Dummy port
+# @param dummy dummy/Object/ApplicationArgument/InputOutput/ReadWrite//False/False/Dummy port
 # @par EAGLE_END
 class CopyApp(BarrierAppDROP):
     """
@@ -216,7 +216,7 @@ class SleepAndCopyApp(SleepApp, CopyApp):
 # @param group_start False/Boolean/ComponentParameter/NoPort/ReadWrite//False/False/Is this node the start of a group?
 # @param input_error_threshold 0/Integer/ComponentParameter/NoPort/ReadWrite//False/False/the allowed failure rate of the inputs (in percent), before this component goes to ERROR state and is not executed
 # @param n_tries 1/Integer/ComponentParameter/NoPort/ReadWrite//False/False/Specifies the number of times the 'run' method will be executed before finally giving up
-# @param array /Object.Array/ComponentParameter/OutputPort/ReadWrite//False/False/Port carrying the averaged array
+# @param array dummy/Object.Array/ComponentParameter/OutputPort/ReadWrite//False/False/Port carrying the averaged array
 # @par EAGLE_END
 class RandomArrayApp(BarrierAppDROP):
     """
@@ -299,7 +299,7 @@ class RandomArrayApp(BarrierAppDROP):
 # @param group_start False/Boolean/ComponentParameter/NoPort/ReadWrite//False/False/Is this node the start of a group?
 # @param input_error_threshold 0/Integer/ComponentParameter/NoPort/ReadWrite//False/False/the allowed failure rate of the inputs (in percent), before this component goes to ERROR state and is not executed
 # @param n_tries 1/Integer/ComponentParameter/NoPort/ReadWrite//False/False/Specifies the number of times the 'run' method will be executed before finally giving up
-# @param array /Object.Array/ApplicationArgument/InputOutput/ReadWrite//False/False/Port for the array(s)
+# @param array dummy/Object.Array/ApplicationArgument/InputOutput/ReadWrite//False/False/Port for the array(s)
 # @par EAGLE_END
 class AverageArraysApp(BarrierAppDROP):
     """
@@ -394,7 +394,7 @@ class AverageArraysApp(BarrierAppDROP):
 # @param n_tries 1/Integer/ComponentParameter/NoPort/ReadWrite//False/False/Specifies the number of times the 'run' method will be executed before finally giving up
 # @param function sum/Select/ComponentParameter/NoPort/ReadWrite/sum,prod,min,max,add,multiply,maximum,minimum/False/False/The function used for gathering
 # @param reduce_axes None/String/ComponentParameter/NoPort/ReadOnly//False/False/The ndarray axes to reduce, None reduces all axes for sum, prod, max, min functions
-# @param array /Object.Array/ApplicationArgument/InputOutput/ReadWrite//False/False/Port for the array(s)
+# @param array dummy/Object.Array/ApplicationArgument/InputOutput/ReadWrite//False/False/Port for the array(s)
 # @par EAGLE_END
 class GenericNpyGatherApp(BarrierAppDROP):
     """
@@ -494,7 +494,7 @@ class GenericNpyGatherApp(BarrierAppDROP):
 # @param group_start False/Boolean/ComponentParameter/NoPort/ReadWrite//False/False/Is this node the start of a group?
 # @param input_error_threshold 0/Integer/ComponentParameter/NoPort/ReadWrite//False/False/the allowed failure rate of the inputs (in percent), before this component goes to ERROR state and is not executed
 # @param n_tries 1/Integer/ComponentParameter/NoPort/ReadWrite//False/False/Specifies the number of times the 'run' method will be executed before finally giving up
-# @param hello "world"/String/ApplicationArgument/OutputPort/ReadWrite//False/False/The port carrying the message produced by the app.
+# @param hello world/String/ApplicationArgument/OutputPort/ReadWrite//False/False/The port carrying the message produced by the app.
 # @par EAGLE_END
 class HelloWorldApp(BarrierAppDROP):
     """
@@ -557,7 +557,7 @@ class HelloWorldApp(BarrierAppDROP):
 # @param group_start False/Boolean/ComponentParameter/NoPort/ReadWrite//False/False/Is this node the start of a group?
 # @param input_error_threshold 0/Integer/ComponentParameter/NoPort/ReadWrite//False/False/the allowed failure rate of the inputs (in percent), before this component goes to ERROR state and is not executed
 # @param n_tries 1/Integer/ComponentParameter/NoPort/ReadWrite//False/False/Specifies the number of times the 'run' method will be executed before finally giving up
-# @param content /String/ComponentParameter/OutputPort/ReadWrite//False/False/The port carrying the content read from the URL
+# @param content None/String/ComponentParameter/OutputPort/ReadWrite//False/False/The port carrying the content read from the URL
 # @par EAGLE_END
 class UrlRetrieveApp(BarrierAppDROP):
     """
@@ -613,7 +613,7 @@ class UrlRetrieveApp(BarrierAppDROP):
 # @param group_start False/Boolean/ComponentParameter/NoPort/ReadWrite//False/False/Is this node the start of a group?
 # @param input_error_threshold 0/Integer/ComponentParameter/NoPort/ReadWrite//False/False/the allowed failure rate of the inputs (in percent), before this component goes to ERROR state and is not executed
 # @param n_tries 1/Integer/ComponentParameter/NoPort/ReadWrite//False/False/Specifies the number of times the 'run' method will be executed before finally giving up
-# @param array /Object.Array/ApplicationArgument/OutputPort/ReadWrite//False/False/A numpy array of arrays, where the first axis is of length <numSplit>
+# @param array None/Object.Array/ApplicationArgument/OutputPort/ReadWrite//False/False/A numpy array of arrays, where the first axis is of length <numSplit>
 # @par EAGLE_END
 class GenericScatterApp(BarrierAppDROP):
     """
@@ -677,7 +677,7 @@ class GenericScatterApp(BarrierAppDROP):
 # @param input_error_threshold 0/Integer/ComponentParameter/NoPort/ReadWrite//False/False/the allowed failure rate of the inputs (in percent), before this component goes to ERROR state and is not executed
 # @param n_tries 1/Integer/ComponentParameter/NoPort/ReadWrite//False/False/Specifies the number of times the 'run' method will be executed before finally giving up
 # @param scatter_axes /String/ApplicationArgument/NoPort/ReadWrite//False/False/The axes to split input ndarrays on, e.g. [0,0,0], length must match the number of input ports
-# @param array /Object.Array/ApplicationArgument/InputPort/ReadWrite//False/False/A numpy array of arrays
+# @param array None/Object.Array/ApplicationArgument/InputPort/ReadWrite//False/False/A numpy array of arrays
 # @par EAGLE_END
 class GenericNpyScatterApp(BarrierAppDROP):
     """
@@ -753,8 +753,8 @@ class SimpleBranch(BranchAppDrop, NullBarrierApp):
 # @param execution_time 5/Float/ComponentParameter/NoPort/ReadOnly//False/False/Estimated execution time # noqa: E501
 # @param num_cpus 1/Integer/ComponentParameter/NoPort/ReadOnly//False/False/Number of cores used # noqa: E501
 # @param group_start False/Boolean/ComponentParameter/NoPort/ReadWrite//False/False/Is this node the start of a group?
-# @param element /Object.element/ApplicationArgument/OutputPort/ReadWrite//False/False/Port carrying the first element of input array
-# @param rest_array /Object.array/ApplicationArgument/InputOutput/ReadWrite//False/False/Port carrying the rest array
+# @param element None/Object.element/ApplicationArgument/OutputPort/ReadWrite//False/False/Port carrying the first element of input array
+# @param rest_array None/Object.array/ApplicationArgument/InputOutput/ReadWrite//False/False/Port carrying the rest array
 # @par EAGLE_END
 class PickOne(BarrierAppDROP):
     """
@@ -817,7 +817,7 @@ class PickOne(BarrierAppDROP):
 # @param group_start False/Boolean/ComponentParameter/NoPort/ReadWrite//False/False/Is this node the start of a group?
 # @param input_error_threshold 0/Integer/ComponentParameter/NoPort/ReadWrite//False/False/the allowed failure rate of the inputs (in percent), before this component goes to ERROR state and is not executed
 # @param n_tries 1/Integer/ComponentParameter/NoPort/ReadWrite//False/False/Specifies the number of times the 'run' method will be executed before finally giving up
-# @param array /Object.Array/ApplicationArgument/OutputPort/ReadWrite//False/False/Port carrying the random array.
+# @param array None/Object.Array/ApplicationArgument/OutputPort/ReadWrite//False/False/Port carrying the random array.
 # @par EAGLE_END
 class ListAppendThrashingApp(BarrierAppDROP):
     """

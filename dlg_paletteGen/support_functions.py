@@ -4,6 +4,7 @@ import os
 import random
 import re
 import subprocess
+import sys
 import tempfile
 import types
 import uuid
@@ -61,7 +62,7 @@ class CustomFormatter(logging.Formatter):
 
 
 # create console handler with a higher log level
-ch = logging.StreamHandler()
+ch = logging.StreamHandler(sys.stdout)
 ch.setLevel(logging.DEBUG)
 
 ch.setFormatter(CustomFormatter())
@@ -230,7 +231,7 @@ def modify_doxygen_options(doxygen_filename: str, options: dict):
 
             for key, value in options.items():
                 if first_part == key:
-                    dfile.write(key + " = " + value + "\n")
+                    dfile.write(key + " = " + str(value) + "\n")
                     written = True
                     break
 

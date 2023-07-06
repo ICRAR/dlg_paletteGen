@@ -11,8 +11,8 @@ import datetime
 import json
 import os
 import xml.etree.ElementTree as ET
-from typing import Any, Union
 from enum import Enum
+from typing import Any, Union
 
 from blockdag import build_block_dag
 
@@ -50,15 +50,18 @@ KNOWN_DATA_CATEGORIES = [
     "EnvironmentVariables",
 ]
 
+
 class PGenEnum(str, Enum):
     @classmethod
     def has_key(cls, key):
         return key in cls._member_names_
 
+
 class FieldType(PGenEnum):
     ComponentParameter = "ComponentParameter"
     ConstructParameter = "ConstructParameter"
     ApplicationArgument = "ApplicationArgument"
+
 
 class FieldUsage(PGenEnum):
     NoPort = "NoPort"
@@ -66,9 +69,11 @@ class FieldUsage(PGenEnum):
     OutputPort = "OutputPort"
     InputOutput = "InputOutput"
 
+
 class FieldAccess(PGenEnum):
-    ReadOnly = "ReadOnly"
-    ReadWrite = "ReadWrite"
+    readonly = "readonly"
+    readwrite = "readwrite"
+
 
 BLOCKDAG_DATA_FIELDS = [
     "inputPorts",
@@ -253,7 +258,7 @@ def create_field(
         "type": value_type,
         "fieldType": field_type,
         "fieldUsage": field_usage,
-        "readonly": access == FieldAccess.ReadOnly,
+        "readonly": access == FieldAccess.readonly,
         "options": options,
         "precious": precious,
         "positional": positional,
@@ -299,14 +304,14 @@ def parse_value(component_name: str, field_name: str, value: str) -> tuple:
             + " field definition contains the wrong number of parts : "
             + value
         )
-        return None
+        return ()
 
     # init attributes of the param
     default_value = ""
     value_type: str = "String"
-    field_type: FieldType = FieldType.ComponentParameter
-    field_usage: FieldUsage = FieldUsage.NoPort
-    access: FieldAccess = FieldAccess.ReadWrite
+    field_type: str = FieldType.ComponentParameter
+    field_usage: str = FieldUsage.NoPort
+    access: str = FieldAccess.readwrite
     options: list = []
     precious = False
     positional = False
@@ -320,7 +325,7 @@ def parse_value(component_name: str, field_name: str, value: str) -> tuple:
     if len(parts) > 2:
         field_type = parts[2]
     if len(parts) > 3:
-        field_usage = parts[3]    
+        field_usage = parts[3]
     if len(parts) > 4:
         access = parts[4]
     else:
@@ -408,12 +413,12 @@ def create_palette_node_from_params(params) -> tuple:
     category = ""
     tag = ""
     construct = ""
-    inputPorts: list = []
-    outputPorts: list = []
-    inputLocalPorts: list = []
-    outputLocalPorts: list = []
+    # inputPorts: list = []
+    # outputPorts: list = []
+    # inputLocalPorts: list = []
+    # outputLocalPorts: list = []
     fields: list = []
-    applicationArgs: list = []
+    # applicationArgs: list = []
 
     # process the params
     for param in params:
@@ -443,11 +448,11 @@ def create_palette_node_from_params(params) -> tuple:
 
             # check if value can be correctly parsed
             field_data = parse_value(text, internal_name, value)
-            if field_data is None:
+            if field_data in [None, ()]:
                 continue
 
             (
-                default_value,  
+                default_value,
                 value_type,
                 field_type,
                 field_usage,
@@ -478,7 +483,7 @@ def create_palette_node_from_params(params) -> tuple:
                     + field_type
                     + " '"
                     + internal_name
-                    + "' has at least one option specified but is not of type 'Select': "
+                    + "' option specified but is not of type 'Select': "
                     + value_type
                 )
 
@@ -519,7 +524,7 @@ def create_palette_node_from_params(params) -> tuple:
                 )
 
             # check that access is a known value
-            if not FieldAccess.has_key(access):
+            if not FieldAccess.has_key(access.lower()):
                 logger.warning(
                     text
                     + " "
@@ -547,7 +552,6 @@ def create_palette_node_from_params(params) -> tuple:
             # add the field to the fields list
             fields.append(field)
 
-
     # check for presence of extra fields that must be included for each
     # category
     check_required_fields_for_category(text, fields, category)
@@ -572,7 +576,11 @@ def create_palette_node_from_params(params) -> tuple:
 
 
 def write_palette_json(
-    output_filename: str, nodes: list, git_repo: str, version: str, block_dag: list
+    output_filename: str,
+    nodes: list,
+    git_repo: str,
+    version: str,
+    block_dag: list,
 ):
     """
     Construct palette header and Write nodes to the output file
@@ -624,7 +632,7 @@ def process_compounddefs(
     output_xml_filename: str,
     tag: str,
     allow_missing_eagle_start: bool = True,
-    language: Language = Language.PYTHON
+    language: Language = Language.PYTHON,
 ) -> list:
     """
     Extract and process the compounddef elements.
@@ -877,43 +885,91 @@ def create_construct_node(node_type: str, node: dict) -> dict:
     if node_type == "Scatter":
         add_fields = [
             create_field(
-                "num_of_copies", 4, "Integer", FieldType.ConstructParameter, FieldUsage.NoPort, FieldAccess.ReadWrite, [], False, False,
+                "num_of_copies",
+                "4",
+                "Integer",
+                FieldType.ConstructParameter,
+                FieldUsage.NoPort,
+                FieldAccess.readwrite,
+                [],
+                False,
+                False,
                 "Specifies the number of replications "
                 "that will be generated of the scatter construct's "
                 "contents.",
             ),
             create_field(
-                "dropclass", "dlg.apps.constructs.ScatterDrop", "String", FieldType.ComponentParameter, FieldUsage.NoPort, FieldAccess.ReadWrite, [], False, False,
-                "Drop class"
-            )
+                "dropclass",
+                "dlg.apps.constructs.ScatterDrop",
+                "String",
+                FieldType.ComponentParameter,
+                FieldUsage.NoPort,
+                FieldAccess.readwrite,
+                [],
+                False,
+                False,
+                "Drop class",
+            ),
         ]
     elif node_type == "MKN":
         add_fields = [
             create_field(
-                "num_of_copies", 4, "Integer", FieldType.ConstructParameter, FieldUsage.NoPort, FieldAccess.ReadWrite, [], False, False,
+                "num_of_copies",
+                "4",
+                "Integer",
+                FieldType.ConstructParameter,
+                FieldUsage.NoPort,
+                FieldAccess.readwrite,
+                [],
+                False,
+                False,
                 "Specifies the number of replications "
                 "that will be generated of the scatter construct's "
                 "contents.",
             ),
             create_field(
-                "dropclass", "dlg.apps.constructs.MKNDrop", "String", FieldType.ComponentParameter, FieldUsage.NoPort, FieldAccess.ReadWrite, [], False, False,
-                "Drop class"
-            )
+                "dropclass",
+                "dlg.apps.constructs.MKNDrop",
+                "String",
+                FieldType.ComponentParameter,
+                FieldUsage.NoPort,
+                FieldAccess.readwrite,
+                [],
+                False,
+                False,
+                "Drop class",
+            ),
         ]
     elif node_type == "Gather":
         add_fields = [
             create_field(
-                "num_of_inputs", 4, "Integer", FieldType.ConstructParameter, FieldUsage.NoPort, FieldAccess.ReadWrite, [], False, False,
+                "num_of_inputs",
+                "4",
+                "Integer",
+                FieldType.ConstructParameter,
+                FieldUsage.NoPort,
+                FieldAccess.readwrite,
+                [],
+                False,
+                False,
                 "Specifies the number of inputs "
                 "that that the gather construct will merge. "
                 "If it is less than the available number of "
                 "inputs, the translator will automatically "
-                "generate additional gathers."
+                "generate additional gathers.",
             ),
             create_field(
-                "dropclass", "dlg.apps.constructs.GatherDrop", "String", FieldType.ComponentParameter, FieldUsage.NoPort, FieldAccess.ReadWrite, [], False, False,
-                "Drop class"
-            )
+                "dropclass",
+                "dlg.apps.constructs.GatherDrop",
+                "String",
+                FieldType.ComponentParameter,
+                FieldUsage.NoPort,
+                FieldAccess.readwrite,
+                [],
+                False,
+                False,
+                "Drop class",
+            ),
         ]
     else:
         add_fields = []  # don't add anything at this point.
@@ -975,7 +1031,13 @@ def params_to_nodes(params: list, tag: str) -> list:
         # if the node tag matches the command line tag, or no tag was specified
         # on the command line, add the node to the list to output
         if data["tag"] == tag or tag == "":  # type: ignore
-            logger.info("Adding component: " + node["text"] + " with " + str(len(node["fields"])) + " fields.")
+            logger.info(
+                "Adding component: "
+                + node["text"]
+                + " with "
+                + str(len(node["fields"]))
+                + " fields."
+            )
             result.append(node)
 
             # if a construct is found, add to nodes
