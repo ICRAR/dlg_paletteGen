@@ -4,6 +4,29 @@ Changelog
 
 (unreleased)
 ------------
+- Merge branch 'dgen-12' [Andreas Wicenec]
+- Fixed linting errors. [Andreas Wicenec]
+- Finally got this workling again. [Andreas Wicenec]
+- Improved modelData section, now includes lastModified etc. [james-
+  strauss-uwa]
+- Added back the 'tag' functionality where you can filter components by
+  a tag specified on the command line. [james-strauss-uwa]
+- Re-enabled warning message. [james-strauss-uwa]
+- Work-in-progress moving to new format for EAGLE doxygen. [james-
+  strauss-uwa]
+
+
+0.1.9 (2023-07-05)
+------------------
+- Release: version 0.1.9 🚀 [Andreas Wicenec]
+- Added tag filter. [Andreas Wicenec]
+- Ignore .vscode dir. [Andreas Wicenec]
+- Ignore .vscode. [Andreas Wicenec]
+- Added support for constructParam. [Andreas Wicenec]
+- Refactored Field into dataclass. [Andreas Wicenec]
+- Added recursion into sub-modules. [Andreas Wicenec]
+- Initial support for module parsing. [Andreas Wicenec]
+- Release: version 0.1.8 🚀 [Andreas Wicenec]
 - Doc updates. [Andreas Wicenec]
 - Release: version 0.1.8 🚀 [Andreas Wicenec]
 - More documentation. [Andreas Wicenec]
