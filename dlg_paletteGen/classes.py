@@ -144,14 +144,18 @@ class DetailedDescription:
         :returns: tuple, description and parameter dictionary
         """
         logger.debug("Processing Numpy style doc_strings")
-        ds = "\n".join(
-            [d.strip() for d in dd.split("\n")]
-        )  # remove whitespace from lines
+        ds = dd
+        # ds = "\n".join(
+        #     [d.strip() for d in dd.split("\n")]
+        # )  # remove whitespace from lines
         # extract main documentation (up to Parameters line)
         (description, rest) = ds.split("\nParameters\n----------\n")
+        has_params = description != rest
         # extract parameter documentation (up to Returns line)
-        pds = rest.split(r"\nReturns\n-------\n")
-        spds = re.split(r"([\w_]+) :", pds[0])[1:]  # split :param lines
+        pds = re.split(r"\nReturns\n-------\n", rest)
+        spds = re.split(r"([\w_]+) : ", pds[0])[1:]  # split param lines
+        if has_params and len(spds) == 0:
+            spds = re.split(r"([\w_]+)\n    ", pds[0])[1:]  # split param lines
         pdict = dict(zip(spds[::2], spds[1::2]))  # create initial param dict
         pdict = {
             k: {
@@ -351,7 +355,7 @@ class GreatGrandChild:
                 else self.func_name
             )
             self.member["params"].append(
-                {"key": "text", "direction": None, "value": self.func_name}
+                {"key": "text", "value": self.func_name}
             )
             logger.debug("Function name: %s", self.func_name)
         elif ggchild.tag == "argsstring":  # type: ignore
@@ -394,10 +398,10 @@ class GreatGrandChild:
 
                 logger.debug(
                     "adding description param: %s",
-                    {"key": "description", "direction": None, "value": desc},
+                    {"key": "description", "value": desc},
                 )
                 self.member["params"].append(
-                    {"key": "description", "direction": None, "value": desc}
+                    {"key": "description", "value": desc}
                 )
 
         elif ggchild.tag == "param":  # type: ignore
@@ -454,26 +458,24 @@ class GreatGrandChild:
                 "adding param: %s",
                 {
                     "key": str(name),
-                    "direction": "in",
                     "value": str(name)
-                    + "/"
-                    + str(default_value)
+                    # + "/"
+                    # + str(default_value)
                     + "/"
                     + str(value_type)
-                    + "/ApplicationArgument/readwrite//False/False/"
+                    + "/ApplicationArgument/NoPort/readwrite//False/False/"
                     + member_desc,
                 },
             )
             self.member["params"].append(
                 {
                     "key": str(name),
-                    "direction": "in",
                     "value": str(name)
-                    + "/"
-                    + str(default_value)
+                    # + "/"
+                    # + str(default_value)
                     + "/"
                     + str(value_type)
-                    + "/ApplicationArgument/readwrite//False/False/"
+                    + "/ApplicationArgument/NoPort/readwrite//False/False/"
                     + member_desc,
                 }
             )
@@ -514,9 +516,9 @@ class GreatGrandChild:
                     {
                         "key": "func_name",
                         "direction": None,
-                        "value": "Function Name/"
+                        "value": ""
                         + f"{self.func_path}.{self.func_name}"
-                        + "/String/ApplicationArgument/readonly/"
+                        + "/String/ApplicationArgument/NoPort/readonly/"
                         + "/False/True/Python function name",
                     }
                 )
@@ -524,8 +526,8 @@ class GreatGrandChild:
                     {
                         "key": "input_parser",
                         "direction": None,
-                        "value": "Input Parser/pickle/Select/"
-                        + "ApplicationArgument/readwrite/pickle,eval,"
+                        "value": "pickle/Select/"
+                        + "ApplicationArgument/NoPort/readwrite/pickle,eval,"
                         + "npy,path,dataurl/False/False/Input port "
                         + "parsing technique",
                     }
@@ -534,9 +536,10 @@ class GreatGrandChild:
                     {
                         "key": "output_parser",
                         "direction": None,
-                        "value": "Output Parser/pickle/Select/"
-                        + "ApplicationArgument/readwrite/pickle,eval,npy,path,"
-                        + "dataurl/False/False/Output port parsing technique",
+                        "value": "pickle/Select/"
+                        + "ApplicationArgument/NoPort/readwrite/pickle,eval,"
+                        + "npy,path,dataurl/False/False/Output port parsing "
+                        + "technique",
                     }
                 )
         else:
@@ -675,15 +678,13 @@ class Child:
                 member["params"].append(
                     {
                         "key": "category",
-                        "direction": None,
                         "value": "DynlibApp",
                     }
                 )
                 member["params"].append(
                     {
                         "key": "libpath",
-                        "direction": None,
-                        "value": "Library Path//String/ComponentParameter/"
+                        "value": " //String/ComponentParameter/NoPort/"
                         + "readwrite//False/False/The location of the shared "
                         + "object/DLL that implements this application",
                     }
@@ -692,16 +693,15 @@ class Child:
                 member["params"].append(
                     {
                         "key": "category",
-                        "direction": None,
                         "value": "PythonApp",
                     }
                 )
                 member["params"].append(
                     {
-                        "key": "appclass",
-                        "direction": None,
-                        "value": "Application Class/dlg.apps.pyfunc.PyFuncApp/"
-                        + "String/ComponentParameter/readwrite//False/False/"
+                        "key": "dropclass",
+                        "value": "dlg.apps.pyfunc.PyFuncApp/"
+                        + "String/ComponentParameter/NoPort/readwrite//False/"
+                        + "False/"
                         + "The python class that implements this application",
                     }
                 )
@@ -709,8 +709,7 @@ class Child:
             member["params"].append(
                 {
                     "key": "execution_time",
-                    "direction": None,
-                    "value": "Execution Time/5/Integer/ComponentParameter/"
+                    "value": "5/Integer/ComponentParameter/NoPort/"
                     + "readwrite//False/False/Estimate of execution time "
                     + "(in seconds) for this application.",
                 }
@@ -719,7 +718,7 @@ class Child:
                 {
                     "key": "num_cpus",
                     "direction": None,
-                    "value": "No. of CPUs/1/Integer/ComponentParameter/"
+                    "value": "1/Integer/ComponentParameter/NoPort/"
                     + "readwrite//False/False/Number of cores used.",
                 }
             )
@@ -727,7 +726,7 @@ class Child:
                 {
                     "key": "group_start",
                     "direction": None,
-                    "value": "Group start/false/Boolean/ComponentParameter/"
+                    "value": "false/Boolean/ComponentParameter/NoPort/"
                     + "readwrite//False/False/Is this node the start of "
                     + "a group?",
                 }

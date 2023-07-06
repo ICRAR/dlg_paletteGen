@@ -186,7 +186,7 @@ def main():  # pragma: no cover
     # version = os.environ.get("PROJECT_VERSION")
 
     nodes = process_compounddefs(
-        output_xml_filename, allow_missing_eagle_start, language
+        output_xml_filename, tag, allow_missing_eagle_start, language
     )
     prepare_and_write_palette(nodes, outputfile)
     # cleanup the output directory
