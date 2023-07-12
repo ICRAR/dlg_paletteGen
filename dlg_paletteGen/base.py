@@ -298,13 +298,19 @@ def parse_value(component_name: str, field_name: str, value: str) -> tuple:
         parts = row
 
     # check that row contains 9 parts
-    if len(parts) != 9:
+    if len(parts) < 9:
         logger.warning(
             component_name
-            + " field definition contains the wrong number of parts : "
+            + " field definition contains too few parts. Ignoring! : "
             + value
         )
         return ()
+    elif len(parts) > 9:
+        logger.warning(
+            component_name
+            + " too many parts in field definition. Combining last. "
+        )
+        parts[8] = "/".join(parts[8:])
 
     # init attributes of the param
     default_value = ""

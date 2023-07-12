@@ -180,24 +180,27 @@ class DetailedDescription:
         :returns: tuple, description and parameter dictionary
         """
         logger.debug("Processing Google style doc_strings")
-        ds = "\n".join(
-            [d.strip() for d in dd.split("\n")]
-        )  # remove whitespace from lines
+        indent = len(re.findall(r"[ ]", re.findall(r"\n[ ]*Args:", dd)[0]))
+        dd = dd.replace(" " * indent, "")
+        # remove indent from lines
         # extract main documentation (up to Parameters line)
-        (description, rest) = ds.split("\nArgs:")
+        (description, rest) = dd.split("\nArgs:\n")
         # logger.debug("Splitting: %s %s", description, rest)
         # extract parameter documentation (up to Returns line)
-        pds = rest.split("\nReturns:\n")
-        spds = re.split(r"\n?([\w_]+)\s?\((\w+)\)\s?:", pds[0])[
+        pds = rest.split("\nReturns:\n")[0]
+        indent = len(re.findall(r"^ +", pds)[0])
+        pds = re.sub(r"\n" + r" " * indent, "\n", pds)  # remove indentation
+
+        # split param lines
+        spds = re.split(r"[\n ]+([\w_]+)\s?\(([`\:\w+\.\[\]\, ]+)\)\s?:", pds)[
             1:
-        ]  # split :param lines
+        ]
         pdict = dict(
             zip(spds[::3], zip(spds[1::3], spds[2::3]))
         )  # create initial param dict
         pdict = {
             k: {
-                "desc": v[1].replace("\n", " "),  # type: ignore
-                # this cryptic line tries to extract the type
+                "desc": v[1].replace("\n", " ").strip(),  # type: ignore
                 "type": typeFix(v[0]),  # type: ignore
             }
             for k, v in pdict.items()
@@ -327,6 +330,9 @@ class GreatGrandChild:
         self.func_path = ""
         self.func_name = func_name
         self.return_type = return_type
+        self.is_init = False
+        self.is_init = False
+        self.is_classmethod = False
         if ggchild:
             self.member = self.process_GreatGrandChild(
                 ggchild, parent_member=parent_member
@@ -361,9 +367,10 @@ class GreatGrandChild:
         elif ggchild.tag == "argsstring":  # type: ignore
             args = ggchild.text[1:-1]  # type: ignore
             args = [a.strip() for a in args.split(",")]
-            if "self" in args:
+            if ("self" in args) ^ ("cls" in args):
+                cm = "::" if "self" in args else "@"
                 class_name = self.func_path.rsplit(".", 1)[-1]
-                self.func_name = f"{class_name}::{self.func_name}"
+                self.func_name = f"{class_name}{cm}{self.func_name}"
                 logger.debug(
                     "Class function --> modified name: %s",
                     self.func_name,
@@ -396,6 +403,9 @@ class GreatGrandChild:
                         self.member["params"],
                     )
 
+                desc = (
+                    f"_@classmethod_: {desc}" if self.is_classmethod else desc
+                )
                 logger.debug(
                     "adding description param: %s",
                     {"key": "description", "value": desc},
@@ -429,6 +439,7 @@ class GreatGrandChild:
                     name = gggchild.text  # type:ignore
                 if gggchild.tag == "defval":
                     default_value = gggchild.text  # type:ignore
+            name = str(name)
             if (
                 name in self.member["params"]
                 and "type" in self.member["params"][name]
@@ -449,36 +460,33 @@ class GreatGrandChild:
                 if default_value.find("/") >= 0:
                     default_value = f'"{default_value}"'
             # attach description from parent, if available
-            if parent_member and name in parent_member.member["params"]:
-                member_desc = parent_member.member["params"][name]
+            # if parent_member and name in parent_member.member["params"]:
+            #     member_desc = parent_member.member["params"][name]
+            # else:
+            #     member_desc = ""
+            if name in ["self", "cls"]:
+                port = (
+                    "InputPort"
+                    if self.func_name[-8:] not in ["__init__", "__call__"]
+                    else "OutputPort"
+                )
+                if name == "cls":
+                    name = "self"
+                    self.is_classmethod = True
+                    port = "OutputPort"
+                    value_type = "Object.self"
+                access = "readonly"
             else:
-                member_desc = ""
-
+                access = "readwrite"
+                port = "NoPort"
+            value = (
+                f"{name}/{value_type}/ApplicationArgument/{port}/{access}"
+                + "//False/False/{member_desc}"
+            )
             logger.debug(
-                "adding param: %s",
-                {
-                    "key": str(name),
-                    "value": str(name)
-                    # + "/"
-                    # + str(default_value)
-                    + "/"
-                    + str(value_type)
-                    + "/ApplicationArgument/NoPort/readwrite//False/False/"
-                    + member_desc,
-                },
+                "adding param: %s", {"key": str(name), "value": value}
             )
-            self.member["params"].append(
-                {
-                    "key": str(name),
-                    "value": str(name)
-                    # + "/"
-                    # + str(default_value)
-                    + "/"
-                    + str(value_type)
-                    + "/ApplicationArgument/NoPort/readwrite//False/False/"
-                    + member_desc,
-                }
-            )
+            self.member["params"].append({"key": name, "value": value})
 
         elif ggchild.tag == "definition":  # type: ignore
             self.return_type = ggchild.text.strip().split(" ")[  # type: ignore
@@ -496,7 +504,7 @@ class GreatGrandChild:
             )
 
             if self.func_name in ["__init__", "__call__"]:
-                pass
+                self.is_init = True
                 # self.func_name = "OBJ:" + self.func_path.rsplit(".",1)[-1]
                 # logger.debug("Using name %s for %s function",
                 #       self.func_path, self.func_name)
@@ -514,20 +522,9 @@ class GreatGrandChild:
                 )
                 self.member["params"].append(
                     {
-                        "key": "func_name",
-                        "direction": None,
-                        "value": ""
-                        + f"{self.func_path}.{self.func_name}"
-                        + "/String/ApplicationArgument/NoPort/readonly/"
-                        + "/False/True/Python function name",
-                    }
-                )
-                self.member["params"].append(
-                    {
                         "key": "input_parser",
-                        "direction": None,
                         "value": "pickle/Select/"
-                        + "ApplicationArgument/NoPort/readwrite/pickle,eval,"
+                        + "ComponentParameter/NoPort/readwrite/pickle,eval,"
                         + "npy,path,dataurl/False/False/Input port "
                         + "parsing technique",
                     }
@@ -535,11 +532,18 @@ class GreatGrandChild:
                 self.member["params"].append(
                     {
                         "key": "output_parser",
-                        "direction": None,
                         "value": "pickle/Select/"
-                        + "ApplicationArgument/NoPort/readwrite/pickle,eval,"
+                        + "ComponentParameter/NoPort/readwrite/pickle,eval,"
                         + "npy,path,dataurl/False/False/Output port parsing "
                         + "technique",
+                    }
+                )
+                self.member["params"].append(
+                    {
+                        "key": "func_name",
+                        "value": self.func_name
+                        + "/String/ComponentParameter/NoPort/readonly/"
+                        + "/False/False/Name of function",
                     }
                 )
         else:
@@ -565,8 +569,8 @@ class GreatGrandChild:
             if p["key"] == name:
                 p["value"] = p["value"] + description
                 # insert the type
-                pp = p["value"].split("/", 3)
-                p["value"] = "/".join(pp[:2] + [p_type] + pp[3:])
+                pp = p["value"].split("/", 2)
+                p["value"] = "/".join(pp[:1] + [p_type] + pp[2:])
                 p["type"] = p_type
                 break
 
@@ -700,7 +704,7 @@ class Child:
                     {
                         "key": "dropclass",
                         "value": "dlg.apps.pyfunc.PyFuncApp/"
-                        + "String/ComponentParameter/NoPort/readwrite//False/"
+                        + "String/ComponentParameter/NoPort/readonly//False/"
                         + "False/"
                         + "The python class that implements this application",
                     }
@@ -717,7 +721,6 @@ class Child:
             member["params"].append(
                 {
                     "key": "num_cpus",
-                    "direction": None,
                     "value": "1/Integer/ComponentParameter/NoPort/"
                     + "readwrite//False/False/Number of cores used.",
                 }
@@ -725,7 +728,6 @@ class Child:
             member["params"].append(
                 {
                     "key": "group_start",
-                    "direction": None,
                     "value": "false/Boolean/ComponentParameter/NoPort/"
                     + "readwrite//False/False/Is this node the start of "
                     + "a group?",
@@ -743,7 +745,8 @@ class Child:
                     del gg
                     return None
             if gg.member != member and gg.member["params"] not in [None, []]:
-                member["params"].extend(gg.member["params"])
+                gg.member["params"].extend(member["params"])
+                member["params"] = gg.member["params"]
                 logger.debug("member after adding gg_members: %s", member)
             logger.info(
                 "Finished processing of function definition: '%s:%s'",

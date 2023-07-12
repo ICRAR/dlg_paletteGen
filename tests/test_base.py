@@ -289,6 +289,44 @@ def test_direct_numpy(tmpdir: str, shared_datadir: str):
     assert len(newcontent["nodeDataArray"][0]["fields"]) == 11
 
 
+def test_direct_google(tmpdir: str, shared_datadir: str):
+    """ "
+    Test the google format by calling the methods directly.
+
+    :param tmpdir: the path to the temp directory to use
+    :param shared_datadir: the path the the local directory
+    """
+    # inputdir,
+    # tag,
+    # outputfile,
+    # allow_missing_eagle_start,
+    # module_path,
+    # language,
+    tag = ""
+    allow_missing_eagle_start = True
+    language = Language.PYTHON
+    input = str(shared_datadir.absolute()) + "/example_google.py"
+    logging.info("path: %s", input)
+    output_directory = str(tmpdir)
+    output_file = f"{output_directory}/t.palette"
+    check_environment_variables()
+    DOXYGEN_SETTINGS.update({"PROJECT_NAME": os.environ.get("PROJECT_NAME")})
+    DOXYGEN_SETTINGS.update({"INPUT": input})
+    DOXYGEN_SETTINGS.update({"OUTPUT_DIRECTORY": output_directory})
+    process_doxygen()
+    output_xml_filename = process_xml()
+    nodes = process_compounddefs(
+        output_xml_filename, tag, allow_missing_eagle_start, language
+    )
+    prepare_and_write_palette(nodes, output_file)
+
+    with open(output_file, "r") as f:
+        newcontent = json.load(f)
+    logging.info("OUTPUT: %s", newcontent)
+    # can't use a hash, since output contains hashed keys
+    assert len(newcontent["nodeDataArray"][0]["fields"]) == 11
+
+
 def test_direct_eagle(tmpdir: str, shared_datadir: str):
     """ "
     Test the numpy format by calling the methods directly.
@@ -325,3 +363,79 @@ def test_direct_eagle(tmpdir: str, shared_datadir: str):
     logging.info("OUTPUT: %s", newcontent)
     # can't use a hash, since output contains hashed keys
     assert len(newcontent["nodeDataArray"][0]["fields"]) == 8
+
+
+def test_direct_oskar(tmpdir: str, shared_datadir: str):
+    """ "
+    Test the oskar (modified google) format by calling the methods directly.
+
+    :param tmpdir: the path to the temp directory to use
+    :param shared_datadir: the path the the local directory
+    """
+    # inputdir,
+    # tag,
+    # outputfile,
+    # allow_missing_eagle_start,
+    # module_path,
+    # language,
+    tag = ""
+    allow_missing_eagle_start = True
+    language = Language.PYTHON
+    input = str(shared_datadir.absolute()) + "/example_oskar.py"
+    logging.info("path: %s", input)
+    output_directory = str(tmpdir)
+    output_file = f"{output_directory}/t.palette"
+    check_environment_variables()
+    DOXYGEN_SETTINGS.update({"PROJECT_NAME": os.environ.get("PROJECT_NAME")})
+    DOXYGEN_SETTINGS.update({"INPUT": input})
+    DOXYGEN_SETTINGS.update({"OUTPUT_DIRECTORY": output_directory})
+    process_doxygen()
+    output_xml_filename = process_xml()
+    nodes = process_compounddefs(
+        output_xml_filename, tag, allow_missing_eagle_start, language
+    )
+    prepare_and_write_palette(nodes, output_file)
+
+    with open(output_file, "r") as f:
+        newcontent = json.load(f)
+    logging.info("OUTPUT: %s", newcontent)
+    # can't use a hash, since output contains hashed keys
+    assert len(newcontent["nodeDataArray"][0]["fields"]) == 10
+
+
+def test_direct_rascil(tmpdir: str, shared_datadir: str):
+    """ "
+    Test the oskar (modified google) format by calling the methods directly.
+
+    :param tmpdir: the path to the temp directory to use
+    :param shared_datadir: the path the the local directory
+    """
+    # inputdir,
+    # tag,
+    # outputfile,
+    # allow_missing_eagle_start,
+    # module_path,
+    # language,
+    tag = ""
+    allow_missing_eagle_start = True
+    language = Language.PYTHON
+    input = str(shared_datadir.absolute()) + "/example_rascil.py"
+    logging.info("path: %s", input)
+    output_directory = str(tmpdir)
+    output_file = f"{output_directory}/t.palette"
+    check_environment_variables()
+    DOXYGEN_SETTINGS.update({"PROJECT_NAME": os.environ.get("PROJECT_NAME")})
+    DOXYGEN_SETTINGS.update({"INPUT": input})
+    DOXYGEN_SETTINGS.update({"OUTPUT_DIRECTORY": output_directory})
+    process_doxygen()
+    output_xml_filename = process_xml()
+    nodes = process_compounddefs(
+        output_xml_filename, tag, allow_missing_eagle_start, language
+    )
+    prepare_and_write_palette(nodes, output_file)
+
+    with open(output_file, "r") as f:
+        newcontent = json.load(f)
+    logging.info("OUTPUT: %s", newcontent)
+    # can't use a hash, since output contains hashed keys
+    assert len(newcontent["nodeDataArray"][0]["fields"]) == 14

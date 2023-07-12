@@ -110,32 +110,33 @@ def typeFix(value_type: str, default_value: str = "") -> str:
 
     :returns output_type: str, the converted type
     """
-    type_recognised = False
+    typerex = r"[\(\[](bool|boolean|int|float|string|str)[\]\)]"
+    re_type = re.findall(typerex, value_type)
     # fix some types
-    if value_type == "bool":
-        value_type = "Boolean"
-        if default_value == "":
-            default_value = "False"
-        type_recognised = True
-    if value_type == "int":
-        value_type = "Integer"
-        if default_value == "":
-            default_value = "0"
-        type_recognised = True
-    if value_type == "float":
-        value_type = "Float"
-        if default_value == "":
-            default_value = "0"
-        type_recognised = True
-    if value_type in ["string", "str", "*", "**"]:
-        value_type = "String"
-        type_recognised = True
+    if re_type:
+        re_type = re_type[0]
+        if re_type in ["bool", "boolean"]:
+            value_type = "Boolean"
+            if default_value == "":
+                default_value = "False"
+        if re_type == "int":
+            value_type = "Integer"
+            if default_value == "":
+                default_value = "0"
+        if re_type == "float":
+            value_type = "Float"
+            if default_value == "":
+                default_value = "0"
+        if re_type in ["string", "str", "*", "**"]:
+            value_type = "String"
+    elif default_value != "":
+        value_type = default_value
 
     # try to guess the type based on the default value
     # TODO: try to parse default_value as JSON to detect JSON types
 
     if (
-        not type_recognised
+        not re_type
         and default_value != ""
         and default_value is not None
         and default_value != "None"
@@ -191,6 +192,9 @@ def typeFix(value_type: str, default_value: str = "") -> str:
                             value_type = "String"
         except NameError or TypeError:  # type: ignore
             raise
+    # we only want stuff in parentheses
+    v_type = re.split(r"[\[\]\(\)]", value_type)
+    value_type = v_type[1] if len(v_type) > 1 else v_type[0]
     return value_type
 
 
