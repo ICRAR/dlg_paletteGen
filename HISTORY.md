@@ -4,6 +4,12 @@ Changelog
 
 (unreleased)
 ------------
+- Final touches. [Andreas Wicenec]
+
+
+0.1.12 (2023-07-12)
+-------------------
+- Release: version 0.1.12 🚀 [Andreas Wicenec]
 - Added classmethods; fixed google processing for oskar. [Andreas
   Wicenec]
 
