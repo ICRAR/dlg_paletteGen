@@ -329,10 +329,12 @@ class GreatGrandChild:
 
         self.func_path = ""
         self.func_name = func_name
+        self.func_title = func_name
         self.return_type = return_type
         self.is_init = False
         self.is_init = False
         self.is_classmethod = False
+        self.is_member = False
         if ggchild:
             self.member = self.process_GreatGrandChild(
                 ggchild, parent_member=parent_member
@@ -360,21 +362,17 @@ class GreatGrandChild:
                 if self.func_name == "Unknown"
                 else self.func_name
             )
-            self.member["params"].append(
-                {"key": "text", "value": self.func_name}
-            )
             logger.debug("Function name: %s", self.func_name)
         elif ggchild.tag == "argsstring":  # type: ignore
             args = ggchild.text[1:-1]  # type: ignore
             args = [a.strip() for a in args.split(",")]
-            if ("self" in args) ^ ("cls" in args):
-                cm = "::" if "self" in args else "@"
-                class_name = self.func_path.rsplit(".", 1)[-1]
-                self.func_name = f"{class_name}{cm}{self.func_name}"
-                logger.debug(
-                    "Class function --> modified name: %s",
-                    self.func_name,
-                )
+            if "cls" in args:
+                self.func_title = self.func_title.replace(".", "@")
+            elif "self" in args:
+                self.func_title = self.func_title.replace(".", "::")
+            self.member["params"].append(
+                {"key": "text", "value": self.func_title}
+            )
 
         elif ggchild.tag == "detaileddescription":  # type: ignore
             # this contains the main description of the function and the
@@ -402,10 +400,10 @@ class GreatGrandChild:
                         p_value["type"],
                         self.member["params"],
                     )
-
-                desc = (
-                    f"_@classmethod_: {desc}" if self.is_classmethod else desc
-                )
+                if self.is_classmethod:
+                    desc = f"_@classmethod_: {desc}"
+                elif self.is_member:
+                    desc = f"_::memberfunction_: {desc}"
                 logger.debug(
                     "adding description param: %s",
                     {"key": "description", "value": desc},
@@ -460,10 +458,10 @@ class GreatGrandChild:
                 if default_value.find("/") >= 0:
                     default_value = f'"{default_value}"'
             # attach description from parent, if available
-            # if parent_member and name in parent_member.member["params"]:
-            #     member_desc = parent_member.member["params"][name]
-            # else:
-            #     member_desc = ""
+            if parent_member and name in parent_member.member["params"]:
+                member_desc = parent_member.member["params"][name]
+            else:
+                member_desc = ""
             if name in ["self", "cls"]:
                 port = (
                     "InputPort"
@@ -475,13 +473,16 @@ class GreatGrandChild:
                     self.is_classmethod = True
                     port = "OutputPort"
                     value_type = "Object.self"
+                elif name == "self":
+                    self.is_member = True
                 access = "readonly"
+                member_desc = "Object reference"
             else:
                 access = "readwrite"
                 port = "NoPort"
             value = (
-                f"{name}/{value_type}/ApplicationArgument/{port}/{access}"
-                + "//False/False/{member_desc}"
+                f"{default_value}/{value_type}/ApplicationArgument/{port}/"
+                + f"{access}//False/False/{member_desc}"
             )
             logger.debug(
                 "adding param: %s", {"key": str(name), "value": value}
@@ -505,17 +506,26 @@ class GreatGrandChild:
 
             if self.func_name in ["__init__", "__call__"]:
                 self.is_init = True
-                # self.func_name = "OBJ:" + self.func_path.rsplit(".",1)[-1]
-                # logger.debug("Using name %s for %s function",
-                #       self.func_path, self.func_name)
+                self.func_title = (
+                    f"{self.func_path.rsplit('.',1)[-1]}.{self.func_name}"
+                )
+                self.func_name = self.func_path
+                logger.debug(
+                    "Using name %s for %s function",
+                    self.func_path,
+                    self.func_name,
+                )
             elif (
                 self.func_name.startswith("_")
                 or self.func_path.find("._") >= 0
             ):
                 logger.debug("Skipping %s.%s", self.func_path, self.func_name)
                 self.member = None  # type: ignore
-            # else:
-            # self.func_name = f"{self.func_path}.{self.func_name}"
+            else:
+                self.func_title = (
+                    f"{self.func_path.rsplit('.',1)[-1]}.{self.func_name}"
+                )
+                self.func_name = f"{self.func_path}.{self.func_name}"
             if self.member:
                 self.return_type = (
                     "None" if self.return_type == "def" else self.return_type
