@@ -4,6 +4,13 @@ Changelog
 
 (unreleased)
 ------------
+- Added classmethods; fixed google processing for oskar. [Andreas
+  Wicenec]
+
+
+0.1.11 (2023-07-06)
+-------------------
+- Release: version 0.1.11 🚀 [Andreas Wicenec]
 - Fix for missing port definitions. [Andreas Wicenec]
 
 
