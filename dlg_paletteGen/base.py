@@ -427,17 +427,8 @@ def create_palette_node_from_params(params) -> tuple:
     # applicationArgs: list = []
 
     # process the params
-    for param in params:
-        # abort if param is not a dictionary
-        if not isinstance(param, dict):
-            logger.error(
-                "param %s has wrong type %s. Ignoring!", param, type(param)
-            )
-            continue
-
+    for key, value in params.items():
         # read data from param
-        key = param["key"]
-        value = param["value"]
 
         if key == "category":
             category = value
@@ -686,9 +677,7 @@ def process_compounddefs(
             functions = functions[0] if len(functions) > 0 else functions
             logger.debug("Number of functions in compound: %d", len(functions))
             for f in functions:
-                f_name = [
-                    k["value"] for k in f["params"] if k["key"] == "text"
-                ]
+                f_name = f["params"]["text"]
                 logger.debug("Function names: %s", f_name)
                 if f_name == [".Unknown"]:
                     continue
@@ -710,6 +699,8 @@ def process_compounddefs(
                         logger.warning(
                             "Function has multiple entires: %s", n["text"]
                         )
+                    if n["description"] == "" and f["description"] != "":
+                        n["description"] = f["description"]
                     nodes.append(n)
         if not is_eagle_node and not allow_missing_eagle_start:
             logger.warning(
@@ -730,7 +721,7 @@ def process_compounddef_default(
     :param compounddef: list of children of compounddef
     :param language: Language, can be [2] for Python, 1 for C or 0 for Unknown
     """
-    result = []
+    result: list = []
 
     ctags = [c.tag for c in compounddef]
     tags = ctags.copy()
@@ -766,18 +757,18 @@ def process_compounddef_default(
     return result
 
 
-def process_compounddef_eagle(compounddef: Union[ET.Element, Any]) -> list:
+def process_compounddef_eagle(compounddef: Union[ET.Element, Any]) -> dict:
     """
     Interpret a compound definition element.
 
     :param compounddef: dict, the compounddef dictionary derived from the
                         respective element
 
-    :returns list of dictionaries
+    :returns dictionary
 
     TODO: This should be split up and make use of XPath expressions
     """
-    result = []
+    result = {}
 
     # get child of compounddef called "briefdescription"
     briefdescription = None
@@ -790,15 +781,9 @@ def process_compounddef_eagle(compounddef: Union[ET.Element, Any]) -> list:
         if len(briefdescription) > 0:
             if briefdescription[0].text is None:
                 logger.warning("No brief description text")
-                result.append({"key": "text", "direction": None, "value": ""})
+                result["text"] = ""
             else:
-                result.append(
-                    {
-                        "key": "text",
-                        "direction": None,
-                        "value": briefdescription[0].text.strip(" ."),
-                    }
-                )
+                result["text"] = briefdescription[0].text.strip(" .")
 
     # get child of compounddef called "detaileddescription"
     detaileddescription = compounddef.find("./detaileddescription")
@@ -811,13 +796,7 @@ def process_compounddef_eagle(compounddef: Union[ET.Element, Any]) -> list:
         description = check_text_element(para[0], ".")
         para = para[-1]
         if description is not None:
-            result.append(
-                {
-                    "key": "description",
-                    "direction": None,
-                    "value": description.strip(),
-                }
-            )
+            result.update({"description": description.strip()})
 
     # check that we found the correct para
     if para is None:
@@ -833,20 +812,11 @@ def process_compounddef_eagle(compounddef: Union[ET.Element, Any]) -> list:
     # read the parameters from the parameter list
     # TODO: refactor this as well
     for parameteritem in parameterlist:
-        key = None
-        direction = None
-        value = None
         for pichild in parameteritem:
             if pichild.tag == "parameternamelist":
                 key = pichild[0].text.strip()
-                direction = pichild[0].attrib.get("direction", "").strip()
             elif pichild.tag == "parameterdescription":
                 if key == "gitrepo" and isinstance(pichild[0], list):
-                    # the gitrepo is a URL, so is contained within a <ulink>
-                    # element,
-                    # therefore we need to use pichild[0][0] here to look one
-                    # level deeper
-                    # in the hierarchy
                     if pichild[0][0] is None or pichild[0][0].text is None:
                         logger.warning("No gitrepo text")
                         value = ""
@@ -859,7 +829,7 @@ def process_compounddef_eagle(compounddef: Union[ET.Element, Any]) -> list:
                     else:
                         value = pichild[0].text.strip()
 
-        result.append({"key": key, "direction": direction, "value": value})
+        result.update({key: value})
     return result
 
 
@@ -997,7 +967,7 @@ def create_construct_node(node_type: str, node: dict) -> dict:
     return construct_node
 
 
-def params_to_nodes(params: list, tag: str) -> list:
+def params_to_nodes(params: dict, tag: str) -> list:
     """
     Generate a list of nodes from the params found
 
@@ -1017,15 +987,8 @@ def params_to_nodes(params: list, tag: str) -> list:
 
         # check if git_repo and version params were found and cache the values
         # TODO: This seems unnecessary remove?
-        for param in params:
-            logger.debug("param: %s", param)
-            if not param:
-                continue
-            key, value = (param["key"], param["value"])
-            if key == "gitrepo":
-                git_repo = value
-            elif key == "version":
-                version = value
+        git_repo = params["gitrepo"] if "girepo" in params else ""
+        version = params["version"] if "version" in params else ""
 
         data, node = create_palette_node_from_params(params)
 

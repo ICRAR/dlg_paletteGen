@@ -232,16 +232,16 @@ class DetailedDescription:
                 for idx, s in enumerate(dList)
                 if re.findall(r"-{1,20} parameter", s)
             ][0] + 1
+        except IndexError:
+            start_ind = 0
+        try:
             end_ind = [
                 idx
                 for idx, s in enumerate(dList)
                 if re.findall(r"-{1,20} example", s)
             ][0]
         except IndexError:
-            logger.debug(
-                "Problems finding start or end index for task: {task}"
-            )
-            return {}, ""
+            end_ind = -1
         paramsList = dList[start_ind:end_ind]
         paramsSidx = [
             idx + 1
@@ -340,7 +340,7 @@ class GreatGrandChild:
                 ggchild, parent_member=parent_member
             )
         else:
-            self.member = {"params": []}
+            self.member = {"params": {}}
 
     def process_GreatGrandChild(
         self, ggchild: ET.Element, parent_member: Union["Child", None] = None
@@ -370,9 +370,7 @@ class GreatGrandChild:
                 self.func_title = self.func_title.replace(".", "@")
             elif "self" in args:
                 self.func_title = self.func_title.replace(".", "::")
-            self.member["params"].append(
-                {"key": "text", "value": self.func_title}
-            )
+            self.member["params"].update({"text": self.func_title})
 
         elif ggchild.tag == "detaileddescription":  # type: ignore
             # this contains the main description of the function and the
@@ -406,11 +404,9 @@ class GreatGrandChild:
                     desc = f"_::memberfunction_: {desc}"
                 logger.debug(
                     "adding description param: %s",
-                    {"key": "description", "value": desc},
+                    desc,
                 )
-                self.member["params"].append(
-                    {"key": "description", "value": desc}
-                )
+                self.member["params"]["description"] = desc
 
         elif ggchild.tag == "param":  # type: ignore
             # Depending on the format used this section only contains
@@ -438,18 +434,6 @@ class GreatGrandChild:
                 if gggchild.tag == "defval":
                     default_value = gggchild.text  # type:ignore
             name = str(name)
-            if (
-                name in self.member["params"]
-                and "type" in self.member["params"][name]
-            ):
-                logger.debug(
-                    "Existing type definition found for %s: %s",
-                    name,
-                    self.member["params"][name]["type"],
-                )
-                value_type = self.member["params"][name]["type"]
-
-            # type recognised - else convert?
             value_type = typeFix(value_type, default_value=default_value)
 
             # add the param
@@ -487,7 +471,7 @@ class GreatGrandChild:
             logger.debug(
                 "adding param: %s", {"key": str(name), "value": value}
             )
-            self.member["params"].append({"key": name, "value": value})
+            self.member["params"].update({name: value})
 
         elif ggchild.tag == "definition":  # type: ignore
             self.return_type = ggchild.text.strip().split(" ")[  # type: ignore
@@ -506,9 +490,12 @@ class GreatGrandChild:
 
             if self.func_name in ["__init__", "__call__"]:
                 self.is_init = True
-                self.func_title = (
-                    f"{self.func_path.rsplit('.',1)[-1]}.{self.func_name}"
-                )
+                if parent_member and not parent_member.casa_mode:
+                    self.func_title = (
+                        f"{self.func_path.rsplit('.',1)[-1]}.{self.func_name}"
+                    )
+                else:
+                    self.func_title = self.func_path.rsplit("._", 1)[-1]
                 self.func_name = self.func_path
                 logger.debug(
                     "Using name %s for %s function",
@@ -530,28 +517,25 @@ class GreatGrandChild:
                 self.return_type = (
                     "None" if self.return_type == "def" else self.return_type
                 )
-                self.member["params"].append(
+                self.member["params"].update(
                     {
-                        "key": "input_parser",
-                        "value": "pickle/Select/"
+                        "input_parser": "pickle/Select/"
                         + "ComponentParameter/NoPort/readwrite/pickle,eval,"
                         + "npy,path,dataurl/False/False/Input port "
                         + "parsing technique",
                     }
                 )
-                self.member["params"].append(
+                self.member["params"].update(
                     {
-                        "key": "output_parser",
-                        "value": "pickle/Select/"
+                        "output_parser": "pickle/Select/"
                         + "ComponentParameter/NoPort/readwrite/pickle,eval,"
                         + "npy,path,dataurl/False/False/Output port parsing "
                         + "technique",
                     }
                 )
-                self.member["params"].append(
+                self.member["params"].update(
                     {
-                        "key": "func_name",
-                        "value": self.func_name
+                        "func_name": self.func_name
                         + "/String/ComponentParameter/NoPort/readonly/"
                         + "/False/False/Name of function",
                     }
@@ -575,14 +559,15 @@ class GreatGrandChild:
         :param params: dict, the set of parameters
         """
         p_type = "" if not p_type else p_type
-        for p in params:
-            if p["key"] == name:
-                p["value"] = p["value"] + description
-                # insert the type
-                pp = p["value"].split("/", 2)
-                p["value"] = "/".join(pp[:1] + [p_type] + pp[2:])
-                p["type"] = p_type
-                break
+        if name in params:
+            params[name] += description
+            # if p["key"] == name:
+            #     p["value"] = p["value"] + description
+            #     # insert the type
+            #     pp = p["value"].split("/", 2)
+            #     p["value"] = "/".join(pp[:1] + [p_type] + pp[2:])
+            #     p["type"] = p_type
+            #     break
 
 
 class Child:
@@ -601,7 +586,7 @@ class Child:
         """
         members = []
         self.type = "generic"
-        self.member: dict = {"params": []}
+        self.member: dict = {"params": {}}
         self.format = ""
         self.description = ""
         self.casa_mode: bool = False
@@ -649,16 +634,14 @@ class Child:
             )
             for grandchild in child:
                 gmember = self._process_grandchild(
-                    grandchild,
-                    language,
-                    # parent=self
+                    grandchild, language, parent=parent
                 )
                 if gmember is None:
                     logger.debug("Bailing out of grandchild processing!")
                     continue
                 elif gmember != self.member:
                     # logger.debug("Adding grandchild members: %s", gmember)
-                    self.member["params"].extend(gmember["params"])
+                    self.member["params"].update(gmember["params"])
                     members.append(gmember)
             logger.debug("Finished processing grand children")
         self.members = members
@@ -667,7 +650,7 @@ class Child:
         self,
         gchild: ET.Element,
         language: Language,
-        # parent: Union["Child", None] = None,
+        parent: Union["Child", None] = None,
     ) -> Union[dict, None]:
         """
         Private function to process a grandchild element
@@ -679,7 +662,7 @@ class Child:
 
         :returns: dict, the member data structure
         """
-        member: dict = {"params": []}
+        member: dict = {"params": {}}
         # logger.debug("Initialized grandchild member: %s", member)
 
         if (
@@ -689,62 +672,54 @@ class Child:
             logger.debug("Start processing of new function definition.")
 
             if language == Language.C:
-                member["params"].append(
+                member["params"].update(
                     {
-                        "key": "category",
-                        "value": "DynlibApp",
+                        "category": "DynlibApp",
                     }
                 )
-                member["params"].append(
+                member["params"].update(
                     {
-                        "key": "libpath",
-                        "value": " //String/ComponentParameter/NoPort/"
+                        "libpath": " //String/ComponentParameter/NoPort/"
                         + "readwrite//False/False/The location of the shared "
                         + "object/DLL that implements this application",
                     }
                 )
             elif language == Language.PYTHON:
-                member["params"].append(
+                member["params"].update({"category": "PythonApp"})
+                member["params"].update(
                     {
-                        "key": "category",
-                        "value": "PythonApp",
-                    }
-                )
-                member["params"].append(
-                    {
-                        "key": "dropclass",
-                        "value": "dlg.apps.pyfunc.PyFuncApp/"
+                        "dropclass": "dlg.apps.pyfunc.PyFuncApp/"
                         + "String/ComponentParameter/NoPort/readonly//False/"
                         + "False/"
                         + "The python class that implements this application",
                     }
                 )
 
-            member["params"].append(
+            member["params"].update(
                 {
-                    "key": "execution_time",
-                    "value": "5/Integer/ComponentParameter/NoPort/"
+                    "execution_time": "5/Integer/ComponentParameter/NoPort/"
                     + "readwrite//False/False/Estimate of execution time "
-                    + "(in seconds) for this application.",
+                    + "(in seconds) for this application."
                 }
             )
-            member["params"].append(
+            member["params"].update(
                 {
-                    "key": "num_cpus",
-                    "value": "1/Integer/ComponentParameter/NoPort/"
-                    + "readwrite//False/False/Number of cores used.",
+                    "num_cpus": "1/Integer/ComponentParameter/NoPort/"
+                    + "readwrite//False/False/Number of cores used."
                 }
             )
-            member["params"].append(
+            member["params"].update(
                 {
-                    "key": "group_start",
-                    "value": "false/Boolean/ComponentParameter/NoPort/"
+                    "group_start": "false/Boolean/ComponentParameter/NoPort/"
                     + "readwrite//False/False/Is this node the start of "
-                    + "a group?",
+                    + "a group?"
                 }
             )
 
             logger.debug("Processing %d great grand children", len(gchild))
+            if parent:
+                self.member["params"].update(parent.member["params"])
+                member["description"] = parent.description
             gg = GreatGrandChild()
             for ggchild in gchild:
                 gg.process_GreatGrandChild(ggchild, parent_member=self)
@@ -754,8 +729,8 @@ class Child:
                     )
                     del gg
                     return None
-            if gg.member != member and gg.member["params"] not in [None, []]:
-                gg.member["params"].extend(member["params"])
+            if gg.member != member and gg.member["params"] not in [None, {}]:
+                gg.member["params"].update(member["params"])
                 member["params"] = gg.member["params"]
                 logger.debug("member after adding gg_members: %s", member)
             logger.info(
