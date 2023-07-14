@@ -4,6 +4,7 @@ Changelog
 
 (unreleased)
 ------------
+- Release: version 0.1.12 🚀 [Andreas Wicenec]
 - Final touches. [Andreas Wicenec]
 
 
