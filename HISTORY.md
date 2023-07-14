@@ -4,6 +4,12 @@ Changelog
 
 (unreleased)
 ------------
+- Fixed casadoc treatment. [Andreas Wicenec]
+
+
+0.1.13 (2023-07-14)
+-------------------
+- Release: version 0.1.13 🚀 [Andreas Wicenec]
 - Release: version 0.1.10 🚀 [Andreas Wicenec]
 - Release: version 0.1.12 🚀 [Andreas Wicenec]
 - Final touches. [Andreas Wicenec]
