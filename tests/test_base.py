@@ -229,7 +229,7 @@ def test_CLI_run_nr(tmpdir: str, shared_datadir: str):
         newcontent = json.load(f)
     logging.info("OUTPUT: %s", newcontent)
     # can't use a hash, since output contains hashed keys
-    assert len(newcontent["nodeDataArray"][0]["fields"]) == 17
+    assert len(newcontent["nodeDataArray"][0]["fields"]) == 16
 
 
 def test_CLI_fail(tmpdir: str, shared_datadir: str):
@@ -514,4 +514,4 @@ def test_direct_casatask(tmpdir: str, shared_datadir: str):
         newcontent = json.load(f)
     logging.info("OUTPUT: %s", newcontent)
     # can't use a hash, since output contains hashed keys
-    assert len(newcontent["nodeDataArray"][0]["fields"]) == 17
+    assert len(newcontent["nodeDataArray"][0]["fields"]) == 16

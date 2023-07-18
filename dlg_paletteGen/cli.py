@@ -19,6 +19,7 @@ import pkg_resources
 from dlg_paletteGen.base import (
     Language,
     logger,
+    module_hook,
     prepare_and_write_palette,
     process_compounddefs,
 )
@@ -42,6 +43,7 @@ def get_args():
                 args.ofile:str,
                 args.parse_all:bool,
                 args.module:str,
+                args.recursive:bool,
                 language)
     """
     # inputdir, tag, outputfile, allow_missing_eagle_start, module_path,
@@ -112,6 +114,7 @@ def get_args():
         args.ofile,
         args.parse_all,
         args.module,
+        args.recursive,
         language,
     )
 
@@ -158,6 +161,7 @@ def main():  # pragma: no cover
         outputfile,
         allow_missing_eagle_start,
         module_path,
+        recursive,
         language,
     ) = get_args()
     logger.info("PROJECT_NAME:" + os.environ.get("PROJECT_NAME"))
@@ -173,21 +177,32 @@ def main():  # pragma: no cover
     # create a temp directory for the output of doxygen
     output_directory = tempfile.TemporaryDirectory()
 
-    # add extra doxygen setting for input and output locations
-    DOXYGEN_SETTINGS.update({"PROJECT_NAME": os.environ.get("PROJECT_NAME")})
-    DOXYGEN_SETTINGS.update({"INPUT": inputdir})
-    DOXYGEN_SETTINGS.update({"OUTPUT_DIRECTORY": output_directory.name})
+    if len(module_path) > 0:
+        modules, mod_count = module_hook(module_path, recursive=recursive)
+        # member_count = sum([len(m) for m in modules])
+        logger.info(">>>>> Number of modules processed: %d", mod_count)
+        logger.error(
+            ">>>>>> Modules support not yet complete: NOTHING WRITTEN!"
+        )
+    else:
+        # add extra doxygen setting for input and output locations
+        DOXYGEN_SETTINGS.update(
+            {"PROJECT_NAME": os.environ.get("PROJECT_NAME")}
+        )
+        DOXYGEN_SETTINGS.update({"INPUT": inputdir})
+        DOXYGEN_SETTINGS.update({"OUTPUT_DIRECTORY": output_directory.name})
 
-    process_doxygen(language=language)
-    output_xml_filename = process_xml()
+        process_doxygen(language=language)
+        output_xml_filename = process_xml()
 
-    # get environment variables
-    # gitrepo = os.environ.get("GIT_REPO")
-    # version = os.environ.get("PROJECT_VERSION")
+        # get environment variables
+        # gitrepo = os.environ.get("GIT_REPO")
+        # version = os.environ.get("PROJECT_VERSION")
 
-    nodes = process_compounddefs(
-        output_xml_filename, tag, allow_missing_eagle_start, language
-    )
-    prepare_and_write_palette(nodes, outputfile)
+        nodes = process_compounddefs(
+            output_xml_filename, tag, allow_missing_eagle_start, language
+        )
+        prepare_and_write_palette(nodes, outputfile)
+        return
     # cleanup the output directory
     output_directory.cleanup()

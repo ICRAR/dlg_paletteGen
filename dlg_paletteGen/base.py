@@ -8,20 +8,25 @@ Should also be made separate sub-repo with proper installation and entry point.
 """
 import csv
 import datetime
+import importlib
+import inspect
 import json
 import os
+import sys
+import types
+from typing import Any, Union, _SpecialForm, Tuple
 import xml.etree.ElementTree as ET
 from enum import Enum
-from typing import Any, Union
 
 from blockdag import build_block_dag
 
-from dlg_paletteGen.classes import Child
+from dlg_paletteGen.classes import Child, DetailedDescription
 from dlg_paletteGen.support_functions import (
     Language,
     check_text_element,
     create_uuid,
     get_next_key,
+    get_submodules,
     logger,
 )
 
@@ -768,7 +773,7 @@ def process_compounddef_eagle(compounddef: Union[ET.Element, Any]) -> dict:
 
     TODO: This should be split up and make use of XPath expressions
     """
-    result = {}
+    result: dict = {}
 
     # get child of compounddef called "briefdescription"
     briefdescription = None
@@ -930,8 +935,8 @@ def create_construct_node(node_type: str, node: dict) -> dict:
                 "generate additional gathers.",
             ),
             create_field(
-                "dropclass",
                 "dlg.apps.constructs.GatherDrop",
+                "",
                 "String",
                 FieldType.ComponentParameter,
                 FieldUsage.NoPort,
@@ -1041,3 +1046,111 @@ def prepare_and_write_palette(nodes: list, output_filename: str):
         output_filename, nodes, GITREPO, VERSION, block_dag  # type: ignore
     )
     logger.info("Wrote " + str(len(nodes)) + " component(s)")
+
+
+def module_get(mod: types.ModuleType):
+    """ """
+    logger.debug(f">>>>>>>>> Processing members for module: {mod.__name__}")
+    content = dir(mod)
+    count = 0
+    # logger.info("Content of %s: %s", mod, content)
+    name = mod.__name__
+    members = []
+    for c in content:
+        if c[0] == "_":
+            # TODO: Deal with __init__
+            # NOTE: PyBind11 classes can have multiple constructors
+            continue
+        m = getattr(mod, c)
+        if not callable(m) or isinstance(m, _SpecialForm):
+            logger.warning("Member %s is not callable", m)
+            # TODO: not sure what to do with these. Usually they
+            # are class parameters.
+            continue
+        else:
+            count += 1
+            name = (
+                f"{mod.__name__}.{m.__name__}"
+                if hasattr(m, "__name__")
+                else f"{mod.__name__}.Unknown"
+            )
+            members.append(name)
+            if m.__doc__ and len(m.__doc__) > 0:
+                dd = DetailedDescription(m.__doc__)
+                logger.debug(f">>> Processing member {name}")
+                logger.debug(f"Brief description: {dd.brief_descr}")
+                if len(dd.params) > 0:
+                    logger.debug("Parameters: %s", dd.params)
+                else:
+                    sig = inspect.signature(m)
+                    for p, v in sig.parameters.items():
+                        logger.debug(
+                            "Parameter '%s' of type %s and kind %s with "
+                            + "default value %s",
+                            p,
+                            v.annotation,
+                            v.kind,
+                            v.default,
+                        )
+            elif hasattr(m, "__name__"):
+                logger.warning("Member '%s' has no description!", name)
+            else:
+                logger.warning(
+                    "Entity '%s' has neither descr. nor __name__", m
+                )
+
+            if hasattr(m, "__members__"):
+                # this takes care of enum types, but needs some
+                # serious thinking for DALiuGE. Note that enums
+                # from PyBind11 have a generic type, but still
+                # the __members__ dict.
+                logger.info("\nMembers:")
+                logger.info(m.__members__)
+                # pass
+    logger.info("Found %d members in module %s", count, mod.__name__)
+    return members
+
+
+def module_hook(
+    mod_name: str, modules: dict = {}, recursive: bool = True
+) -> "Tuple[dict, int]":
+    """
+    This is the starting point of a function dissecting the
+    docs for an imported module.
+
+    TODO: Generate palette from description and params.
+    TODO: At some point this might be the main entry point for
+    the whole parsing, but means that the module has to be installed.
+
+    :param mod_name: str, the name of the module to be treated
+    :param recursive: bool, treat sub-modules [True]
+
+    :returns: Number of modules processed
+    """
+    member_count = 0
+    mod_count = 0
+    if mod_name not in sys.builtin_module_names:
+        try:
+            mod = importlib.import_module(mod_name)
+        except ImportError:
+            logger.error("Module %s can't be loaded!", mod_name)
+            raise
+    modules.update({mod_name: module_get(mod)})
+    mod_count += 1
+    if recursive:
+        sub_modules = get_submodules(mod)
+        sub_mods = [
+            x[1]
+            for x in sub_modules
+            if (x[1][0] != "_" and x[1][:4] != "test")
+        ]  # get the names; ignore test modules
+        if len(sub_mods) > 0:
+            logger.debug("sub_modules of %s: %s", mod_name, sub_mods)
+        for sub_mod in sub_mods:
+            mod_load = f"{mod_name}.{sub_mod}"
+            # modules.update({mod_load: {}})
+            modules, mod_count = module_hook(mod_load, modules=modules)
+            mod_count += len(modules)
+    member_count = sum([len(m) for m in modules])
+    logger.info("%d, %d", len(modules), member_count)
+    return modules, mod_count

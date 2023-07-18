@@ -10,6 +10,7 @@ import types
 import uuid
 import xml.etree.ElementTree as ET
 from enum import Enum
+from pkgutil import iter_modules
 
 DOXYGEN_SETTINGS = {
     "OPTIMIZE_OUTPUT_JAVA": "YES",
@@ -334,3 +335,25 @@ def process_xml() -> str:
     os.system("cp " + output_xml_filename + " output.xml")
     logger.info("Wrote doxygen XML to output.xml")
     return output_xml_filename
+
+
+def get_submodules(module):
+    """
+    Retrieve names of sub-modules using iter_modules.
+    This will also return sub-packages. Third tuple
+    item is a flag ispkg indicating that.
+
+    :module module: module object to be searched
+
+    :returns iterator[tuple]
+    """
+    if not isinstance(module, types.ModuleType):
+        logger.warning(
+            "Provided object %s is not a module: %s",
+            module,
+            type(module),
+        )
+        return iter([])
+    if hasattr(module, "__path__"):
+        return iter_modules(module.__path__)
+    return iter([])

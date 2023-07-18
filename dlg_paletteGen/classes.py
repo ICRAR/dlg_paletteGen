@@ -33,6 +33,9 @@ class DetailedDescription:
         self.format = ""
         self._identify_format()
         self.main_descr, self.params = self.process_descr()
+        self.brief_descr = (
+            self.main_descr.split(".")[0] + "." if self.main_descr else ""
+        )
 
     def _process_rEST(self, detailed_description) -> tuple:
         """
@@ -464,14 +467,17 @@ class GreatGrandChild:
             else:
                 access = "readwrite"
                 port = "NoPort"
-            value = (
-                f"{default_value}/{value_type}/ApplicationArgument/{port}/"
-                + f"{access}//False/False/{member_desc}"
-            )
-            logger.debug(
-                "adding param: %s", {"key": str(name), "value": value}
-            )
-            self.member["params"].update({name: value})
+            if parent_member and parent_member.casa_mode and name == "self":
+                logger.debug("Skipping 'self' for casatasks")
+            else:
+                value = (
+                    f"{default_value}/{value_type}/ApplicationArgument/{port}/"
+                    + f"{access}//False/False/{member_desc}"
+                )
+                logger.debug(
+                    "adding param: %s", {"key": str(name), "value": value}
+                )
+                self.member["params"].update({name: value})
 
         elif ggchild.tag == "definition":  # type: ignore
             self.return_type = ggchild.text.strip().split(" ")[  # type: ignore
@@ -483,7 +489,7 @@ class GreatGrandChild:
             if func_path.find(".") >= 0:
                 self.func_path, self.func_name = func_path.rsplit(".", 1)
             logger.info(
-                "Found function name: '%s:%s'",
+                "Found function [path:name]: '%s:%s'",
                 self.func_path,
                 self.func_name,
             )
@@ -496,10 +502,11 @@ class GreatGrandChild:
                     )
                 else:
                     self.func_title = self.func_path.rsplit("._", 1)[-1]
+                    self.func_path = self.func_path.rsplit("._")[0]
                 self.func_name = self.func_path
-                logger.debug(
-                    "Using name %s for %s function",
-                    self.func_path,
+                logger.info(
+                    "Using title %s for %s function",
+                    self.func_title,
                     self.func_name,
                 )
             elif (
@@ -516,29 +523,6 @@ class GreatGrandChild:
             if self.member:
                 self.return_type = (
                     "None" if self.return_type == "def" else self.return_type
-                )
-                self.member["params"].update(
-                    {
-                        "input_parser": "pickle/Select/"
-                        + "ComponentParameter/NoPort/readwrite/pickle,eval,"
-                        + "npy,path,dataurl/False/False/Input port "
-                        + "parsing technique",
-                    }
-                )
-                self.member["params"].update(
-                    {
-                        "output_parser": "pickle/Select/"
-                        + "ComponentParameter/NoPort/readwrite/pickle,eval,"
-                        + "npy,path,dataurl/False/False/Output port parsing "
-                        + "technique",
-                    }
-                )
-                self.member["params"].update(
-                    {
-                        "func_name": self.func_name
-                        + "/String/ComponentParameter/NoPort/readonly/"
-                        + "/False/False/Name of function",
-                    }
                 )
         else:
             logger.debug(
@@ -671,6 +655,43 @@ class Child:
         ):
             logger.debug("Start processing of new function definition.")
 
+            member["params"].update(
+                {
+                    "input_parser": "pickle/Select/"
+                    + "ComponentParameter/NoPort/readwrite/pickle,eval,"
+                    + "npy,path,dataurl/False/False/Input port "
+                    + "parsing technique",
+                }
+            )
+            member["params"].update(
+                {
+                    "output_parser": "pickle/Select/"
+                    + "ComponentParameter/NoPort/readwrite/pickle,eval,"
+                    + "npy,path,dataurl/False/False/Output port parsing "
+                    + "technique",
+                }
+            )
+
+            member["params"].update(
+                {
+                    "execution_time": "5/Integer/ComponentParameter/NoPort/"
+                    + "readwrite//False/False/Estimate of execution time "
+                    + "(in seconds) for this application."
+                }
+            )
+            member["params"].update(
+                {
+                    "num_cpus": "1/Integer/ComponentParameter/NoPort/"
+                    + "readwrite//False/False/Number of cores used."
+                }
+            )
+            member["params"].update(
+                {
+                    "group_start": "false/Boolean/ComponentParameter/NoPort/"
+                    + "readwrite//False/False/Is this node the start of "
+                    + "a group?"
+                }
+            )
             if language == Language.C:
                 member["params"].update(
                     {
@@ -695,27 +716,6 @@ class Child:
                     }
                 )
 
-            member["params"].update(
-                {
-                    "execution_time": "5/Integer/ComponentParameter/NoPort/"
-                    + "readwrite//False/False/Estimate of execution time "
-                    + "(in seconds) for this application."
-                }
-            )
-            member["params"].update(
-                {
-                    "num_cpus": "1/Integer/ComponentParameter/NoPort/"
-                    + "readwrite//False/False/Number of cores used."
-                }
-            )
-            member["params"].update(
-                {
-                    "group_start": "false/Boolean/ComponentParameter/NoPort/"
-                    + "readwrite//False/False/Is this node the start of "
-                    + "a group?"
-                }
-            )
-
             logger.debug("Processing %d great grand children", len(gchild))
             if parent:
                 self.member["params"].update(parent.member["params"])
@@ -731,6 +731,15 @@ class Child:
                     return None
             if gg.member != member and gg.member["params"] not in [None, {}]:
                 gg.member["params"].update(member["params"])
+
+                gg.member["params"].update(
+                    {
+                        "func_name": gg.func_name
+                        + "/String/ComponentParameter/NoPort/readonly/"
+                        + "/False/False/Complete import path of function",
+                    }
+                )
+
                 member["params"] = gg.member["params"]
                 logger.debug("member after adding gg_members: %s", member)
             logger.info(
