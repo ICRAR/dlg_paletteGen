@@ -1,12 +1,14 @@
 import subprocess
 import logging
 import os
+import sys
 import json
-from dlg_paletteGen.cli import NAME
+from dlg_paletteGen.cli import get_args, NAME
 from dlg_paletteGen.base import (
     Language,
     prepare_and_write_palette,
     process_compounddefs,
+    module_hook,
 )
 from dlg_paletteGen.support_functions import (
     DOXYGEN_SETTINGS,
@@ -251,6 +253,58 @@ def test_CLI_fail(tmpdir: str, shared_datadir: str):
     assert err[:26] == b"usage: dlg_paletteGen [-h]"
 
 
+def test_CLI_module(tmpdir: str, shared_datadir: str):
+    """
+    Test the CLI using the module hook on itself
+
+    :param tmpdir: the path to the temp directory to use
+    :param shared_datadir: the path the the local directory
+    """
+    input = str(shared_datadir.absolute())  # don't really need this
+    output = tmpdir + "t.palette"
+    p = start_process(
+        ("-rsm", "dlg_paletteGen", input, output),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    out, err = p.communicate()
+    assert p.returncode == 0
+    # # logging.info("Captured output: %s", err)
+
+    # TODO: Once we have output we can re-enable this
+    # with open(input, "r") as f:
+    #     content = f.read()
+    # logging.info("INPUT: %s", content)
+    # with open(output, "r") as f:
+    #     newcontent = json.load(f)
+    # logging.info("OUTPUT: %s", newcontent)
+    # can't use a hash, since output contains hashed keys
+    # assert newcontent["modelData"]["commitHash"] == "0.1"
+
+
+def test_direct_cli():
+    """
+    Execute the cli directly to test the code itself.
+    """
+
+    class args:
+        idir = "."
+        tag = ""
+        ofile = "t.palette"
+        parse_all = False
+        module = "dlg_paletteGen"
+        recursive = True
+        verbose = False
+        c = False
+
+        def __len__(self):
+            return 8
+
+    a = args()
+    res = get_args(args=a)
+    assert res[:3] == (".", "", "t.palette")
+
+
 def test_direct_numpy(tmpdir: str, shared_datadir: str):
     """ "
     Test the numpy format by calling the methods directly.
@@ -258,12 +312,6 @@ def test_direct_numpy(tmpdir: str, shared_datadir: str):
     :param tmpdir: the path to the temp directory to use
     :param shared_datadir: the path the the local directory
     """
-    # inputdir,
-    # tag,
-    # outputfile,
-    # allow_missing_eagle_start,
-    # module_path,
-    # language,
     tag = ""
     allow_missing_eagle_start = True
     language = Language.PYTHON
@@ -515,3 +563,28 @@ def test_direct_casatask(tmpdir: str, shared_datadir: str):
     logging.info("OUTPUT: %s", newcontent)
     # can't use a hash, since output contains hashed keys
     assert len(newcontent["nodeDataArray"][0]["fields"]) == 16
+
+
+def test_direct_module(tmpdir: str, shared_datadir: str):
+    """ "
+    Test the module processing format by calling the methods directly.
+
+    :param tmpdir: the path to the temp directory to use
+    :param shared_datadir: the path the the local directory
+    """
+    tag = ""
+    allow_missing_eagle_start = True
+    language = Language.PYTHON
+    input = str(shared_datadir.absolute()) + "/."
+    output_directory = str(tmpdir)
+    output_file = f"{output_directory}/t.palette"
+    check_environment_variables()
+
+    modules, mod_count = module_hook("dlg_paletteGen", recursive=True)
+    assert mod_count == 6
+
+    # with open(output_file, "r") as f:
+    #     newcontent = json.load(f)
+    # logging.info("OUTPUT: %s", newcontent)
+    # # can't use a hash, since output contains hashed keys
+    # assert len(newcontent["nodeDataArray"][0]["fields"]) == 16

@@ -152,7 +152,12 @@ class DetailedDescription:
         #     [d.strip() for d in dd.split("\n")]
         # )  # remove whitespace from lines
         # extract main documentation (up to Parameters line)
-        (description, rest) = ds.split("\nParameters\n----------\n")
+        dss = ds.split("\nParameters\n----------\n")
+        if len(dss) == 2:
+            (description, rest) = dss
+        else:
+            description = dss[0]
+            rest = ""
         has_params = description != rest
         # extract parameter documentation (up to Returns line)
         pds = re.split(r"\nReturns\n-------\n", rest)

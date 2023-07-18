@@ -1,13 +1,11 @@
 import ast
 import logging
 import os
-import random
 import re
 import subprocess
 import sys
 import tempfile
 import types
-import uuid
 import xml.etree.ElementTree as ET
 from enum import Enum
 from pkgutil import iter_modules
@@ -253,22 +251,6 @@ def get_next_key():
     next_key -= 1
 
     return next_key + 1
-
-
-def create_uuid(seed):
-    """
-    Simple helper function to create a UUID
-
-    :param seed: [int| str| bytes| bytearray], seed value, if not provided
-                 timestamp is used
-
-    :returns uuid
-    """
-    rnd = random.Random()
-    rnd.seed(seed)
-
-    new_uuid = uuid.UUID(int=rnd.getrandbits(128), version=4)
-    return new_uuid
 
 
 def process_doxygen(language: Language = Language.PYTHON):

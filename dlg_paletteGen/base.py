@@ -24,7 +24,6 @@ from dlg_paletteGen.classes import Child, DetailedDescription
 from dlg_paletteGen.support_functions import (
     Language,
     check_text_element,
-    create_uuid,
     get_next_key,
     get_submodules,
     logger,
@@ -87,59 +86,6 @@ BLOCKDAG_DATA_FIELDS = [
     "category",
     "fields",
 ]
-
-
-def create_port(
-    component_name,
-    internal_name,
-    external_name,
-    direction,
-    event,
-    value_type,
-    description,
-) -> dict:
-    """
-    Create the dict data structure used to describe a port
-    TODO: This should be a dataclass
-
-    :param component_name: str, the name of the component
-    :param internal_name: str, the identifier name for the component
-    :param external_name: str, the display name of the component
-    :param direction: str, ['input'|'output']
-    :param event: str, if event this string contains event name
-    :param value_type: str, type of the port (not limited to standard data
-                       types)
-    :param description: str, short description of the port
-
-    :returns dict: {
-                    'Id':uuid,
-                    'IdText': internal_name,
-                    'text': external_name,
-                    'event': event,
-                    'type': value_type,
-                    'description': description
-                    }
-    """
-    seed = {
-        "component_name": component_name,
-        "internal_name": internal_name,
-        "external_name": external_name,
-        "direction": direction,
-        "event": event,
-        "type": value_type,
-        "description": description,
-    }
-
-    port_uuid = create_uuid(str(seed))
-
-    return {
-        "Id": str(port_uuid),
-        "IdText": internal_name,
-        "text": external_name,
-        "event": event,
-        "type": value_type,
-        "description": description,
-    }
 
 
 def find_field_by_name(fields, name):

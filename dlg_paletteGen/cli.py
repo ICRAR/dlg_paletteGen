@@ -33,7 +33,8 @@ NAME = "dlg_paletteGen"
 VERSION = pkg_resources.require(NAME)[0].version
 
 
-def get_args():
+def get_args(args=None):
+    # def get_args():
     """
     Deal with the command line arguments
 
@@ -90,13 +91,15 @@ def get_args():
         help="increase output verbosity",
         action="store_true",
     )
-    if len(sys.argv) == 1:
-        print(
-            "\x1b[31;20mInsufficient number of arguments provided!!!\n\x1b[0m"
-        )
-        parser.print_help(sys.stderr)
-        sys.exit(1)
-    args = parser.parse_args()
+    if not args:
+        if len(sys.argv) == 1:
+            print(
+                "\x1b[31;20mInsufficient number of "
+                + "arguments provided!!!\n\x1b[0m"
+            )
+            parser.print_help(sys.stderr)
+            sys.exit(1)
+        args = parser.parse_args()
     logger.setLevel(logging.INFO)
     if args.verbose:
         logger.setLevel(logging.DEBUG)
