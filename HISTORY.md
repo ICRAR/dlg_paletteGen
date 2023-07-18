@@ -4,6 +4,13 @@ Changelog
 
 (unreleased)
 ------------
+- Added direct cli testing. [Andreas Wicenec]
+- Brought back the module hook and brief description. [Andreas Wicenec]
+
+
+0.1.14 (2023-07-18)
+-------------------
+- Release: version 0.1.14 🚀 [Andreas Wicenec]
 - Release: version 0.1.13 🚀 [Andreas Wicenec]
 - Fixed casadoc treatment. [Andreas Wicenec]
 
