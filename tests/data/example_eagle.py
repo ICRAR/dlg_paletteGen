@@ -29,10 +29,9 @@ import urllib.error
 import urllib.request
 import logging
 import time
-import ast
 import numpy as np
 
-from dlg import droputils, utils
+from dlg import droputils
 from dlg.drop import BarrierAppDROP, ContainerDROP
 from dlg.apps.branch import BranchAppDrop
 from dlg.meta import (

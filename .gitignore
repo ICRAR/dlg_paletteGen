@@ -117,9 +117,6 @@ venv.bak/
 # Rope project settings
 .ropeproject
 
-# VScode project settings
-.vscode
-
 # mkdocs documentation
 /site
 
@@ -137,3 +134,4 @@ dmypy.json
 # Custom
 output.xml
 t.palette
+.vscode

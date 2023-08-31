@@ -1,4 +1,2 @@
-blockdag
-docstring_parser
-wheel
-types-setuptools
+# For production
+benedict

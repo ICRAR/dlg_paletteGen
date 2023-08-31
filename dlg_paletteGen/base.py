@@ -8,7 +8,6 @@ Should also be made separate sub-repo with proper installation and entry point.
 """
 import csv
 import datetime
-import importlib
 import inspect
 import json
 import os
@@ -20,13 +19,22 @@ from enum import Enum
 
 from blockdag import build_block_dag
 
-from dlg_paletteGen.classes import Child, DetailedDescription
-from dlg_paletteGen.support_functions import (
+from dlg_paletteGen.classes import (
+    logger,
     Language,
+    Child,
+    DetailedDescription,
+    DummySig,
+)
+from .support_functions import (
     check_text_element,
     get_next_key,
     get_submodules,
-    logger,
+    import_using_name,
+    constructNode,
+    populateDefaultFields,
+    populateFields,
+    constructPalette,
 )
 
 KNOWN_PARAM_DATA_TYPES = [
@@ -189,9 +197,9 @@ def create_field(
     :param internal_name: str, the internal name of the parameter
     :param value: str, the value of the parameter
     :param value_type: str, the type of the value
-    :param field_type: FieldType, the type of the field
-    :param field_usage: FieldUsage, type usage of the field
-    :param access: FieldAccess, ReadWrite|ReadOnly (default ReadOnly)
+    :param field_type: One of FieldType type
+    :param field_usage: One from FieldUsage type
+    :param access: FieldAccess type, ReadWrite|ReadOnly (default ReadOnly)
     :param options: list, list of options
     :param precious: bool,
         should this parameter appear, even if empty or None
@@ -541,30 +549,16 @@ def write_palette_json(
     """
     for i in range(len(nodes)):
         nodes[i]["dataHash"] = block_dag[i]["data_hash"]
-    palette = {
-        "modelData": {
-            "filePath": output_filename,
-            "fileType": "palette",
-            "shortDescription": "",
-            "detailedDescription": "",
-            "repoService": "GitHub",
-            "repoBranch": "master",
-            "repo": "ICRAR/EAGLE_test_repo",
-            "eagleVersion": "",
-            "eagleCommitHash": "",
-            "schemaVersion": "AppRef",
-            "readonly": True,  # type: ignore
-            "repositoryUrl": git_repo,
-            "commitHash": version,
-            "downloadUrl": "",
-            "signature": block_dag["signature"],  # type: ignore
-            "lastModifiedName": "",
-            "lastModifiedEmail": "",
-            "lastModifiedDatetime": datetime.datetime.now().timestamp() * 1000,
-        },
-        "nodeDataArray": nodes,
-        "linkDataArray": [],
-    }  # type: ignore
+    palette = constructPalette()
+    palette.modelData.filePath = output_filename
+    palette.modelData.repositoryUrl = git_repo
+    palette.modelData.commitHash = version
+    palette.modelData.signature = block_dag["signature"]
+    palette.modelData.lastModifiedDatetime = (
+        datetime.datetime.now().timestamp()
+    )
+
+    palette.nodeDataArray = nodes
 
     # write palette to file
     with open(output_filename, "w") as outfile:
@@ -994,56 +988,94 @@ def prepare_and_write_palette(nodes: list, output_filename: str):
     logger.info("Wrote " + str(len(nodes)) + " component(s)")
 
 
-def module_get(mod: types.ModuleType):
-    """ """
-    logger.debug(f">>>>>>>>> Processing members for module: {mod.__name__}")
-    content = dir(mod)
+def get_members(mod: types.ModuleType, parent=None, member=None):
+    """
+    Get members of a module
+    """
+    if not mod:
+        return {}
+    name = parent if parent else mod.__name__
+    logger.debug(f">>>>>>>>> Analysing members for module: {name}")
+    content = inspect.getmembers(
+        mod,
+        lambda x: inspect.isfunction(x)
+        or inspect.isclass(x)
+        or inspect.isbuiltin(x),
+    )
     count = 0
-    # logger.info("Content of %s: %s", mod, content)
-    name = mod.__name__
-    members = []
-    for c in content:
-        if c[0] == "_":
-            # TODO: Deal with __init__
-            # NOTE: PyBind11 classes can have multiple constructors
-            continue
-        m = getattr(mod, c)
-        if not callable(m) or isinstance(m, _SpecialForm):
-            logger.warning("Member %s is not callable", m)
-            # TODO: not sure what to do with these. Usually they
-            # are class parameters.
-            continue
-        else:
-            count += 1
-            name = (
-                f"{mod.__name__}.{m.__name__}"
-                if hasattr(m, "__name__")
-                else f"{mod.__name__}.Unknown"
-            )
-            members.append(name)
-            if m.__doc__ and len(m.__doc__) > 0:
-                dd = DetailedDescription(m.__doc__)
-                logger.debug(f">>> Processing member {name}")
-                logger.debug(f"Brief description: {dd.brief_descr}")
-                if len(dd.params) > 0:
-                    logger.debug("Parameters: %s", dd.params)
-                else:
-                    sig = inspect.signature(m)
-                    for p, v in sig.parameters.items():
-                        logger.debug(
-                            "Parameter '%s' of type %s and kind %s with "
-                            + "default value %s",
-                            p,
-                            v.annotation,
-                            v.kind,
-                            v.default,
-                        )
-            elif hasattr(m, "__name__"):
-                logger.warning("Member '%s' has no description!", name)
+    # logger.debug("Members of %s: %s", name, [c for c, m in content])
+    members = {}
+    for c, m in content:
+        if not member or (member and c == member):
+            if c[0] == "_" and c not in ["__init__", "__call__"]:
+                # TODO: Deal with __init__
+                # NOTE: PyBind11 classes can have multiple constructors
+                continue
+            m = getattr(mod, c)
+            if not callable(m) or isinstance(m, _SpecialForm):
+                # logger.warning("Member %s is not callable", m)
+                # # TODO: not sure what to do with these. Usually they
+                # # are class parameters.
+                continue
             else:
-                logger.warning(
-                    "Entity '%s' has neither descr. nor __name__", m
+                node = constructNode()
+                count += 1
+                name = (
+                    f"{parent}.{m.__name__}"
+                    if hasattr(m, "__name__")
+                    else f"{mod.__name__}.Unknown"
                 )
+                logger.info("Inspecting %s: %s", type(m).__name__, m.__name__)
+
+                dd = None
+                if m.__doc__ and len(m.__doc__) > 0:
+                    logger.info(
+                        f"Process documentation of {type(m).__name__} {name}"
+                    )
+                    dd = DetailedDescription(m.__doc__)
+                    logger.debug(f"Full description: {dd.description}")
+                    node.description = dd.brief_descr.strip()
+                    node.text = name
+                    if len(dd.params) > 0:
+                        logger.debug("Desc. parameters: %s", dd.params)
+                elif hasattr(m, "__name__"):
+                    logger.warning("Member '%s' has no description!", name)
+                else:
+                    logger.warning(
+                        "Entity '%s' has neither descr. nor __name__", m
+                    )
+
+                if type(m).__name__ in [
+                    "pybind11_type",
+                    "builtin_function_or_method",
+                ]:
+                    logger.info(
+                        "!!!! PyBind11 or builtin: Trying to create dummy signature !!!!!"
+                    )
+                    sig = DummySig(m)
+                else:
+                    try:
+                        # this will fail for e.g. pybind11 modules
+                        sig = inspect.signature(m)  # type: ignore
+                    except ValueError:
+                        logger.warning(
+                            "Unable to get signature of %s: ", m.__name__
+                        )
+                        continue
+                # fill custom ApplicationArguments first
+            fields = populateFields(sig.parameters, dd)
+            for _, field in fields.items():
+                node.fields.update(field)
+
+            # now populate with default fields.
+            node = populateDefaultFields(node)
+            node.fields["func_name"]["value"] = name
+            if hasattr(sig, "ret"):
+                logger.debug("Return type: %s", sig.ret)
+            logger.debug(
+                ">>> member update with: %s", {name: node.dump_json_str()}
+            )
+            members.update({name: node})
 
             if hasattr(m, "__members__"):
                 # this takes care of enum types, but needs some
@@ -1053,13 +1085,14 @@ def module_get(mod: types.ModuleType):
                 logger.info("\nMembers:")
                 logger.info(m.__members__)
                 # pass
-    logger.info("Found %d members in module %s", count, mod.__name__)
+            break
+    logger.info("Analysed %d members in module %s", count, name)
     return members
 
 
 def module_hook(
     mod_name: str, modules: dict = {}, recursive: bool = True
-) -> "Tuple[dict, int]":
+) -> "dict":
     """
     This is the starting point of a function dissecting the
     docs for an imported module.
@@ -1071,32 +1104,28 @@ def module_hook(
     :param mod_name: str, the name of the module to be treated
     :param recursive: bool, treat sub-modules [True]
 
-    :returns: Number of modules processed
+    :returns: dict of modules processed
     """
     member_count = 0
-    mod_count = 0
+    member = None
     if mod_name not in sys.builtin_module_names:
         try:
-            mod = importlib.import_module(mod_name)
+            mod = import_using_name(mod_name)
+            if mod_name != mod.__name__:
+                member = mod_name.split(".")[-1]
+                mod_name = mod.__name__
+            modules.update(
+                {mod_name: get_members(mod, parent=mod_name, member=member)}
+            )
+            # mod_count += 1
+            if not member and recursive and mod:
+                sub_modules = get_submodules(mod)
+                # if len(sub_modules) > 0:
+                logger.info("Iterating over sub_modules of %s", mod_name)
+                for sub_mod in sub_modules:
+                    logger.info("Treating sub-module: %s", sub_mod)
+                    modules = module_hook(sub_mod, modules=modules)
+            # member_count = sum([len(m) for m in modules.values()])
         except ImportError:
             logger.error("Module %s can't be loaded!", mod_name)
-            raise
-    modules.update({mod_name: module_get(mod)})
-    mod_count += 1
-    if recursive:
-        sub_modules = get_submodules(mod)
-        sub_mods = [
-            x[1]
-            for x in sub_modules
-            if (x[1][0] != "_" and x[1][:4] != "test")
-        ]  # get the names; ignore test modules
-        if len(sub_mods) > 0:
-            logger.debug("sub_modules of %s: %s", mod_name, sub_mods)
-        for sub_mod in sub_mods:
-            mod_load = f"{mod_name}.{sub_mod}"
-            # modules.update({mod_load: {}})
-            modules, mod_count = module_hook(mod_load, modules=modules)
-            mod_count += len(modules)
-    member_count = sum([len(m) for m in modules])
-    logger.info("%d, %d", len(modules), member_count)
-    return modules, mod_count
+    return modules

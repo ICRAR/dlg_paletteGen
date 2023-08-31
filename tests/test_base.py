@@ -1,9 +1,8 @@
 import subprocess
 import logging
 import os
-import sys
 import json
-from dlg_paletteGen.cli import get_args, NAME
+from dlg_paletteGen.classes import DOXYGEN_SETTINGS
 from dlg_paletteGen.base import (
     Language,
     prepare_and_write_palette,
@@ -11,11 +10,10 @@ from dlg_paletteGen.base import (
     module_hook,
 )
 from dlg_paletteGen.support_functions import (
-    DOXYGEN_SETTINGS,
     process_doxygen,
     process_xml,
 )
-from dlg_paletteGen.cli import check_environment_variables
+from dlg_paletteGen.cli import get_args, NAME, check_environment_variables
 
 pytest_plugins = ["pytester", "pytest-datadir"]
 
@@ -572,19 +570,10 @@ def test_direct_module(tmpdir: str, shared_datadir: str):
     :param tmpdir: the path to the temp directory to use
     :param shared_datadir: the path the the local directory
     """
-    tag = ""
-    allow_missing_eagle_start = True
-    language = Language.PYTHON
-    input = str(shared_datadir.absolute()) + "/."
-    output_directory = str(tmpdir)
-    output_file = f"{output_directory}/t.palette"
-    check_environment_variables()
-
-    modules, mod_count = module_hook("dlg_paletteGen", recursive=True)
-    assert mod_count == 6
-
-    # with open(output_file, "r") as f:
-    #     newcontent = json.load(f)
-    # logging.info("OUTPUT: %s", newcontent)
-    # # can't use a hash, since output contains hashed keys
-    # assert len(newcontent["nodeDataArray"][0]["fields"]) == 16
+    modules = module_hook("data.PickOne.pickOne", recursive=True)
+    nodes = []
+    for members in modules.values():
+        for node in members.values():
+            nodes.append(node)
+    assert len(modules) == 1
+    prepare_and_write_palette(nodes, "test.palette")

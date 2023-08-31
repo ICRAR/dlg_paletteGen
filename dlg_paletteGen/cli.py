@@ -15,16 +15,15 @@ import tempfile
 
 import pkg_resources
 
+from .classes import logger, Language, DOXYGEN_SETTINGS
+
 # isort: ignore
-from dlg_paletteGen.base import (
-    Language,
-    logger,
+from .base import (
     module_hook,
     prepare_and_write_palette,
     process_compounddefs,
 )
-from dlg_paletteGen.support_functions import (
-    DOXYGEN_SETTINGS,
+from .support_functions import (
     process_doxygen,
     process_xml,
 )
@@ -181,11 +180,22 @@ def main():  # pragma: no cover
     output_directory = tempfile.TemporaryDirectory()
 
     if len(module_path) > 0:
-        modules, mod_count = module_hook(module_path, recursive=recursive)
+        modules = module_hook(module_path, recursive=recursive)
         # member_count = sum([len(m) for m in modules])
-        logger.info(">>>>> Number of modules processed: %d", mod_count)
-        logger.error(
-            ">>>>>> Modules support not yet complete: NOTHING WRITTEN!"
+        logger.info(">>>>> Number of modules processed: %d", len(modules))
+        logger.debug(
+            "Modules found: %s",
+            # modules
+            {m: list(v.keys()) for m, v in modules.items()},
+        )
+        nodes = []
+        for mod, members in modules.items():
+            for member, node in members.items():
+                node.fields = list(node.fields.values())
+                nodes.append(node)
+        prepare_and_write_palette(nodes, outputfile)
+        logger.warning(
+            ">>>>>> Modules support not yet complete: Use with care!"
         )
     else:
         # add extra doxygen setting for input and output locations

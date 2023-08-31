@@ -1,14 +1,235 @@
+import ast
+from enum import Enum
+import inspect
+import logging
 import re
+import sys
+import types
 import xml.etree.ElementTree as ET
 from typing import Union
 
-from dlg_paletteGen.support_functions import (
-    VALUE_TYPES,
-    Language,
-    cleanString,
-    logger,
-    typeFix,
-)
+
+class CustomFormatter(logging.Formatter):
+    high = "\x1b[34;1m"
+    grey = "\x1b[38;20m"
+    yellow = "\x1b[33;20m"
+    red = "\x1b[31;20m"
+    bold_red = "\x1b[31;1m"
+    reset = "\x1b[0m"
+    base_format = (
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s "
+        + "(%(filename)s:%(lineno)d)"
+    )
+
+    FORMATS = {
+        logging.DEBUG: high + base_format + reset,
+        logging.INFO: grey + base_format + reset,
+        logging.WARNING: yellow + base_format + reset,
+        logging.ERROR: red + base_format + reset,
+        logging.CRITICAL: bold_red + base_format + reset,
+    }
+
+    def format(self, record):
+        log_fmt = self.FORMATS.get(record.levelno)
+        formatter = logging.Formatter(log_fmt, "%Y-%m-%dT%H:%M:%S")
+        return formatter.format(record)
+
+
+# create console handler with a higher log level
+ch = logging.StreamHandler(sys.stdout)
+ch.setLevel(logging.DEBUG)
+
+ch.setFormatter(CustomFormatter())
+
+logger = logging.getLogger(__name__)
+logger.addHandler(ch)
+
+
+def cleanString(input_text: str) -> str:
+    """
+    Remove ANSI escape strings from input"
+
+    :param input_text: string to clean
+
+    :returns: str, cleaned string
+    """
+    # ansi_escape = re.compile(r'[@-Z\\-_]|\[[0-?]*[ -/]*[@-~]')
+    ansi_escape = re.compile(r"\[[0-?]*[ -/]*[@-~]")
+    return ansi_escape.sub("", input_text)
+
+
+def typeFix(value_type: str, default_value: str = "") -> str:
+    """
+    Trying to fix or guess the type of a parameter
+
+    :param value_type: str, convert type string to something known
+
+    :returns output_type: str, the converted type
+    """
+    typerex = r"[\(\[](bool|boolean|int|float|string|str)[\]\)]"
+    re_type = re.findall(typerex, value_type)
+    # fix some types
+    if re_type:
+        re_type = re_type[0]
+        if re_type in ["bool", "boolean"]:
+            value_type = "Boolean"
+            if default_value == "":
+                default_value = "False"
+        if re_type == "int":
+            value_type = "Integer"
+            if default_value == "":
+                default_value = "0"
+        if re_type == "float":
+            value_type = "Float"
+            if default_value == "":
+                default_value = "0"
+        if re_type in ["string", "str", "*", "**"]:
+            value_type = "String"
+    elif default_value != "":
+        value_type = default_value
+
+    # try to guess the type based on the default value
+    # TODO: try to parse default_value as JSON to detect JSON types
+
+    if (
+        not re_type
+        and default_value != ""
+        and default_value is not None
+        and default_value != "None"
+    ):
+        try:
+            # we'll try to interpret what the type of the default_value is
+            # using ast
+            l: dict = {}
+            try:
+                eval(
+                    compile(
+                        ast.parse(f"t = {default_value}"),
+                        filename="",
+                        mode="exec",
+                    ),
+                    l,
+                )
+                vt = type(l["t"])
+                if not isinstance(l["t"], type):
+                    default_value = l["t"]
+                else:
+                    vt = str
+            except NameError:
+                vt = str
+            except SyntaxError:
+                vt = str
+
+            value_type = VALUE_TYPES[vt] if vt in VALUE_TYPES else "String"
+            val = None
+            if value_type == "String":
+                # if it is String we need to do a few more tests
+                try:
+                    val = int(default_value)  # type: ignore
+                    value_type = "Integer"
+                    # print("Use Integer")
+                except TypeError:
+                    if isinstance(default_value, types.BuiltinFunctionType):
+                        value_type = "String"
+                except ValueError:
+                    try:
+                        val = float(  # noqa: F841
+                            default_value  # type: ignore
+                        )
+                        value_type = "Float"
+                    except ValueError:
+                        if default_value and (
+                            default_value.lower() == "true"
+                            or default_value.lower() == "false"
+                        ):
+                            value_type = "Boolean"
+                            default_value = default_value.lower()
+                        else:
+                            value_type = "String"
+        except NameError or TypeError:  # type: ignore
+            raise
+    # we only want stuff in parentheses
+    v_type = re.split(r"[\[\]\(\)]", value_type)
+    value_type = v_type[1] if len(v_type) > 1 else v_type[0]
+    return value_type
+
+
+VALUE_TYPES = {
+    str: "String",
+    int: "Integer",
+    float: "Float",
+    bool: "Boolean",
+    list: "Json",
+    dict: "Json",
+    tuple: "Json",
+}
+
+
+class Language(Enum):
+    UNKNOWN = 0
+    C = 1
+    PYTHON = 2
+
+
+DOXYGEN_SETTINGS = {
+    "OPTIMIZE_OUTPUT_JAVA": "YES",
+    "AUTOLINK_SUPPORT": "NO",
+    "IDL_PROPERTY_SUPPORT": "NO",
+    "EXCLUDE_PATTERNS": "*/web/*, CMakeLists.txt",
+    "VERBATIM_HEADERS": "NO",
+    "GENERATE_HTML": "NO",
+    "GENERATE_LATEX": "NO",
+    "GENERATE_XML": "YES",
+    "XML_PROGRAMLISTING": "NO",
+    "ENABLE_PREPROCESSING": "NO",
+    "CLASS_DIAGRAMS": "NO",
+}
+
+# extra doxygen setting for C repositories
+DOXYGEN_SETTINGS_C = {
+    "FILE_PATTERNS": "*.h, *.hpp",
+}
+
+DOXYGEN_SETTINGS_PYTHON = {
+    "FILE_PATTERNS": "*.py",
+}
+
+
+class DummySig:
+    """
+    Dummy signature class for PyBind11 functions
+    """
+
+    def __init__(self, module):
+        self.name = module.__name__
+        self.docstring = module.__doc__
+        self.parameters, self.ret = self.get_pb11_sig()
+
+    def get_pb11_sig(self):
+        """
+        Process the docstring from the PyBind11 functions
+        """
+        parameters = {}
+        ret = None
+        if self.docstring and self.docstring.find("\n") > 0:
+            call_line, rest = self.docstring.split("\n", 1)
+            params = re.findall(r"([\w_]+)\: ([\w_\:\.\[\]]+)", call_line)
+            ret = re.findall(r"-> ([\w_\:\.\[\]]+)", call_line)
+            ret = ret[0] if ret else None
+            for k, v in params:
+                parameters[k] = DummyParam()
+                parameters[k].annotation = v
+        elif self.docstring and len(self.docstring) == 0:
+            logger.warning("Module %s docstring is empty.", self.docstring)
+        elif self.docstring and len(self.docstring) > 0:
+            logger.info('PB11 docstring found: "%s"', self.docstring)
+        return parameters, ret
+
+
+class DummyParam:
+    annotation = None
+    kind = "POSITIONAL_OR_KEYWORD"
+    default = inspect._empty
 
 
 class DetailedDescription:
@@ -136,7 +357,7 @@ class DetailedDescription:
                     "Type spec without matching description %s", param_name
                 )
 
-        return detailed_description.split(":param")[0], result
+        return detailed_description.split(":param")[0].strip(), result
 
     def _process_Numpy(self, dd: str) -> tuple:
         """
@@ -147,11 +368,10 @@ class DetailedDescription:
         :returns: tuple, description and parameter dictionary
         """
         logger.debug("Processing Numpy style doc_strings")
-        ds = dd
-        # ds = "\n".join(
-        #     [d.strip() for d in dd.split("\n")]
-        # )  # remove whitespace from lines
-        # extract main documentation (up to Parameters line)
+        ds = dd.strip("\n")
+        indent = len(ds) - len(ds.lstrip())
+        ds = re.sub(r"\n {" + f"{indent}" + r"}", r"\n", ds)
+        ds = ds.lstrip()
         dss = ds.split("\nParameters\n----------\n")
         if len(dss) == 2:
             (description, rest) = dss
@@ -160,7 +380,7 @@ class DetailedDescription:
             rest = ""
         has_params = description != rest
         # extract parameter documentation (up to Returns line)
-        pds = re.split(r"\nReturns\n-------\n", rest)
+        pds = re.split(r"\nReturns\n-------\n|\nRaises\n------\n", rest)
         spds = re.split(r"([\w_]+) : ", pds[0])[1:]  # split param lines
         if has_params and len(spds) == 0:
             spds = re.split(r"([\w_]+)\n    ", pds[0])[1:]  # split param lines
