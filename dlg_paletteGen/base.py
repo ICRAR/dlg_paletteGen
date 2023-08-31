@@ -13,7 +13,7 @@ import json
 import os
 import sys
 import types
-from typing import Any, Union, _SpecialForm, Tuple
+from typing import Any, Union, _SpecialForm
 import xml.etree.ElementTree as ET
 from enum import Enum
 
@@ -553,7 +553,7 @@ def write_palette_json(
     palette.modelData.filePath = output_filename
     palette.modelData.repositoryUrl = git_repo
     palette.modelData.commitHash = version
-    palette.modelData.signature = block_dag["signature"]
+    palette.modelData.signature = block_dag["signature"]  # type: ignore
     palette.modelData.lastModifiedDatetime = (
         datetime.datetime.now().timestamp()
     )
@@ -1050,7 +1050,7 @@ def get_members(mod: types.ModuleType, parent=None, member=None):
                     "builtin_function_or_method",
                 ]:
                     logger.info(
-                        "!!!! PyBind11 or builtin: Trying to create dummy signature !!!!!"
+                        "!!! PyBind11 or builtin: Creting dummy signature !!!"
                     )
                     sig = DummySig(m)
                 else:
@@ -1106,7 +1106,6 @@ def module_hook(
 
     :returns: dict of modules processed
     """
-    member_count = 0
     member = None
     if mod_name not in sys.builtin_module_names:
         try:

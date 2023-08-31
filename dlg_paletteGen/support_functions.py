@@ -293,7 +293,10 @@ def populateFields(parameters: dict, dd) -> dict:
                 if isinstance(v.default, str):
                     value = v.default  # type: ignore
         except ValueError:
-            value = f"{type(v.default).__module__}.{type(v.default).__name__}"  # type: ignore
+            value = (
+                f"{type(v.default).__module__}"  # type: ignore
+                + f".{type(v.default).__name__}"  # type: ignore
+            )
 
         field[p].value = field[p].defaultValue = value
         field[p].description = (
