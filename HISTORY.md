@@ -4,6 +4,15 @@ Changelog
 
 (unreleased)
 ------------
+- Suppress multiplied modules. [Andreas Wicenec]
+- Restructuring of code. [Andreas Wicenec]
+- Better support for builtin functions. [Andreas Wicenec]
+- Updated documentation. [Andreas Wicenec]
+
+
+0.2.0 (2023-09-01)
+------------------
+- Release: version 0.2.0 🚀 [Andreas Wicenec]
 - Compatibility with python 3.9. [Andreas Wicenec]
 - Update requirements.txt. [awicenec]
 
