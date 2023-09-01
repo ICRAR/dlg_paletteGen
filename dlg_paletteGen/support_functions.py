@@ -287,10 +287,10 @@ def populateFields(parameters: dict, dd) -> dict:
         logger.debug(">>>> %s", v.default)
         field = initializeField(p)
         try:
-            if isinstance(v.default, list | tuple): # type: ignore
+            if isinstance(v.default, list | tuple):  # type: ignore
                 value = v.default  # type: ignore
             elif v.default != inspect._empty:
-                if isinstance(v.default, str): # type: ignore
+                if isinstance(v.default, str):  # type: ignore
                     value = v.default  # type: ignore
         except ValueError:
             value = (
