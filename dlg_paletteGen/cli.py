@@ -15,10 +15,16 @@ import tempfile
 
 import pkg_resources
 
-# isort: ignore
-from .base import module_hook, prepare_and_write_palette, process_compounddefs
 from .classes import DOXYGEN_SETTINGS, Language, logger
-from .support_functions import process_doxygen, process_xml
+from .module_base import module_hook
+
+# isort: ignore
+from .source_base import process_compounddefs
+from .support_functions import (
+    prepare_and_write_palette,
+    process_doxygen,
+    process_xml,
+)
 
 NAME = "dlg_paletteGen"
 VERSION = pkg_resources.require(NAME)[0].version

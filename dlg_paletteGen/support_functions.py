@@ -1,6 +1,7 @@
 import datetime
 import importlib
 import inspect
+import json
 import os
 import subprocess
 import sys
@@ -9,8 +10,10 @@ import xml.etree.ElementTree as ET
 from pkgutil import iter_modules
 
 import benedict
+from blockdag import build_block_dag
 
 from .classes import (
+    BLOCKDAG_DATA_FIELDS,
     DOXYGEN_SETTINGS,
     DOXYGEN_SETTINGS_C,
     DOXYGEN_SETTINGS_PYTHON,
@@ -142,6 +145,63 @@ def process_xml() -> str:
     os.system("cp " + output_xml_filename + " output.xml")
     logger.info("Wrote doxygen XML to output.xml")
     return output_xml_filename
+
+
+def write_palette_json(
+    output_filename: str,
+    nodes: list,
+    git_repo: str,
+    version: str,
+    block_dag: list,
+):
+    """
+    Construct palette header and Write nodes to the output file
+
+    :param output_filename: str, the name of the output file
+    :param nodes: list of nodes
+    :param git_repo: str, the git repository URL
+    :param version: str, version string to be used
+    :param block_dag: list, the reproducibility information
+    """
+    for i in range(len(nodes)):
+        nodes[i]["dataHash"] = block_dag[i]["data_hash"]
+    palette = constructPalette()
+    palette.modelData.filePath = output_filename
+    palette.modelData.repositoryUrl = git_repo
+    palette.modelData.commitHash = version
+    palette.modelData.signature = block_dag["signature"]  # type: ignore
+    palette.modelData.lastModifiedDatetime = (
+        datetime.datetime.now().timestamp()
+    )
+
+    palette.nodeDataArray = nodes
+
+    # write palette to file
+    with open(output_filename, "w") as outfile:
+        json.dump(palette, outfile, indent=4)
+
+
+def prepare_and_write_palette(nodes: list, output_filename: str):
+    """
+    Prepare and write the palette in JSON format.
+
+    :param nodes: the list of nodes
+    :param output_filename: the filename of the output
+    """
+    # add signature for whole palette using BlockDAG
+    vertices = {}
+    GITREPO = os.environ.get("GIT_REPO")
+    VERSION = os.environ.get("PROJECT_VERSION")
+
+    for i in range(len(nodes)):
+        vertices[i] = nodes[i]
+    block_dag = build_block_dag(vertices, [], data_fields=BLOCKDAG_DATA_FIELDS)
+
+    # write the output json file
+    write_palette_json(
+        output_filename, nodes, GITREPO, VERSION, block_dag  # type: ignore
+    )
+    logger.info("Wrote " + str(len(nodes)) + " component(s)")
 
 
 def get_submodules(module):
@@ -315,7 +375,7 @@ def populateFields(parameters: dict, dd) -> dict:
             field[p].type = v.annotation.__name__
         else:
             field[p].type = "Object"
-        field[p].fieldType = "ApplicationArgument"
+        field[p].parameterType = "ApplicationArgument"
         field[p].options = None
         field[p].positional = (
             True if v.kind == inspect.Parameter.POSITIONAL_ONLY else False
@@ -364,6 +424,15 @@ def populateDefaultFields(Node):
     :param Node: a LG node from constructNode
     """
     # default field definitions
+    n = "group_start"
+    gs = initializeField(n)
+    gs[n].name = n
+    gs[n].type = "Boolean"
+    gs[n].value = "false"
+    gs[n].default_value = "false"
+    gs[n].description = "Is this node the start of a group?"
+    Node.fields.update(gs)
+
     n = "execution_time"
     et = initializeField(n)
     et[n].name = n
@@ -402,9 +471,10 @@ def populateDefaultFields(Node):
     dc = initializeField(n)
     dc[n].name = n
     dc[n].value = "dlg.apps.pyfunc.PyFuncApp"
-    dc[n].default_value = "dlg.apps.pyfunc.PyFuncApp"
+    dc[n].defaultValue = "dlg.apps.pyfunc.PyFuncApp"
     dc[n].type = "String"
     dc[n].description = "The python class that implements this application"
+    dc[n].readonly = True
     Node.fields.update(dc)
 
     n = "input_parser"
@@ -426,15 +496,6 @@ def populateDefaultFields(Node):
     outpp[n].type = "Select"
     outpp[n].options = ["pickle", "eval", "npy", "path", "dataurl"]
     Node.fields.update(outpp)
-
-    n = "group_start"
-    gs = initializeField(n)
-    gs[n].name = n
-    gs[n].type = "Boolean"
-    gs[n].value = "false"
-    gs[n].default_value = "false"
-    gs[n].description = "Is this node the start of a group?"
-    Node.fields.update(gs)
 
     return Node
 

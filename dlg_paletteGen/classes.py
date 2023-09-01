@@ -164,6 +164,14 @@ VALUE_TYPES = {
     tuple: "Json",
 }
 
+BLOCKDAG_DATA_FIELDS = [
+    "inputPorts",
+    "outputPorts",
+    "applicationArgs",
+    "category",
+    "fields",
+]
+
 
 class Language(Enum):
     UNKNOWN = 0

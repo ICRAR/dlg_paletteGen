@@ -3,13 +3,13 @@ import logging
 import os
 import json
 from dlg_paletteGen.classes import DOXYGEN_SETTINGS
-from dlg_paletteGen.base import (
+from dlg_paletteGen.module_base import module_hook
+from dlg_paletteGen.source_base import (
     Language,
-    prepare_and_write_palette,
     process_compounddefs,
-    module_hook,
 )
 from dlg_paletteGen.support_functions import (
+    prepare_and_write_palette,
     process_doxygen,
     process_xml,
 )

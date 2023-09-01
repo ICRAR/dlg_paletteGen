@@ -6,9 +6,7 @@
 
 This is the palette generator of the [DALiuGE](https://daliuge.readthedocs.io) system.
 
-It processes a file or a directory of source files and
-produces a DALiuGE compatible palette file containing the
-information required to use the identified functions and classes and methods to construct logical graphs in [EAGLE](https://eagle-dlg.readthedocs.io).
+It processes a file or a directory of source files or an installed python module and produces a DALiuGE compatible palette file containing the information required to use the identified functions, classes and methods to construct logical graphs in [EAGLE](https://eagle-dlg.readthedocs.io).
 For more information please refer to the [documentation](https://icrar.github.io/dlg_paletteGen/).
 
 ## Install it from PyPI
