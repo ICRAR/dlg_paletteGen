@@ -4,6 +4,27 @@ Changelog
 
 (unreleased)
 ------------
+- Compatibility with python 3.9. [Andreas Wicenec]
+- Update requirements.txt. [awicenec]
+
+  added blockdag again.
+- Update requirements-test.txt. [awicenec]
+
+  missing stub package added
+- Update support_functions.py. [awicenec]
+
+  added required spaces
+- Update support_functions.py. [awicenec]
+
+  another type error
+- Fixed linting errors. [Andreas Wicenec]
+- Added module palette writing. [Andreas Wicenec]
+- Added .vscode. [Andreas Wicenec]
+
+
+0.1.15 (2023-07-18)
+-------------------
+- Release: version 0.1.15 🚀 [Andreas Wicenec]
 - Added direct cli testing. [Andreas Wicenec]
 - Brought back the module hook and brief description. [Andreas Wicenec]
 
