@@ -16,7 +16,9 @@ from .support_functions import (
 )
 
 
-def get_members(mod: types.ModuleType, parent=None, member=None):
+def get_members(
+    mod: types.ModuleType, module_members=[], parent=None, member=None
+):
     """
     Get members of a module
 
@@ -67,7 +69,7 @@ def get_members(mod: types.ModuleType, parent=None, member=None):
                     dd = DetailedDescription(m.__doc__)
                     logger.debug(f"Full description: {dd.description}")
                     node.description = f"{dd.description.strip()}"
-                    node.text = name
+                    node.text = m.__name__
                     if len(dd.params) > 0:
                         logger.debug("Desc. parameters: %s", dd.params)
                 elif hasattr(m, "__name__"):
@@ -108,16 +110,20 @@ def get_members(mod: types.ModuleType, parent=None, member=None):
             logger.debug(
                 ">>> member update with: %s", {name: node.dump_json_str()}
             )
-            members.update({name: node})
+            if m.__name__ in module_members:
+                logger.debug("!!!!! found existing member: %s", m.__name__)
+            else:
+                module_members.append(m.__name__)
+                members.update({name: node})
 
-            if hasattr(m, "__members__"):
-                # this takes care of enum types, but needs some
-                # serious thinking for DALiuGE. Note that enums
-                # from PyBind11 have a generic type, but still
-                # the __members__ dict.
-                logger.info("\nMembers:")
-                logger.info(m.__members__)
-                # pass
+                if hasattr(m, "__members__"):
+                    # this takes care of enum types, but needs some
+                    # serious thinking for DALiuGE. Note that enums
+                    # from PyBind11 have a generic type, but still
+                    # the __members__ dict.
+                    logger.info("\nMembers:")
+                    logger.info(m.__members__)
+                    # pass
             if member:
                 break
     logger.info("Analysed %d members in module %s", count, name)
@@ -128,15 +134,19 @@ def module_hook(
     mod_name: str, modules: dict = {}, recursive: bool = True
 ) -> "dict":
     """
-    This is the starting point of a function dissecting the
-    docs for an imported module.
+    Function dissecting the an imported module.
 
     :param mod_name: str, the name of the module to be treated
+    :param modules: dictionary of modules
     :param recursive: bool, treat sub-modules [True]
 
     :returns: dict of modules processed
     """
     member = None
+    module_members = []
+    for m in modules.values():
+        module_members.extend([k.split(".")[-1] for k in m.keys()])
+    # member_names = [n.split(".")[-1] for n in module_members.keys()]
     if mod_name not in sys.builtin_module_names:
         try:
             traverse = True if len(modules) == 0 else False
@@ -144,9 +154,14 @@ def module_hook(
             if mod and mod_name != mod.__name__:
                 member = mod_name.split(".")[-1]
                 mod_name = mod.__name__
-            modules.update(
-                {mod_name: get_members(mod, parent=mod_name, member=member)}
+            members = get_members(
+                mod,
+                parent=mod_name,
+                module_members=module_members,
+                member=member,
             )
+            module_members.extend([k.split(".") for k in members.keys()])
+            modules.update({mod_name: members})
             # mod_count += 1
             if not member and recursive and mod:
                 sub_modules = get_submodules(mod)
