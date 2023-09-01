@@ -416,7 +416,7 @@ class DetailedDescription:
         # logger.debug("Splitting: %s %s", description, rest)
         # extract parameter documentation (up to Returns line)
         pds = rest.split("\nReturns:\n")[0]
-        indent = len(re.findall(r"^ +", pds)[0])
+        indent = len(re.findall(r"^ *", pds)[0])
         pds = re.sub(r"\n" + r" " * indent, "\n", pds)  # remove indentation
 
         # split param lines
@@ -518,11 +518,19 @@ class DetailedDescription:
         if not self.format:
             logger.warning("Unknown param desc format!")
 
+    def _gen_code_block(self):
+        """
+        Update indenation for pre-formatting the description
+        """
+        if self.description:
+            self.description = self.description.replace("\n", "\n    ")
+
     def process_descr(self):
         """
         Helper function to provide plugin style parsers for various
         formats.
         """
+        self._gen_code_block()
         do = f"_process_{self.format}"
         if hasattr(self, do) and callable(func := getattr(self, do)):
             logger.debug("Calling %s parser function", do)

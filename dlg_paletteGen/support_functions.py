@@ -190,7 +190,7 @@ def get_submodules(module):
     return iter(submods)
 
 
-def import_using_name(mod_name: str):
+def import_using_name(mod_name: str, traverse=False):
     """
     Import a module using its name and try hard to go up the hierarchy if
     direct import is not possible. This only imports actual modules,
@@ -200,7 +200,7 @@ def import_using_name(mod_name: str):
     """
     logger.debug("Importing %s", mod_name)
     parts = mod_name.split(".")
-    exists = parts[0] in sys.modules
+    exists = parts[0] in sys.modules if not traverse else False
     try:  # direct import first
         mod = importlib.import_module(mod_name)
     except ModuleNotFoundError:
@@ -322,7 +322,7 @@ def populateFields(parameters: dict, dd) -> dict:
         )
         fields.update(field)
 
-    logger.debug("Parameters %s: %s", fields)
+    logger.debug("Parameters %s", fields)
     return fields
 
 

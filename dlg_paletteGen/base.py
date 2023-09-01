@@ -1035,7 +1035,7 @@ def get_members(mod: types.ModuleType, parent=None, member=None):
                     )
                     dd = DetailedDescription(m.__doc__)
                     logger.debug(f"Full description: {dd.description}")
-                    node.description = dd.brief_descr.strip()
+                    node.description = f"{dd.description.strip()}"
                     node.text = name
                     if len(dd.params) > 0:
                         logger.debug("Desc. parameters: %s", dd.params)
@@ -1048,7 +1048,7 @@ def get_members(mod: types.ModuleType, parent=None, member=None):
 
                 if type(m).__name__ in [
                     "pybind11_type",
-                    "builtin_function_or_method",
+                    # "builtin_function_or_method",
                 ]:
                     logger.info(
                         "!!! PyBind11 or builtin: Creting dummy signature !!!"
@@ -1065,8 +1065,8 @@ def get_members(mod: types.ModuleType, parent=None, member=None):
                         continue
                 # fill custom ApplicationArguments first
             fields = populateFields(sig.parameters, dd)
-            for _, field in fields.items():
-                node.fields.update(field)
+            for k, field in fields.items():
+                node.fields.update({k: field})
 
             # now populate with default fields.
             node = populateDefaultFields(node)
@@ -1086,7 +1086,8 @@ def get_members(mod: types.ModuleType, parent=None, member=None):
                 logger.info("\nMembers:")
                 logger.info(m.__members__)
                 # pass
-            break
+            if member:
+                break
     logger.info("Analysed %d members in module %s", count, name)
     return members
 
@@ -1110,8 +1111,9 @@ def module_hook(
     member = None
     if mod_name not in sys.builtin_module_names:
         try:
-            mod = import_using_name(mod_name)
-            if mod_name != mod.__name__:
+            traverse = True if len(modules) == 0 else False
+            mod = import_using_name(mod_name, traverse=traverse)
+            if mod and mod_name != mod.__name__:
                 member = mod_name.split(".")[-1]
                 mod_name = mod.__name__
             modules.update(
