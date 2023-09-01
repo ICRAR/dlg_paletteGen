@@ -10,3 +10,4 @@ codecov
 mypy
 gitchangelog
 mkdocs
+types-setuptools
