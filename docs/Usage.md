@@ -1,14 +1,16 @@
 # Usage
-After Installation the tool is available on the command line and as a module inside the virtual environment.
+After Installation the tool is available on the command line and as a module inside the virtual environment. There are different ways of calling it from the command line.
 ```bash
 $ python -m dlg_paletteGen
-
+```
 or
 
+```bash
 $ dlg_paletteGen -h
-
+```
 or
 
+```bash
 $ dlg-paletteGen -h
 
 usage: dlg_paletteGen [-h] [-m MODULE] [-t TAG] [-c] [-r] [-s] [-v] idir ofile
