@@ -13,28 +13,29 @@ import json
 import os
 import sys
 import types
-from typing import Any, Union, _SpecialForm
 import xml.etree.ElementTree as ET
 from enum import Enum
+from typing import Any, Union, _SpecialForm
 
 from blockdag import build_block_dag
 
 from dlg_paletteGen.classes import (
-    logger,
-    Language,
     Child,
     DetailedDescription,
     DummySig,
+    Language,
+    logger,
 )
+
 from .support_functions import (
     check_text_element,
+    constructNode,
+    constructPalette,
     get_next_key,
     get_submodules,
     import_using_name,
-    constructNode,
     populateDefaultFields,
     populateFields,
-    constructPalette,
 )
 
 KNOWN_PARAM_DATA_TYPES = [

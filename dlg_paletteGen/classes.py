@@ -1,11 +1,11 @@
 import ast
-from enum import Enum
 import inspect
 import logging
 import re
 import sys
 import types
 import xml.etree.ElementTree as ET
+from enum import Enum
 from typing import Union
 
 

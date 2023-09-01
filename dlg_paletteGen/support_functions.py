@@ -1,4 +1,3 @@
-import benedict
 import datetime
 import importlib
 import inspect
@@ -8,12 +7,15 @@ import sys
 import tempfile
 import xml.etree.ElementTree as ET
 from pkgutil import iter_modules
+
+import benedict
+
 from .classes import (
-    Language,
-    logger,
     DOXYGEN_SETTINGS,
     DOXYGEN_SETTINGS_C,
     DOXYGEN_SETTINGS_PYTHON,
+    Language,
+    logger,
 )
 
 
@@ -287,7 +289,9 @@ def populateFields(parameters: dict, dd) -> dict:
         logger.debug(">>>> %s", v.default)
         field = initializeField(p)
         try:
-            if isinstance(v.default, list | tuple):  # type: ignore
+            if isinstance(v.default, list) or isinstance(
+                v.default, tuple
+            ):  # type: ignore
                 value = v.default  # type: ignore
             elif v.default != inspect._empty:
                 if isinstance(v.default, str):  # type: ignore
