@@ -4,6 +4,12 @@ Changelog
 
 (unreleased)
 ------------
+- Support for classes added to module mode. [Andreas Wicenec]
+
+
+0.2.1 (2023-09-01)
+------------------
+- Release: version 0.2.1 🚀 [Andreas Wicenec]
 - Suppress multiplied modules. [Andreas Wicenec]
 - Restructuring of code. [Andreas Wicenec]
 - Better support for builtin functions. [Andreas Wicenec]
