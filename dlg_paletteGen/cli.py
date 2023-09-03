@@ -192,9 +192,6 @@ def main():  # pragma: no cover
                 node.fields = list(node.fields.values())
                 nodes.append(node)
         prepare_and_write_palette(nodes, outputfile)
-        logger.warning(
-            ">>>>>> Modules support not yet complete: Use with care!"
-        )
     else:
         # add extra doxygen setting for input and output locations
         DOXYGEN_SETTINGS.update(

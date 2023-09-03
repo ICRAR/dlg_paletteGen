@@ -33,9 +33,16 @@ def get_class_members(cls):
         if re.match(r"^[a-zA-Z]", n) or n in ["__init__", "__cls__"]
     ]
     class_members = {}
-    for n, m in content:
-        node = inspect_member(m, module=cls)
-        class_members.update({node.text: node})
+    for _, m in content:
+        if m.__qualname__.find(cls.__name__) >= 0:
+            node = inspect_member(m, module=cls)
+            class_members.update({node.text: node})
+        else:
+            logger.debug(
+                "class name %s not contained in qualified name: %s",
+                cls.__name__,
+                m.__qualname__,
+            )
     return class_members
 
 
@@ -86,7 +93,12 @@ def inspect_member(member, module=None, parent=None):
         "builtin_function_or_method",
     ]:
         logger.info("!!! PyBind11 or builtin: Creting dummy signature !!!")
-        sig = DummySig(member)
+        try:
+            # this will fail for e.g. pybind11 modules
+            sig = inspect.signature(member)  # type: ignore
+        except ValueError:
+            logger.warning("Unable to get signature of %s: ", name)
+            sig = DummySig(member)
     else:
         try:
             # this will fail for e.g. pybind11 modules
@@ -97,6 +109,8 @@ def inspect_member(member, module=None, parent=None):
     # fill custom ApplicationArguments first
     fields = populateFields(sig.parameters, dd)
     for k, field in fields.items():
+        if k == "self" and member.__name__ in ["__init__", "__cls__"]:
+            continue
         node.fields.update({k: field})
 
         # now populate with default fields.

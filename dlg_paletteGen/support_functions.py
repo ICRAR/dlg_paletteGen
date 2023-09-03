@@ -1,4 +1,3 @@
-from blockdag import build_block_dag
 import datetime
 import importlib
 import inspect
@@ -11,6 +10,7 @@ import xml.etree.ElementTree as ET
 from pkgutil import iter_modules
 
 import benedict
+from blockdag import build_block_dag
 
 from .classes import (
     BLOCKDAG_DATA_FIELDS,
