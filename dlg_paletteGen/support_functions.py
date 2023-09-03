@@ -1,3 +1,4 @@
+from blockdag import build_block_dag
 import datetime
 import importlib
 import inspect
@@ -10,7 +11,6 @@ import xml.etree.ElementTree as ET
 from pkgutil import iter_modules
 
 import benedict
-from blockdag import build_block_dag
 
 from .classes import (
     BLOCKDAG_DATA_FIELDS,
@@ -201,7 +201,7 @@ def prepare_and_write_palette(nodes: list, output_filename: str):
     write_palette_json(
         output_filename, nodes, GITREPO, VERSION, block_dag  # type: ignore
     )
-    logger.info("Wrote " + str(len(nodes)) + " component(s)")
+    logger.info("Wrote %s components to %s", len(nodes), output_filename)
 
 
 def get_submodules(module):
@@ -238,11 +238,9 @@ def get_submodules(module):
         ]  # get the names; ignore test modules
         logger.debug("sub-modules found: %s", submods)
     else:
-        for m in inspect.getmembers(
-            module, lambda x: inspect.ismodule(x) or inspect.isclass(x)
-        ):
+        for m in inspect.getmembers(module, lambda x: inspect.ismodule(x)):
             if (
-                inspect.ismodule(m)
+                inspect.ismodule(m[1])
                 and m[1].__name__ not in sys.builtin_module_names
                 and m[1].__file__.find(module.__name__) > -1
             ):
@@ -346,7 +344,6 @@ def populateFields(parameters: dict, dd) -> dict:
     value = None
 
     for p, v in parameters.items():
-        logger.debug(">>>> %s", v.default)
         field = initializeField(p)
         try:
             if isinstance(v.default, list) or isinstance(

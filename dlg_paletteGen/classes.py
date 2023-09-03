@@ -206,6 +206,8 @@ DOXYGEN_SETTINGS_PYTHON = {
 class DummySig:
     """
     Dummy signature class for PyBind11 functions
+
+    TODO: need to figure out why there are still stray example_functions
     """
 
     def __init__(self, module):

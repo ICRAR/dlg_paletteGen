@@ -2,6 +2,7 @@
 dlg_paletteGen base functionality for the treatment of installed modules.
 """
 import inspect
+import re
 import sys
 import types
 from typing import _SpecialForm
@@ -14,6 +15,97 @@ from .support_functions import (
     populateDefaultFields,
     populateFields,
 )
+
+
+def get_class_members(cls):
+    """
+    Inspect members of a class
+    """
+    content = inspect.getmembers(
+        cls,
+        lambda x: inspect.isfunction(x)
+        # or inspect.isclass(x)
+        # or inspect.isbuiltin(x),
+    )
+    content = [
+        (n, m)
+        for n, m in content
+        if re.match(r"^[a-zA-Z]", n) or n in ["__init__", "__cls__"]
+    ]
+    class_members = {}
+    for n, m in content:
+        node = inspect_member(m, module=cls)
+        class_members.update({node.text: node})
+    return class_members
+
+
+def inspect_member(member, module=None, parent=None):
+    """
+    Inspect a member function or method.
+    """
+    node = constructNode()
+    if inspect.isclass(module):
+        name = member.__qualname__
+    else:
+        name = (
+            f"{parent}.{member.__name__}"
+            if hasattr(member, "__name__")
+            else f"{module.__name__}.Unknown"
+        )
+    node.text = name
+    logger.info("Inspecting %s: %s", type(member).__name__, member.__name__)
+
+    dd = None
+
+    if member.__doc__ and len(member.__doc__) > 0:
+        logger.info(f"Process documentation of {type(member).__name__} {name}")
+        dd = DetailedDescription(member.__doc__)
+        logger.debug(f"Full description: \n{dd.description}")
+        node.description = f"{dd.description.strip()}"
+        if len(dd.params) > 0:
+            logger.debug("Desc. parameters: %s", dd.params)
+    elif (
+        member.__name__ in ["__init__", "__cls__"]
+        and inspect.isclass(module)
+        and module.__doc__
+    ):
+        logger.debug(
+            "Using description of class '%s' for %s",
+            module.__name__,
+            member.__name__,
+        )
+        dd = DetailedDescription(module.__doc__)
+        node.description = f"{dd.description.strip()}"
+    elif hasattr(member, "__name__"):
+        logger.warning("Member '%s' has no description!", name)
+    else:
+        logger.warning("Entity '%s' has neither descr. nor __name__", name)
+
+    if type(member).__name__ in [
+        "pybind11_type",
+        "builtin_function_or_method",
+    ]:
+        logger.info("!!! PyBind11 or builtin: Creting dummy signature !!!")
+        sig = DummySig(member)
+    else:
+        try:
+            # this will fail for e.g. pybind11 modules
+            sig = inspect.signature(member)  # type: ignore
+        except ValueError:
+            logger.warning("Unable to get signature of %s: ", name)
+            return None
+    # fill custom ApplicationArguments first
+    fields = populateFields(sig.parameters, dd)
+    for k, field in fields.items():
+        node.fields.update({k: field})
+
+        # now populate with default fields.
+    node = populateDefaultFields(node)
+    node.fields["func_name"]["value"] = name
+    node.fields["func_name"]["defaultValue"] = name
+    if hasattr(sig, "ret"):
+        logger.debug("Return type: %s", sig.ret)
+    return node
 
 
 def get_members(
@@ -51,80 +143,36 @@ def get_members(
                 # # TODO: not sure what to do with these. Usually they
                 # # are class parameters.
                 continue
+            if inspect.isclass(m):
+                logger.debug("Processing class '%s'", c)
+                nodes = get_class_members(m)
+                logger.debug("Class members: %s", nodes.keys())
+
             else:
-                node = constructNode()
-                count += 1
-                name = (
-                    f"{parent}.{m.__name__}"
-                    if hasattr(m, "__name__")
-                    else f"{mod.__name__}.Unknown"
-                )
-                logger.info("Inspecting %s: %s", type(m).__name__, m.__name__)
+                nodes = {
+                    m.__name__: inspect_member(m, module=mod, parent=parent)
+                }
 
-                dd = None
-                if m.__doc__ and len(m.__doc__) > 0:
-                    logger.info(
-                        f"Process documentation of {type(m).__name__} {name}"
-                    )
-                    dd = DetailedDescription(m.__doc__)
-                    logger.debug(f"Full description: {dd.description}")
-                    node.description = f"{dd.description.strip()}"
-                    node.text = m.__name__
-                    if len(dd.params) > 0:
-                        logger.debug("Desc. parameters: %s", dd.params)
-                elif hasattr(m, "__name__"):
-                    logger.warning("Member '%s' has no description!", name)
+            for name, node in nodes.items():
+                if name in module_members:
+                    logger.debug("!!!!! found duplicate: %s", name)
                 else:
-                    logger.warning(
-                        "Entity '%s' has neither descr. nor __name__", m
+                    module_members.append(name)
+                    logger.debug(
+                        ">>> member update with: %s",
+                        name,
                     )
+                    members.update({name: node})
 
-                if type(m).__name__ in [
-                    "pybind11_type",
-                    # "builtin_function_or_method",
-                ]:
-                    logger.info(
-                        "!!! PyBind11 or builtin: Creting dummy signature !!!"
-                    )
-                    sig = DummySig(m)
-                else:
-                    try:
-                        # this will fail for e.g. pybind11 modules
-                        sig = inspect.signature(m)  # type: ignore
-                    except ValueError:
-                        logger.warning(
-                            "Unable to get signature of %s: ", m.__name__
-                        )
-                        continue
-                # fill custom ApplicationArguments first
-            fields = populateFields(sig.parameters, dd)
-            for k, field in fields.items():
-                node.fields.update({k: field})
-
-            # now populate with default fields.
-            node = populateDefaultFields(node)
-            node.fields["func_name"]["value"] = name
-            node.fields["func_name"]["defaultValue"] = name
-            if hasattr(sig, "ret"):
-                logger.debug("Return type: %s", sig.ret)
-            logger.debug(
-                ">>> member update with: %s", {name: node.dump_json_str()}
-            )
-            if m.__name__ in module_members:
-                logger.debug("!!!!! found existing member: %s", m.__name__)
-            else:
-                module_members.append(m.__name__)
-                members.update({name: node})
-
-                if hasattr(m, "__members__"):
-                    # this takes care of enum types, but needs some
-                    # serious thinking for DALiuGE. Note that enums
-                    # from PyBind11 have a generic type, but still
-                    # the __members__ dict.
-                    logger.info("\nMembers:")
-                    logger.info(m.__members__)
-                    # pass
-            if member:
+                    if hasattr(m, "__members__"):
+                        # this takes care of enum types, but needs some
+                        # serious thinking for DALiuGE. Note that enums
+                        # from PyBind11 have a generic type, but still
+                        # the __members__ dict.
+                        logger.info("\nMembers:")
+                        logger.info(m.__members__)
+                        # pass
+            if member:  # we've found what we wanted
                 break
     logger.info("Analysed %d members in module %s", count, name)
     return members
