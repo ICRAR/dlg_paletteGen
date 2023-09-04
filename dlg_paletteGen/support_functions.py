@@ -288,8 +288,20 @@ def import_using_name(mod_name: str, traverse=False):
                     try:
                         logger.debug("Getting attribute %s", m)
                         # Make sure this is a module
-                        mod_down = getattr(mod, m)
-                        mod = mod_down if inspect.ismodule(mod_down) else mod
+                        if hasattr(mod, m):
+                            mod_down = getattr(mod, m)
+                        else:
+                            logger.debug(
+                                "Problem getting attribute '%s' from '%s'",
+                                m,
+                                mod,
+                            )
+                        mod = (
+                            mod_down
+                            if inspect.ismodule(mod_down)
+                            or inspect.isclass(mod_down)
+                            else mod
+                        )
                     except AttributeError:
                         try:
                             logger.debug(

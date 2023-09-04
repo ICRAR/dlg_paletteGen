@@ -1,19 +1,18 @@
-import subprocess
+import json
 import logging
 import os
-import json
+import subprocess
+
 from dlg_paletteGen.classes import DOXYGEN_SETTINGS
+from dlg_paletteGen.cli import NAME, check_environment_variables, get_args
 from dlg_paletteGen.module_base import module_hook
-from dlg_paletteGen.source_base import (
-    Language,
-    process_compounddefs,
-)
+from dlg_paletteGen.source_base import Language, process_compounddefs
 from dlg_paletteGen.support_functions import (
+    import_using_name,
     prepare_and_write_palette,
     process_doxygen,
     process_xml,
 )
-from dlg_paletteGen.cli import get_args, NAME, check_environment_variables
 
 pytest_plugins = ["pytester", "pytest-datadir"]
 
@@ -564,17 +563,31 @@ def test_direct_casatask(tmpdir: str, shared_datadir: str):
 
 
 def test_direct_module(tmpdir: str, shared_datadir: str):
-    """ "
+    """
     Test the module processing format by calling the methods directly.
 
     :param tmpdir: the path to the temp directory to use
     :param shared_datadir: the path the the local directory
     """
     # modules = module_hook("data.example_oskar.Sky", recursive=True)
-    modules = module_hook("numpy.random.SeedSequence", recursive=True)
+    modules = module_hook("astropy.constants", recursive=True)
     nodes = []
     for members in modules.values():
         for node in members.values():
             nodes.append(node)
     assert len(modules) == 1
     prepare_and_write_palette(nodes, "test.palette")
+
+
+def test_import_using_name(tmpdir: str, shared_datadir: str):
+    """
+    Directly test the import_using_name function
+
+    :param tmpdir: the path to the temp directory to use
+    :param shared_datadir: the path the the local directory
+    """
+    module_name = "urllib.request.URLopener.retrieve"
+    # traverse is important, because urllib had been imported
+    # by test framework already.
+    mod = import_using_name(module_name, traverse=True)
+    assert mod.__name__ == "URLopener"

@@ -21,12 +21,16 @@ def get_class_members(cls):
     """
     Inspect members of a class
     """
-    content = inspect.getmembers(
-        cls,
-        lambda x: inspect.isfunction(x)
-        or inspect.ismethod(x)
-        or inspect.isbuiltin(x),
-    )
+    try:
+        content = inspect.getmembers(
+            cls,
+            lambda x: inspect.isfunction(x)
+            or inspect.ismethod(x)
+            or inspect.isbuiltin(x),
+        )
+    except KeyError:
+        logger.error("Problem getting members of %s", cls)
+        return {}
     content = [
         (n, m)
         for n, m in content
@@ -120,8 +124,13 @@ def inspect_member(member, module=None, parent=None):
 
         # now populate with default fields.
     node = populateDefaultFields(node)
-    node.fields["func_name"]["value"] = member.__qualname__
-    node.fields["func_name"]["defaultValue"] = member.__qualname__
+    load_name = member.__qualname__
+    if hasattr(member, "__module__"):
+        load_name = f"{member.__module__}.{load_name}"
+    elif hasattr(member, "__package__"):
+        load_name = f"{member.__package__}.{load_name}"
+    node.fields["func_name"]["value"] = load_name
+    node.fields["func_name"]["defaultValue"] = load_name
     if hasattr(sig, "ret"):
         logger.debug("Return type: %s", sig.ret)
     return node
