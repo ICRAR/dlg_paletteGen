@@ -256,13 +256,16 @@ def get_submodules(module):
     return iter(submods)
 
 
-def import_using_name(mod_name: str, traverse=False):
+def import_using_name(mod_name: str, traverse: bool = False):
     """
     Import a module using its name and try hard to go up the hierarchy if
     direct import is not possible. This only imports actual modules,
-    not functions, classes or types.
+    not classes, functions, or types. In those cases it will return the
+    lowest module in the hierarchy. As a final fallback it will return the
+    highest level module.
 
-    :param mod_name
+    :param mod_name: The name of the module to be imported.
+    :param traverse: Follow the tree even if module already loaded.
     """
     logger.debug("Importing %s", mod_name)
     parts = mod_name.split(".")
@@ -270,6 +273,7 @@ def import_using_name(mod_name: str, traverse=False):
     try:  # direct import first
         mod = importlib.import_module(mod_name)
     except ModuleNotFoundError:
+        mod_down = None
         if len(parts) >= 1:
             if parts[-1] in ["__init__", "__class__"]:
                 parts = parts[:-1]
@@ -289,6 +293,7 @@ def import_using_name(mod_name: str, traverse=False):
                         logger.debug("Getting attribute %s", m)
                         # Make sure this is a module
                         if hasattr(mod, m):
+                            mod_prev = mod_down if mod_down else mod
                             mod_down = getattr(mod, m)
                         else:
                             logger.debug(
@@ -296,12 +301,18 @@ def import_using_name(mod_name: str, traverse=False):
                                 m,
                                 mod,
                             )
-                        mod = (
-                            mod_down
-                            if inspect.ismodule(mod_down)
-                            or inspect.isclass(mod_down)
-                            else mod
-                        )
+                            mod_prev = mod
+                        if inspect.ismodule(mod_down):
+                            mod = mod_down
+                        elif (  # in other cases return the provious module.
+                            inspect.isclass(mod_down)
+                            or inspect.isfunction(mod_down)
+                            or inspect.isbuiltin(mod_down)
+                            or inspect.ismethod(mod_down)
+                        ):
+                            mod = mod_prev
+                        else:  # just fallback to initial module
+                            mod
                     except AttributeError:
                         try:
                             logger.debug(

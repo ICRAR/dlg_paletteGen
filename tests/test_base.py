@@ -569,8 +569,8 @@ def test_direct_module(tmpdir: str, shared_datadir: str):
     :param tmpdir: the path to the temp directory to use
     :param shared_datadir: the path the the local directory
     """
-    # modules = module_hook("data.example_oskar.Sky", recursive=True)
-    modules = module_hook("astropy.constants", recursive=True)
+    #    modules = module_hook("readline.clear_history", recursive=True)
+    modules = module_hook("numpy.exceptions.AxisError", recursive=True)
     nodes = []
     for members in modules.values():
         for node in members.values():
@@ -587,7 +587,8 @@ def test_import_using_name(tmpdir: str, shared_datadir: str):
     :param shared_datadir: the path the the local directory
     """
     module_name = "urllib.request.URLopener.retrieve"
+    # module_name = "numpy.exceptions.AxisError"
     # traverse is important, because urllib had been imported
     # by test framework already.
     mod = import_using_name(module_name, traverse=True)
-    assert mod.__name__ == "URLopener"
+    assert mod.__name__ == "urllib.request"

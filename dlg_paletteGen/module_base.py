@@ -7,7 +7,7 @@ import sys
 import types
 from typing import _SpecialForm
 
-from .classes import DetailedDescription, DummySig, DummyParam, logger
+from .classes import DetailedDescription, DummyParam, DummySig, logger
 from .support_functions import (
     constructNode,
     get_submodules,
@@ -71,23 +71,24 @@ def inspect_member(member, module=None, parent=None):
 
     dd = None
 
-    if member.__doc__ and len(member.__doc__) > 0:
+    doc = inspect.getdoc(member)
+    if doc and len(doc) > 0:
         logger.info(f"Process documentation of {type(member).__name__} {name}")
-        dd = DetailedDescription(member.__doc__)
+        dd = DetailedDescription(doc)
         node.description = f"{dd.description.strip()}"
         if len(dd.params) > 0:
             logger.debug("Identified parameters: %s", dd.params)
     elif (
         member.__name__ in ["__init__", "__cls__"]
         and inspect.isclass(module)
-        and module.__doc__
+        and inspect.getdoc(module)
     ):
         logger.debug(
             "Using description of class '%s' for %s",
             module.__name__,
             member.__name__,
         )
-        dd = DetailedDescription(module.__doc__)
+        dd = DetailedDescription(inspect.getdoc(module))
         node.description = f"{dd.description.strip()}"
     elif hasattr(member, "__name__"):
         logger.warning("Member '%s' has no description!", name)
