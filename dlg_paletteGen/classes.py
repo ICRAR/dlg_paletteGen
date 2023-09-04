@@ -232,7 +232,9 @@ class DummySig:
         elif self.docstring and len(self.docstring) == 0:
             logger.warning("Module %s docstring is empty.", self.docstring)
         elif self.docstring and len(self.docstring) > 0:
-            logger.info('PB11 docstring found: "%s"', self.docstring)
+            logger.info(
+                'Non-standard PB11 docstring found: "%s"', self.docstring
+            )
         return parameters, ret
 
 

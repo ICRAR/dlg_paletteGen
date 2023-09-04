@@ -571,7 +571,7 @@ def test_direct_module(tmpdir: str, shared_datadir: str):
     :param shared_datadir: the path the the local directory
     """
     # modules = module_hook("data.example_oskar.Sky", recursive=True)
-    modules = module_hook("statistics.fabs", recursive=True)
+    modules = module_hook("numpy.random.SeedSequence", recursive=True)
     nodes = []
     for members in modules.values():
         for node in members.values():

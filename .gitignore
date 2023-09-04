@@ -134,4 +134,4 @@ dmypy.json
 # Custom
 output.xml
 t.palette
-.vscode
+.vscode/

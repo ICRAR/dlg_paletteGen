@@ -225,7 +225,15 @@ def get_submodules(module):
         return iter([])
     submods = []
     if hasattr(module, "__all__"):
-        sub_mods = dict(inspect.getmembers(module, inspect.ismodule))
+        sub_mods = dict(
+            inspect.getmembers(
+                module,
+                lambda x: inspect.ismodule(x)
+                or inspect.isfunction(x)
+                or inspect.ismethod(x)
+                or inspect.isbuiltin(x),
+            )
+        )
         submods = [
             f"{module.__name__}.{m}" for m in module.__all__ if m in sub_mods
         ]

@@ -7,7 +7,7 @@ import sys
 import types
 from typing import _SpecialForm
 
-from .classes import DetailedDescription, DummySig, logger
+from .classes import DetailedDescription, DummySig, DummyParam, logger
 from .support_functions import (
     constructNode,
     get_submodules,
@@ -24,8 +24,8 @@ def get_class_members(cls):
     content = inspect.getmembers(
         cls,
         lambda x: inspect.isfunction(x)
-        # or inspect.isclass(x)
-        # or inspect.isbuiltin(x),
+        or inspect.ismethod(x)
+        or inspect.isbuiltin(x),
     )
     content = [
         (n, m)
@@ -34,12 +34,15 @@ def get_class_members(cls):
     ]
     class_members = {}
     for _, m in content:
-        if m.__qualname__.find(cls.__name__) >= 0:
+        if m.__qualname__.startswith(cls.__name__):
             node = inspect_member(m, module=cls)
+            if not node:
+                logger.debug("Inspection of '%s' failed.", m.__qualname__)
+                continue
             class_members.update({node.text: node})
         else:
             logger.debug(
-                "class name %s not contained in qualified name: %s",
+                "class name %s not start of qualified name: %s",
                 cls.__name__,
                 m.__qualname__,
             )
@@ -67,10 +70,9 @@ def inspect_member(member, module=None, parent=None):
     if member.__doc__ and len(member.__doc__) > 0:
         logger.info(f"Process documentation of {type(member).__name__} {name}")
         dd = DetailedDescription(member.__doc__)
-        logger.debug(f"Full description: \n{dd.description}")
         node.description = f"{dd.description.strip()}"
         if len(dd.params) > 0:
-            logger.debug("Desc. parameters: %s", dd.params)
+            logger.debug("Identified parameters: %s", dd.params)
     elif (
         member.__name__ in ["__init__", "__cls__"]
         and inspect.isclass(module)
@@ -105,7 +107,10 @@ def inspect_member(member, module=None, parent=None):
             sig = inspect.signature(member)  # type: ignore
         except ValueError:
             logger.warning("Unable to get signature of %s: ", name)
-            return None
+            sig = DummySig(member)
+            if not getattr(sig, "parameters") and dd and len(dd.params) > 0:
+                for p, v in dd.params.items():
+                    sig.parameters[p] = DummyParam()
     # fill custom ApplicationArguments first
     fields = populateFields(sig.parameters, dd)
     for k, field in fields.items():
@@ -115,8 +120,8 @@ def inspect_member(member, module=None, parent=None):
 
         # now populate with default fields.
     node = populateDefaultFields(node)
-    node.fields["func_name"]["value"] = name
-    node.fields["func_name"]["defaultValue"] = name
+    node.fields["func_name"]["value"] = member.__qualname__
+    node.fields["func_name"]["defaultValue"] = member.__qualname__
     if hasattr(sig, "ret"):
         logger.debug("Return type: %s", sig.ret)
     return node
@@ -139,6 +144,7 @@ def get_members(
     content = inspect.getmembers(
         mod,
         lambda x: inspect.isfunction(x)
+        or inspect.ismethod(x)
         or inspect.isclass(x)
         or inspect.isbuiltin(x),
     )
