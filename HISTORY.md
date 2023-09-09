@@ -4,6 +4,16 @@ Changelog
 
 (unreleased)
 ------------
+- ESO pyCPL extraction works. [Andreas Wicenec]
+- More cases covered in import_using_name. [Andreas Wicenec]
+- Fixed a few corner cases in astropy and numpy. [Andreas Wicenec]
+- Fixed stray case in numpy. [Andreas Wicenec]
+- Removed self argument from __init__ [Andreas Wicenec]
+
+
+0.2.2 (2023-09-03)
+------------------
+- Release: version 0.2.2 🚀 [Andreas Wicenec]
 - Support for classes added to module mode. [Andreas Wicenec]
 
 
