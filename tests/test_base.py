@@ -244,9 +244,7 @@ def test_CLI_fail(tmpdir: str, shared_datadir: str):
         stderr=subprocess.PIPE,
     )
     out, err = p.communicate()
-    # ret_code == 2 because it failed
     assert p.returncode == 1
-    # The CLI output should contain a short help message
     assert err[:26] == b"usage: dlg_paletteGen [-h]"
 
 
@@ -341,12 +339,6 @@ def test_direct_google(tmpdir: str, shared_datadir: str):
     :param tmpdir: the path to the temp directory to use
     :param shared_datadir: the path the the local directory
     """
-    # inputdir,
-    # tag,
-    # outputfile,
-    # allow_missing_eagle_start,
-    # module_path,
-    # language,
     tag = ""
     allow_missing_eagle_start = True
     language = Language.PYTHON
@@ -379,12 +371,6 @@ def test_direct_eagle(tmpdir: str, shared_datadir: str):
     :param tmpdir: the path to the temp directory to use
     :param shared_datadir: the path the the local directory
     """
-    # inputdir,
-    # tag,
-    # outputfile,
-    # allow_missing_eagle_start,
-    # module_path,
-    # language,
     tag = ""
     allow_missing_eagle_start = False
     language = Language.PYTHON
@@ -417,12 +403,6 @@ def test_direct_oskar(tmpdir: str, shared_datadir: str):
     :param tmpdir: the path to the temp directory to use
     :param shared_datadir: the path the the local directory
     """
-    # inputdir,
-    # tag,
-    # outputfile,
-    # allow_missing_eagle_start,
-    # module_path,
-    # language,
     tag = ""
     allow_missing_eagle_start = True
     language = Language.PYTHON
@@ -455,12 +435,6 @@ def test_direct_rascil(tmpdir: str, shared_datadir: str):
     :param tmpdir: the path to the temp directory to use
     :param shared_datadir: the path the the local directory
     """
-    # inputdir,
-    # tag,
-    # outputfile,
-    # allow_missing_eagle_start,
-    # module_path,
-    # language,
     tag = ""
     allow_missing_eagle_start = True
     language = Language.PYTHON
@@ -493,12 +467,6 @@ def test_direct_functions(tmpdir: str, shared_datadir: str):
     :param tmpdir: the path to the temp directory to use
     :param shared_datadir: the path the the local directory
     """
-    # inputdir,
-    # tag,
-    # outputfile,
-    # allow_missing_eagle_start,
-    # module_path,
-    # language,
     tag = ""
     allow_missing_eagle_start = True
     language = Language.PYTHON
@@ -531,12 +499,6 @@ def test_direct_casatask(tmpdir: str, shared_datadir: str):
     :param tmpdir: the path to the temp directory to use
     :param shared_datadir: the path the the local directory
     """
-    # inputdir,
-    # tag,
-    # outputfile,
-    # allow_missing_eagle_start,
-    # module_path,
-    # language,
     tag = ""
     allow_missing_eagle_start = True
     language = Language.PYTHON
@@ -569,7 +531,6 @@ def test_direct_module(tmpdir: str, shared_datadir: str):
     :param tmpdir: the path to the temp directory to use
     :param shared_datadir: the path the the local directory
     """
-    #    modules = module_hook("readline.clear_history", recursive=True)
     modules = module_hook("numpy.exceptions.AxisError", recursive=True)
     nodes = []
     for members in modules.values():
@@ -587,7 +548,7 @@ def test_import_using_name(tmpdir: str, shared_datadir: str):
     :param shared_datadir: the path the the local directory
     """
     module_name = "urllib.request.URLopener.retrieve"
-    # module_name = "numpy.exceptions.AxisError"
+    # module_name = "cpl.core.Bivector"
     # traverse is important, because urllib had been imported
     # by test framework already.
     mod = import_using_name(module_name, traverse=True)

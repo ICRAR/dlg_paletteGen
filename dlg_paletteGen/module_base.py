@@ -26,7 +26,8 @@ def get_class_members(cls):
             cls,
             lambda x: inspect.isfunction(x)
             or inspect.ismethod(x)
-            or inspect.isbuiltin(x),
+            or inspect.isbuiltin(x)
+            or inspect.ismethoddescriptor(x),
         )
     except KeyError:
         logger.error("Problem getting members of %s", cls)
@@ -36,9 +37,12 @@ def get_class_members(cls):
         for n, m in content
         if re.match(r"^[a-zA-Z]", n) or n in ["__init__", "__cls__"]
     ]
+    logger.debug("Member functions of class %s: %s", cls, content)
     class_members = {}
     for _, m in content:
-        if m.__qualname__.startswith(cls.__name__):
+        if m.__qualname__.startswith(
+            cls.__name__
+        ) or m.__qualname__.startswith("PyCapsule"):
             node = inspect_member(m, module=cls)
             if not node:
                 logger.debug("Inspection of '%s' failed.", m.__qualname__)
@@ -60,6 +64,10 @@ def inspect_member(member, module=None, parent=None):
     node = constructNode()
     if inspect.isclass(module):
         name = member.__qualname__
+        if name.startswith("PyCapsule"):
+            name = name.replace(
+                "PyCapsule", f"{module.__module__}.{module.__name__}"
+            )
     else:
         name = (
             f"{parent}.{member.__name__}"
@@ -106,6 +114,7 @@ def inspect_member(member, module=None, parent=None):
         except ValueError:
             logger.warning("Unable to get signature of %s: ", name)
             sig = DummySig(member)
+            node.description = sig.docstring
     else:
         try:
             # this will fail for e.g. pybind11 modules
@@ -113,6 +122,7 @@ def inspect_member(member, module=None, parent=None):
         except ValueError:
             logger.warning("Unable to get signature of %s: ", name)
             sig = DummySig(member)
+            node.description = sig.docstring
             if not getattr(sig, "parameters") and dd and len(dd.params) > 0:
                 for p, v in dd.params.items():
                     sig.parameters[p] = DummyParam()
@@ -130,6 +140,8 @@ def inspect_member(member, module=None, parent=None):
         load_name = f"{member.__module__}.{load_name}"
     elif hasattr(member, "__package__"):
         load_name = f"{member.__package__}.{load_name}"
+    if load_name.find("PyCapsule"):
+        load_name = load_name.replace("PyCapsule", module.__name__)
     node.fields["func_name"]["value"] = load_name
     node.fields["func_name"]["defaultValue"] = load_name
     if hasattr(sig, "ret"):

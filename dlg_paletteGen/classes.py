@@ -206,13 +206,11 @@ DOXYGEN_SETTINGS_PYTHON = {
 class DummySig:
     """
     Dummy signature class for PyBind11 functions
-
-    TODO: need to figure out why there are still stray example_functions
     """
 
     def __init__(self, module):
         self.name = module.__name__
-        self.docstring = module.__doc__
+        self.docstring = inspect.getdoc(module)
         self.parameters, self.ret = self.get_pb11_sig()
 
     def get_pb11_sig(self):
@@ -223,6 +221,8 @@ class DummySig:
         ret = None
         if self.docstring and self.docstring.find("\n") > 0:
             call_line, rest = self.docstring.split("\n", 1)
+            self.docstring = rest.replace("\n\n", "\n")
+            # self.docstring = rest.strip()
             params = re.findall(r"([\w_]+)\: ([\w_\:\.\[\]]+)", call_line)
             ret = re.findall(r"-> ([\w_\:\.\[\]]+)", call_line)
             ret = ret[0] if ret else None
@@ -380,6 +380,8 @@ class DetailedDescription:
         :returns: tuple, description and parameter dictionary
         """
         logger.debug("Processing Numpy style doc_strings")
+        if not dd:
+            return ("", {})
         ds = dd.strip("\n")
         indent = len(ds) - len(ds.lstrip())
         ds = re.sub(r"\n {" + f"{indent}" + r"}", r"\n", ds)
@@ -542,15 +544,19 @@ class DetailedDescription:
         Helper function to provide plugin style parsers for various
         formats.
         """
-        self._gen_code_block()
+        # self._gen_code_block()
         do = f"_process_{self.format}"
         if hasattr(self, do) and callable(func := getattr(self, do)):
             logger.debug("Calling %s parser function", do)
-            return func(self.description)
+            pd = func(self.description)
+            # self.description = pd[0].replace("\n\n", "\n")
+            self.description = pd[0]
+            self._gen_code_block()
+            return self.description, pd[1]
         else:
             logger.warning("Format not recognized or can't execute %s", do)
             logger.warning("Returning description unparsed!")
-            return (self.description, {})
+            return (self._gen_code_block(), {})
 
 
 class GreatGrandChild:

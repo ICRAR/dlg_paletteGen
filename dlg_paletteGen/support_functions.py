@@ -209,8 +209,6 @@ def get_submodules(module):
     Retrieve names of sub-modules using iter_modules.
     This will also return sub-packages. Third tuple
     item is a flag ispkg indicating that.
-    NOTE: This only works for path based modules, i.e.
-    not for PyBind11 modules.
 
     :module module: module object to be searched
 
@@ -250,9 +248,11 @@ def get_submodules(module):
             if (
                 inspect.ismodule(m[1])
                 and m[1].__name__ not in sys.builtin_module_names
-                and m[1].__file__.find(module.__name__) > -1
+                # and hasattr(m[1], "__file__")
+                and m[1].__name__.find(module.__name__) > -1
             ):
-                submods.append(getattr(module, m).__name__)
+                logger.debug("Trying to import submodule: %s", m[1].__name__)
+                submods.append(getattr(module, m[0]).__name__)
     return iter(submods)
 
 
