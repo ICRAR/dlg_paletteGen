@@ -4,6 +4,13 @@ Changelog
 
 (unreleased)
 ------------
+- Support for splitting large modules. [Andreas Wicenec]
+- Fixed issues treating tabascal package. [Andreas Wicenec]
+
+
+0.2.3 (2023-09-09)
+------------------
+- Release: version 0.2.3 🚀 [Andreas Wicenec]
 - ESO pyCPL extraction works. [Andreas Wicenec]
 - More cases covered in import_using_name. [Andreas Wicenec]
 - Fixed a few corner cases in astropy and numpy. [Andreas Wicenec]
