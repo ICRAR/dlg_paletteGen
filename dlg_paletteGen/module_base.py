@@ -47,7 +47,7 @@ def get_class_members(cls):
             if not node:
                 logger.debug("Inspection of '%s' failed.", m.__qualname__)
                 continue
-            class_members.update({node.text: node})
+            class_members.update({node.name: node})
         else:
             logger.debug(
                 "class name %s not start of qualified name: %s",
@@ -74,7 +74,13 @@ def inspect_member(member, module=None, parent=None):
             if hasattr(member, "__name__")
             else f"{module.__name__}.Unknown"
         )
-    node.text = name
+    # shorten node name, else EAGLE components are cluttered.
+    name = (
+        f"{name.split('.')[0]}.{name.split('.')[-1]}"
+        if name.count(".") > 1
+        else name
+    )
+    node.name = name
     logger.info("Inspecting %s: %s", type(member).__name__, member.__name__)
 
     dd = None
@@ -186,6 +192,8 @@ def get_members(
                 # # are class parameters.
                 continue
             if inspect.isclass(m):
+                if m.__module__.find(name) < 0:
+                    continue
                 logger.debug("Processing class '%s'", c)
                 nodes = get_class_members(m)
                 logger.debug("Class members: %s", nodes.keys())

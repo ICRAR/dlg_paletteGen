@@ -417,7 +417,7 @@ def populateFields(parameters: dict, dd) -> dict:
 def constructNode(
     category: str = "PythonApp",
     key: int = -1,
-    text: str = "example_function",
+    name: str = "example_function",
     description: str = "dummy description",
     repositoryUrl: str = "dlg_paletteGen.generated",
     commitHash: str = "0.1",
@@ -432,7 +432,7 @@ def constructNode(
     Node = benedict.BeneDict()
     Node.category = category
     Node.key = key
-    Node.text = text
+    Node.name = name
     Node.description = description
     Node.repositoryUrl = repositoryUrl
     Node.commitHash = commitHash
