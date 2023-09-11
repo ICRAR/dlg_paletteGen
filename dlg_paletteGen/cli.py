@@ -21,6 +21,8 @@ from .module_base import module_hook
 # isort: ignore
 from .source_base import process_compounddefs
 from .support_functions import (
+    get_submodules,
+    import_using_name,
     prepare_and_write_palette,
     process_doxygen,
     process_xml,
@@ -42,6 +44,7 @@ def get_args(args=None):
                 args.parse_all:bool,
                 args.module:str,
                 args.recursive:bool,
+                args.split:bool,
                 language)
     """
     # inputdir, tag, outputfile, allow_missing_eagle_start, module_path,
@@ -77,6 +80,13 @@ def get_args(args=None):
         action="store_true",
     )
     parser.add_argument(
+        "-S",
+        "--split",
+        help="Split into sub-module palettes",
+        action="store_true",
+        default=False,
+    )
+    parser.add_argument(
         "-s",
         "--parse_all",
         help="Parse non DAliuGE compliant functions and methods",
@@ -108,6 +118,10 @@ def get_args(args=None):
         DOXYGEN_SETTINGS.update({"RECURSIVE": "NO"})
         logger.info("Recursive flag OFF")
     language = Language.C if args.c else Language.PYTHON
+    if args.split:
+        logger.info("Split flag ON")
+    else:
+        args.split = False
     return (
         args.idir,
         args.tag,
@@ -115,6 +129,7 @@ def get_args(args=None):
         args.parse_all,
         args.module,
         args.recursive,
+        args.split,
         language,
     )
 
@@ -147,6 +162,83 @@ def check_environment_variables() -> bool:
     return True
 
 
+def nodes_from_module(module_path: str, recursive: bool = True) -> list:
+    """
+    Extract nodes from specified module.
+
+    :param module_path: dot delimited module path
+    :param recursive: flag indicating wether to recurse down the hierarchy
+
+    :returns list of nodes (for now)
+    """
+    modules = module_hook(module_path, recursive=recursive)
+    # member_count = sum([len(m) for m in modules])
+    logger.debug(">>>>> Number of modules processed: %d", len(modules))
+    logger.debug(
+        "Modules found: %s",
+        # modules
+        {m: list(v.keys()) for m, v in modules.items()},
+    )
+    nodes = []
+    for _, members in modules.items():
+        for _, node in members.items():
+            # TODO: remove once EAGLE can deal with dict fields
+            if isinstance(node.fields, list):
+                continue
+            node.fields = list(node.fields.values())
+            nodes.append(node)
+    return nodes
+
+
+def palettes_from_module(
+    module_path: str,
+    outfile: str = "",
+    split: bool = False,
+    recursive: bool = True,
+) -> None:
+    """
+    Generates one or more palette files from the module specified.
+
+    :param module_path: dot delimited module path
+    :param outfile: name of palette file, if left blank the module name will be
+                     used. If split is True and a name is specified it will be
+                     prepended to the module name(s).
+    :param split: If True (default False), the module will be split into
+                  palettes one for each sub-module.
+    :param recursive: flag indicating wether to recurse down the hierarchy
+    """
+    if split:
+        mod = import_using_name(module_path, traverse=True)
+        sub_modules = list(get_submodules(mod))
+        logger.info(
+            "Splitting module %s in sub-module palettes: %s",
+            module_path,
+            sub_modules,
+        )
+    else:
+        sub_modules = [module_path]
+    files = {}
+    for m in sub_modules:
+        logger.info("Extracting nodes from module: %s", m)
+        nodes = nodes_from_module(m, recursive=recursive)
+        if len(nodes) == 0:
+            continue
+        filename = (
+            outfile if not split else f"{outfile}{m.replace('.','_')}.palette"
+        )
+        files[filename] = len(nodes)
+        prepare_and_write_palette(nodes, filename)
+        logger.info(
+            "%s palette file written with %s components", filename, len(nodes)
+        )
+    logger.info(
+        "\n\n>>>>>>> Extraction summary <<<<<<<<\n%s\n",
+        "\n".join(
+            [f"Wrote {k} with {v} components" for k, v in files.items()]
+        ),
+    )
+
+
 def main():  # pragma: no cover
     """
     The main function executes on commands:
@@ -162,6 +254,7 @@ def main():  # pragma: no cover
         allow_missing_eagle_start,
         module_path,
         recursive,
+        split,
         language,
     ) = get_args()
     logger.info("PROJECT_NAME:" + os.environ.get("PROJECT_NAME"))
@@ -178,20 +271,12 @@ def main():  # pragma: no cover
     output_directory = tempfile.TemporaryDirectory()
 
     if len(module_path) > 0:
-        modules = module_hook(module_path, recursive=recursive)
-        # member_count = sum([len(m) for m in modules])
-        logger.info(">>>>> Number of modules processed: %d", len(modules))
-        logger.debug(
-            "Modules found: %s",
-            # modules
-            {m: list(v.keys()) for m, v in modules.items()},
+        outputfile = "" if outputfile == "." else outputfile
+        palettes_from_module(
+            module_path, outfile=outputfile, recursive=recursive, split=split
         )
-        nodes = []
-        for mod, members in modules.items():
-            for member, node in members.items():
-                node.fields = list(node.fields.values())
-                nodes.append(node)
-        prepare_and_write_palette(nodes, outputfile)
+        # nodes = nodes_from_module(module_path, recursive=recursive)
+        # prepare_and_write_palette(nodes, outputfile)
     else:
         # add extra doxygen setting for input and output locations
         DOXYGEN_SETTINGS.update(

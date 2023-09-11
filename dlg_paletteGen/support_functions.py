@@ -201,7 +201,7 @@ def prepare_and_write_palette(nodes: list, output_filename: str):
     write_palette_json(
         output_filename, nodes, GITREPO, VERSION, block_dag  # type: ignore
     )
-    logger.info("Wrote %s components to %s", len(nodes), output_filename)
+    logger.debug("Wrote %s components to %s", len(nodes), output_filename)
 
 
 def get_submodules(module):

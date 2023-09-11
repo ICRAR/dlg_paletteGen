@@ -530,7 +530,7 @@ class DetailedDescription:
             if rc.search(ds):
                 self.format = k
         if not self.format:
-            logger.warning("Unknown param desc format!")
+            logger.debug("Unknown param desc format!")
 
     def _gen_code_block(self):
         """
@@ -554,8 +554,8 @@ class DetailedDescription:
             self._gen_code_block()
             return self.description, pd[1]
         else:
-            logger.warning("Format not recognized or can't execute %s", do)
-            logger.warning("Returning description unparsed!")
+            logger.debug("Format not recognized or can't execute %s", do)
+            logger.debug("Returning description unparsed!")
             return (self._gen_code_block(), {})
 
 

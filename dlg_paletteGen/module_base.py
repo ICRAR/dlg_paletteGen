@@ -81,13 +81,15 @@ def inspect_member(member, module=None, parent=None):
         else name
     )
     node.name = name
-    logger.info("Inspecting %s: %s", type(member).__name__, member.__name__)
+    logger.debug("Inspecting %s: %s", type(member).__name__, member.__name__)
 
     dd = None
 
     doc = inspect.getdoc(member)
     if doc and len(doc) > 0:
-        logger.info(f"Process documentation of {type(member).__name__} {name}")
+        logger.debug(
+            f"Process documentation of {type(member).__name__} {name}"
+        )
         dd = DetailedDescription(doc)
         node.description = f"{dd.description.strip()}"
         if len(dd.params) > 0:
@@ -105,9 +107,9 @@ def inspect_member(member, module=None, parent=None):
         dd = DetailedDescription(inspect.getdoc(module))
         node.description = f"{dd.description.strip()}"
     elif hasattr(member, "__name__"):
-        logger.warning("Member '%s' has no description!", name)
+        logger.debug("Member '%s' has no description!", name)
     else:
-        logger.warning("Entity '%s' has neither descr. nor __name__", name)
+        logger.debug("Entity '%s' has neither descr. nor __name__", name)
 
     if type(member).__name__ in [
         "pybind11_type",
@@ -118,7 +120,7 @@ def inspect_member(member, module=None, parent=None):
             # this will fail for e.g. pybind11 modules
             sig = inspect.signature(member)  # type: ignore
         except ValueError:
-            logger.warning("Unable to get signature of %s: ", name)
+            logger.debug("Unable to get signature of %s: ", name)
             sig = DummySig(member)
             node.description = sig.docstring
     else:
@@ -224,7 +226,7 @@ def get_members(
                         # pass
             if member:  # we've found what we wanted
                 break
-    logger.info("Analysed %d members in module %s", count, name)
+    logger.debug("Analysed %d members in module %s", count, name)
     return members
 
 
@@ -264,9 +266,11 @@ def module_hook(
             if not member and recursive and mod:
                 sub_modules = get_submodules(mod)
                 # if len(sub_modules) > 0:
-                logger.info("Iterating over sub_modules of %s", mod_name)
+                logger.debug("Iterating over sub_modules of %s", mod_name)
                 for sub_mod in sub_modules:
-                    logger.info("Treating sub-module: %s", sub_mod)
+                    logger.info(
+                        "Treating sub-module: %s of %s", sub_mod, mod_name
+                    )
                     modules = module_hook(sub_mod, modules=modules)
             # member_count = sum([len(m) for m in modules.values()])
         except ImportError:

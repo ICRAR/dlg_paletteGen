@@ -290,6 +290,7 @@ def test_direct_cli():
         module = "dlg_paletteGen"
         recursive = True
         verbose = False
+        split = False
         c = False
 
         def __len__(self):
