@@ -115,7 +115,7 @@ def inspect_member(member, module=None, parent=None):
         "pybind11_type",
         "builtin_function_or_method",
     ]:
-        logger.info("!!! PyBind11 or builtin: Creting dummy signature !!!")
+        logger.debug("!!! PyBind11 or builtin: Creating dummy signature !!!")
         try:
             # this will fail for e.g. pybind11 modules
             sig = inspect.signature(member)  # type: ignore
