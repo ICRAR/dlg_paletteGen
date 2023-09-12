@@ -116,7 +116,7 @@ def test_CLI_run_eagle(tmpdir: str, shared_datadir: str):
         newcontent = json.load(f)
     logging.info("OUTPUT: %s", newcontent)
     # can't use a hash, since output contains hashed keys
-    assert len(newcontent["nodeDataArray"][0]["fields"]) == 8
+    assert len(newcontent["nodeDataArray"][0]["fields"]) == 6
 
 
 def test_CLI_run_rest(tmpdir: str, shared_datadir: str):
@@ -394,7 +394,7 @@ def test_direct_eagle(tmpdir: str, shared_datadir: str):
         newcontent = json.load(f)
     logging.info("OUTPUT: %s", newcontent)
     # can't use a hash, since output contains hashed keys
-    assert len(newcontent["nodeDataArray"][0]["fields"]) == 8
+    assert len(newcontent["nodeDataArray"][0]["fields"]) == 6
 
 
 def test_direct_oskar(tmpdir: str, shared_datadir: str):
@@ -532,13 +532,15 @@ def test_direct_module(tmpdir: str, shared_datadir: str):
     :param tmpdir: the path to the temp directory to use
     :param shared_datadir: the path the the local directory
     """
-    modules = module_hook("numpy.exceptions.AxisError", recursive=True)
+    modules, module_doc = module_hook(
+        "numpy.exceptions.AxisError", recursive=True
+    )
     nodes = []
     for members in modules.values():
         for node in members.values():
             nodes.append(node)
     assert len(modules) == 1
-    prepare_and_write_palette(nodes, "test.palette")
+    prepare_and_write_palette(nodes, "test.palette", module_doc=module_doc)
 
 
 def test_import_using_name(tmpdir: str, shared_datadir: str):

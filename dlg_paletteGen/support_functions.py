@@ -8,6 +8,7 @@ import sys
 import tempfile
 import xml.etree.ElementTree as ET
 from pkgutil import iter_modules
+from typing import Union
 
 import benedict
 from blockdag import build_block_dag
@@ -149,23 +150,28 @@ def process_xml() -> str:
 
 def write_palette_json(
     output_filename: str,
+    module_doc: Union[str, None],
     nodes: list,
-    git_repo: str,
-    version: str,
+    git_repo: Union[str, None],
+    version: Union[str, None],
     block_dag: list,
 ):
     """
     Construct palette header and Write nodes to the output file
 
     :param output_filename: str, the name of the output file
+    :param module_doc: module level docstring
     :param nodes: list of nodes
     :param git_repo: str, the git repository URL
     :param version: str, version string to be used
     :param block_dag: list, the reproducibility information
     """
+    if not module_doc:
+        module_doc = ""
     for i in range(len(nodes)):
         nodes[i]["dataHash"] = block_dag[i]["data_hash"]
     palette = constructPalette()
+    palette.modelData.detailedDescription = module_doc.strip()
     palette.modelData.filePath = output_filename
     palette.modelData.repositoryUrl = git_repo
     palette.modelData.commitHash = version
@@ -181,12 +187,15 @@ def write_palette_json(
         json.dump(palette, outfile, indent=4)
 
 
-def prepare_and_write_palette(nodes: list, output_filename: str):
+def prepare_and_write_palette(
+    nodes: list, output_filename: str, module_doc: str = ""
+):
     """
     Prepare and write the palette in JSON format.
 
     :param nodes: the list of nodes
     :param output_filename: the filename of the output
+    :param module_doc: module level docstring
     """
     # add signature for whole palette using BlockDAG
     vertices = {}
@@ -199,7 +208,12 @@ def prepare_and_write_palette(nodes: list, output_filename: str):
 
     # write the output json file
     write_palette_json(
-        output_filename, nodes, GITREPO, VERSION, block_dag  # type: ignore
+        output_filename,
+        module_doc,
+        nodes,
+        GITREPO,
+        VERSION,
+        block_dag,
     )
     logger.debug("Wrote %s components to %s", len(nodes), output_filename)
 
@@ -418,7 +432,7 @@ def constructNode(
     category: str = "PythonApp",
     key: int = -1,
     name: str = "example_function",
-    description: str = "dummy description",
+    description: str = "No description found",
     repositoryUrl: str = "dlg_paletteGen.generated",
     commitHash: str = "0.1",
     paletteDownlaodUrl: str = "",

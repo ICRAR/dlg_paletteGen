@@ -240,7 +240,7 @@ def get_members(
 
 def module_hook(
     mod_name: str, modules: dict = {}, recursive: bool = True
-) -> "dict":
+) -> tuple:
     """
     Function dissecting the an imported module.
 
@@ -279,8 +279,8 @@ def module_hook(
                     logger.info(
                         "Treating sub-module: %s of %s", sub_mod, mod_name
                     )
-                    modules = module_hook(sub_mod, modules=modules)
+                    modules, _ = module_hook(sub_mod, modules=modules)
             # member_count = sum([len(m) for m in modules.values()])
         except ImportError:
             logger.error("Module %s can't be loaded!", mod_name)
-    return modules
+    return modules, mod.__doc__

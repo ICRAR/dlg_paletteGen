@@ -162,7 +162,7 @@ def check_environment_variables() -> bool:
     return True
 
 
-def nodes_from_module(module_path: str, recursive: bool = True) -> list:
+def nodes_from_module(module_path: str, recursive: bool = True) -> tuple:
     """
     Extract nodes from specified module.
 
@@ -171,7 +171,7 @@ def nodes_from_module(module_path: str, recursive: bool = True) -> list:
 
     :returns list of nodes (for now)
     """
-    modules = module_hook(module_path, recursive=recursive)
+    modules, module_doc = module_hook(module_path, recursive=recursive)
     # member_count = sum([len(m) for m in modules])
     logger.debug(">>>>> Number of modules processed: %d", len(modules))
     logger.debug(
@@ -187,7 +187,7 @@ def nodes_from_module(module_path: str, recursive: bool = True) -> list:
                 continue
             node.fields = list(node.fields.values())
             nodes.append(node)
-    return nodes
+    return nodes, module_doc
 
 
 def palettes_from_module(
@@ -220,19 +220,23 @@ def palettes_from_module(
     files = {}
     for m in sub_modules:
         logger.info("Extracting nodes from module: %s", m)
-        nodes = nodes_from_module(m, recursive=recursive)
+        nodes, module_doc = nodes_from_module(m, recursive=recursive)
         if len(nodes) == 0:
             continue
         filename = (
             outfile if not split else f"{outfile}{m.replace('.','_')}.palette"
         )
         files[filename] = len(nodes)
-        prepare_and_write_palette(nodes, filename)
+        prepare_and_write_palette(nodes, filename, module_doc=module_doc)
         logger.info(
-            "%s palette file written with %s components", filename, len(nodes)
+            "%s palette file written with %s components\n%s",
+            filename,
+            len(nodes),
+            m,
         )
     logger.info(
-        "\n\n>>>>>>> Extraction summary <<<<<<<<\n%s\n",
+        "\n\n>>>>>>> Extraction summary <<<<<<<<\n%s\n%s\n",
+        module_doc,
         "\n".join(
             [f"Wrote {k} with {v} components" for k, v in files.items()]
         ),

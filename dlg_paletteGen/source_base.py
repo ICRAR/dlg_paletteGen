@@ -4,10 +4,10 @@ dlg_paletteGen base functionality for the treatment of source directories.
 """
 import csv
 import os
+import uuid
 import xml.etree.ElementTree as ET
 from enum import Enum
 from typing import Any, Union
-import uuid
 
 from dlg_paletteGen.classes import Child, Language, logger
 
@@ -733,6 +733,7 @@ def create_construct_node(node_type: str, node: dict) -> dict:
         pass
 
     construct_params = {
+        "inputAppFields": [],
         "outputAppFields": [],
         "inputApplicationName": "GenericScatterApp",
         "inputApplicationType": "PythonApp",
@@ -743,75 +744,77 @@ def create_construct_node(node_type: str, node: dict) -> dict:
         "outputApplicationKey": None,
         "outputApplicationDescription": "",
     }
-    construct_params["inputAppFields"] = [
-        {
-            "name": "dropclass",
-            "value": "",
-            "defaultValue": "",
-            "description": "Application class",
-            "readonly": True,
-            "type": "String",
-            "precious": False,
-            "options": [],
-            "positional": False,
-            "keyAttribute": False,
-            "id": str(uuid.uuid4()),
-            "parameterType": "ComponentParameter",
-            "usage": "NoPort",
-        },
-        {
-            "name": "execution_time",
-            "value": 5,
-            "defaultValue": "0",
-            "description": "Estimated execution time",
-            "readonly": False,
-            "type": "Float",
-            "precious": False,
-            "options": [],
-            "positional": False,
-            "keyAttribute": False,
-            "id": str(uuid.uuid4()),
-            "parameterType": "ConstraintParameter",
-            "usage": "NoPort",
-        },
-        {
-            "name": "num_cpus",
-            "value": 1,
-            "defaultValue": "0",
-            "description": "Number of cores used",
-            "readonly": False,
-            "type": "Integer",
-            "precious": False,
-            "options": [],
-            "positional": False,
-            "keyAttribute": False,
-            "id": str(uuid.uuid4()),
-            "parameterType": "ConstraintParameter",
-            "usage": "NoPort",
-        },
-        {
-            "name": "group_start",
-            "value": False,
-            "defaultValue": "False",
-            "description": "Component is start of a group",
-            "readonly": False,
-            "type": "Boolean",
-            "precious": False,
-            "options": [],
-            "positional": False,
-            "keyAttribute": False,
-            "id": str(uuid.uuid4()),
-            "parameterType": "ComponentParameter",
-            "usage": "NoPort",
-        },
-    ]
+    construct_params["inputAppFields"].extend(  # type: ignore
+        [
+            {
+                "name": "dropclass",
+                "value": "",
+                "defaultValue": "",
+                "description": "Application class",
+                "readonly": True,
+                "type": "String",
+                "precious": False,
+                "options": [],
+                "positional": False,
+                "keyAttribute": False,
+                "id": str(uuid.uuid4()),
+                "parameterType": "ComponentParameter",
+                "usage": "NoPort",
+            },
+            {
+                "name": "execution_time",
+                "value": 5,
+                "defaultValue": "0",
+                "description": "Estimated execution time",
+                "readonly": False,
+                "type": "Float",
+                "precious": False,
+                "options": [],
+                "positional": False,
+                "keyAttribute": False,
+                "id": str(uuid.uuid4()),
+                "parameterType": "ConstraintParameter",
+                "usage": "NoPort",
+            },
+            {
+                "name": "num_cpus",
+                "value": 1,
+                "defaultValue": "0",
+                "description": "Number of cores used",
+                "readonly": False,
+                "type": "Integer",
+                "precious": False,
+                "options": [],
+                "positional": False,
+                "keyAttribute": False,
+                "id": str(uuid.uuid4()),
+                "parameterType": "ConstraintParameter",
+                "usage": "NoPort",
+            },
+            {
+                "name": "group_start",
+                "value": False,
+                "defaultValue": "False",
+                "description": "Component is start of a group",
+                "readonly": False,
+                "type": "Boolean",
+                "precious": False,
+                "options": [],
+                "positional": False,
+                "keyAttribute": False,
+                "id": str(uuid.uuid4()),
+                "parameterType": "ComponentParameter",
+                "usage": "NoPort",
+            },
+        ]
+    )
     if node_type == "Scatter":
         logger.debug(">>>> %s", node)
         construct_params["inputApplicationName"] = node["text"]
-        construct_params["inputAppFields"][0][
+        construct_params["inputAppFields"][0][  # type: ignore
             "value"
         ] = f"dlg.apps.simple.{node['text']}"
-        construct_params["inputAppFields"].extend(
+        construct_params["inputAppFields"].extend(  # type: ignore
             [
                 {
                     "name": "array",
@@ -863,10 +866,10 @@ def create_construct_node(node_type: str, node: dict) -> dict:
         ]
     elif node_type == "MKN":
         construct_params["inputApplicationName"] = node["text"]
-        construct_params["inputAppFields"][0][
+        construct_params["inputAppFields"][0][  # type: ignore
             "value"
         ] = f"dlg.apps.simple.{node['text']}"
-        construct_params["inputAppFields"].extend(
+        construct_params["inputAppFields"].extend(  # type: ignore
             [
                 {
                     "name": "array",
@@ -918,10 +921,10 @@ def create_construct_node(node_type: str, node: dict) -> dict:
         ]
     elif node_type == "Gather":
         construct_params["inputApplicationName"] = node["text"]
-        construct_params["inputAppFields"][0][
+        construct_params["inputAppFields"][0][  # type: ignore
             "value"
         ] = f"dlg.apps.simple.{node['text']}"
-        construct_params["inputAppFields"].extend(
+        construct_params["inputAppFields"].extend(  # type: ignore
             [
                 {
                     "name": "content",
