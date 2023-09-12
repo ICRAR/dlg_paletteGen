@@ -385,7 +385,6 @@ class AverageArraysApp(BarrierAppDROP):
 # @param category PythonApp
 # @param construct Gather
 # @param tag daliuge
-# @param dropclass dlg.apps.simple.GenericNpyGatherApp/String/ComponentParameter/NoPort/ReadOnly//False/False/Application class
 # @param execution_time 5/Float/ComponentParameter/NoPort/ReadOnly//False/False/Estimated execution time
 # @param num_cpus 1/Integer/ComponentParameter/NoPort/ReadOnly//False/False/Number of cores used
 # @param group_start False/Boolean/ComponentParameter/NoPort/ReadWrite//False/False/Is this node the start of a group?
@@ -606,7 +605,6 @@ class UrlRetrieveApp(BarrierAppDROP):
 # @param category PythonApp
 # @param construct Scatter
 # @param tag daliuge
-# @param dropclass dlg.apps.simple.GenericScatterApp/String/ComponentParameter/NoPort/ReadOnly//False/False/Application class
 # @param execution_time 5/Float/ComponentParameter/NoPort/ReadOnly//False/False/Estimated execution time
 # @param num_cpus 1/Integer/ComponentParameter/NoPort/ReadOnly//False/False/Number of cores used
 # @param group_start False/Boolean/ComponentParameter/NoPort/ReadWrite//False/False/Is this node the start of a group?
@@ -669,7 +667,6 @@ class GenericScatterApp(BarrierAppDROP):
 # @param category PythonApp
 # @param construct Scatter
 # @param tag daliuge
-# @param dropclass dlg.apps.simple.GenericNpyScatterApp/String/ComponentParameter/NoPort/ReadOnly//False/False/Application class
 # @param execution_time 5/Float/ComponentParameter/NoPort/ReadOnly//False/False/Estimated execution time
 # @param num_cpus 1/Integer/ComponentParameter/NoPort/ReadOnly//False/False/Number of cores used
 # @param group_start False/Boolean/ComponentParameter/NoPort/ReadWrite//False/False/Is this node the start of a group?

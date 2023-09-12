@@ -7,6 +7,7 @@ import os
 import xml.etree.ElementTree as ET
 from enum import Enum
 from typing import Any, Union
+import uuid
 
 from dlg_paletteGen.classes import Child, Language, logger
 
@@ -47,6 +48,7 @@ class PGenEnum(str, Enum):
 class FieldType(PGenEnum):
     ComponentParameter = "ComponentParameter"
     ConstructParameter = "ConstructParameter"
+    ConstraintParameter = "ConstraintParameter"
     ApplicationArgument = "ApplicationArgument"
 
 
@@ -730,7 +732,119 @@ def create_construct_node(node_type: str, node: dict) -> dict:
         logger.info("Known types are: %s", KNOWN_CONSTRUCT_TYPES)
         pass
 
+    construct_params = {
+        "outputAppFields": [],
+        "inputApplicationName": "GenericScatterApp",
+        "inputApplicationType": "PythonApp",
+        "inputApplicationKey": None,
+        "inputApplicationDescription": "",
+        "outputApplicationName": "",
+        "outputApplicationType": "None",
+        "outputApplicationKey": None,
+        "outputApplicationDescription": "",
+    }
+    construct_params["inputAppFields"] = [
+        {
+            "name": "dropclass",
+            "value": "",
+            "defaultValue": "",
+            "description": "Application class",
+            "readonly": True,
+            "type": "String",
+            "precious": False,
+            "options": [],
+            "positional": False,
+            "keyAttribute": False,
+            "id": str(uuid.uuid4()),
+            "parameterType": "ComponentParameter",
+            "usage": "NoPort",
+        },
+        {
+            "name": "execution_time",
+            "value": 5,
+            "defaultValue": "0",
+            "description": "Estimated execution time",
+            "readonly": False,
+            "type": "Float",
+            "precious": False,
+            "options": [],
+            "positional": False,
+            "keyAttribute": False,
+            "id": str(uuid.uuid4()),
+            "parameterType": "ConstraintParameter",
+            "usage": "NoPort",
+        },
+        {
+            "name": "num_cpus",
+            "value": 1,
+            "defaultValue": "0",
+            "description": "Number of cores used",
+            "readonly": False,
+            "type": "Integer",
+            "precious": False,
+            "options": [],
+            "positional": False,
+            "keyAttribute": False,
+            "id": str(uuid.uuid4()),
+            "parameterType": "ConstraintParameter",
+            "usage": "NoPort",
+        },
+        {
+            "name": "group_start",
+            "value": False,
+            "defaultValue": "False",
+            "description": "Component is start of a group",
+            "readonly": False,
+            "type": "Boolean",
+            "precious": False,
+            "options": [],
+            "positional": False,
+            "keyAttribute": False,
+            "id": str(uuid.uuid4()),
+            "parameterType": "ComponentParameter",
+            "usage": "NoPort",
+        },
+    ]
     if node_type == "Scatter":
+        logger.debug(">>>> %s", node)
+        construct_params["inputApplicationName"] = node["text"]
+        construct_params["inputAppFields"][0][
+            "value"
+        ] = f"dlg.apps.simple.{node['text']}"
+        construct_params["inputAppFields"].extend(
+            [
+                {
+                    "name": "array",
+                    "value": "",
+                    "defaultValue": "",
+                    "description": "Input array",
+                    "readonly": False,
+                    "type": "Object",
+                    "precious": False,
+                    "options": [],
+                    "positional": False,
+                    "keyAttribute": False,
+                    "id": str(uuid.uuid4()),
+                    "parameterType": "ApplicationArgument",
+                    "usage": "InputPort",
+                },
+                {
+                    "name": "split_array",
+                    "value": "",
+                    "defaultValue": "",
+                    "description": "",
+                    "readonly": False,
+                    "type": "Object",
+                    "precious": False,
+                    "options": [],
+                    "positional": False,
+                    "keyAttribute": False,
+                    "id": str(uuid.uuid4()),
+                    "parameterType": "ApplicationArgument",
+                    "usage": "OutputPort",
+                },
+            ]
+        )
         add_fields = [
             create_field(
                 "num_of_copies",
@@ -745,21 +859,47 @@ def create_construct_node(node_type: str, node: dict) -> dict:
                 "Specifies the number of replications "
                 "that will be generated of the scatter construct's "
                 "contents.",
-            ),
-            create_field(
-                "dropclass",
-                "dlg.apps.constructs.ScatterDrop",
-                "String",
-                FieldType.ComponentParameter,
-                FieldUsage.NoPort,
-                FieldAccess.readwrite,
-                [],
-                False,
-                False,
-                "Drop class",
             ),
         ]
     elif node_type == "MKN":
+        construct_params["inputApplicationName"] = node["text"]
+        construct_params["inputAppFields"][0][
+            "value"
+        ] = f"dlg.apps.simple.{node['text']}"
+        construct_params["inputAppFields"].extend(
+            [
+                {
+                    "name": "array",
+                    "value": "",
+                    "defaultValue": "",
+                    "description": "Input array",
+                    "readonly": False,
+                    "type": "Object",
+                    "precious": False,
+                    "options": [],
+                    "positional": False,
+                    "keyAttribute": False,
+                    "id": str(uuid.uuid4()),
+                    "parameterType": "ApplicationArgument",
+                    "usage": "InputPort",
+                },
+                {
+                    "name": "split_array",
+                    "value": "",
+                    "defaultValue": "",
+                    "description": "",
+                    "readonly": False,
+                    "type": "Object",
+                    "precious": False,
+                    "options": [],
+                    "positional": False,
+                    "keyAttribute": False,
+                    "id": str(uuid.uuid4()),
+                    "parameterType": "ApplicationArgument",
+                    "usage": "OutputPort",
+                },
+            ]
+        )
         add_fields = [
             create_field(
                 "num_of_copies",
@@ -775,20 +915,31 @@ def create_construct_node(node_type: str, node: dict) -> dict:
                 "that will be generated of the scatter construct's "
                 "contents.",
             ),
-            create_field(
-                "dropclass",
-                "dlg.apps.constructs.MKNDrop",
-                "String",
-                FieldType.ComponentParameter,
-                FieldUsage.NoPort,
-                FieldAccess.readwrite,
-                [],
-                False,
-                False,
-                "Drop class",
-            ),
         ]
     elif node_type == "Gather":
+        construct_params["inputApplicationName"] = node["text"]
+        construct_params["inputAppFields"][0][
+            "value"
+        ] = f"dlg.apps.simple.{node['text']}"
+        construct_params["inputAppFields"].extend(
+            [
+                {
+                    "name": "content",
+                    "value": "",
+                    "defaultValue": "",
+                    "description": "",
+                    "readonly": False,
+                    "type": "String",
+                    "precious": False,
+                    "options": [],
+                    "positional": False,
+                    "keyAttribute": False,
+                    "id": str(uuid.uuid4()),
+                    "parameterType": "ApplicationArgument",
+                    "usage": "InputOutput",
+                }
+            ]
+        )
         add_fields = [
             create_field(
                 "num_of_inputs",
@@ -805,18 +956,6 @@ def create_construct_node(node_type: str, node: dict) -> dict:
                 "If it is less than the available number of "
                 "inputs, the translator will automatically "
                 "generate additional gathers.",
-            ),
-            create_field(
-                "dlg.apps.constructs.GatherDrop",
-                "",
-                "String",
-                FieldType.ComponentParameter,
-                FieldUsage.NoPort,
-                FieldAccess.readwrite,
-                [],
-                False,
-                False,
-                "Drop class",
             ),
         ]
     else:
@@ -840,6 +979,7 @@ def create_construct_node(node_type: str, node: dict) -> dict:
         "key": get_next_key(),
         "text": node_type + "/" + node["text"],
     }
+    construct_node.update(construct_params)
 
     return construct_node
 
