@@ -4,6 +4,13 @@ Changelog
 
 (unreleased)
 ------------
+- Fixed func_name and scipy issues. [Andreas Wicenec]
+- Fixed typo. [Andreas Wicenec]
+
+
+0.2.4 (2023-09-11)
+------------------
+- Release: version 0.2.4 🚀 [Andreas Wicenec]
 - Support for splitting large modules. [Andreas Wicenec]
 - Fixed issues treating tabascal package. [Andreas Wicenec]
 
