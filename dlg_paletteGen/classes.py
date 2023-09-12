@@ -219,8 +219,13 @@ class DummySig:
         """
         parameters = {}
         ret = None
-        if self.docstring and self.docstring.find("\n") > 0:
-            call_line, rest = self.docstring.split("\n", 1)
+        if self.docstring:
+            call_line = self.docstring.split("\n", 1)
+            if len(call_line) == 2:
+                call_line, rest = call_line
+            else:
+                call_line = call_line[0]
+                rest = ""
             self.docstring = rest.replace("\n\n", "\n")
             # self.docstring = rest.strip()
             # params = re.findall(r"([\w_]+)\: ([\w_\:\.\[\]]+)", call_line)

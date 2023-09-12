@@ -75,11 +75,11 @@ def inspect_member(member, module=None, parent=None):
             else f"{module.__name__}.Unknown"
         )
     # shorten node name, else EAGLE components are cluttered.
-    name = (
-        f"{name.split('.')[0]}.{name.split('.')[-1]}"
-        if name.count(".") > 1
-        else name
-    )
+    # name = (
+    #     f"{name.split('.')[0]}.{'.'.join(name.split('.')[-2:])}"
+    #     if name.count(".") > 2
+    #     else name
+    # )
     node.name = name
     logger.debug("Inspecting %s: %s", type(member).__name__, member.__name__)
 
@@ -100,7 +100,7 @@ def inspect_member(member, module=None, parent=None):
         node.description = f"{dd.description.strip()}"
         if len(dd.params) > 0:
             logger.debug("Identified parameters: %s", dd.params)
-    elif (
+    if (
         member.__name__ in ["__init__", "__cls__"]
         and inspect.isclass(module)
         and inspect.getdoc(module)
@@ -111,7 +111,7 @@ def inspect_member(member, module=None, parent=None):
             member.__name__,
         )
         dd = DetailedDescription(inspect.getdoc(module))
-        node.description = f"{dd.description.strip()}"
+        node.description += f"\n{dd.description.strip()}"
     elif hasattr(member, "__name__"):
         logger.debug("Member '%s' has no description!", name)
     else:
@@ -136,7 +136,8 @@ def inspect_member(member, module=None, parent=None):
         except ValueError:
             logger.warning("Unable to get signature of %s: ", name)
             sig = DummySig(member)
-            node.description = sig.docstring
+            if sig.docstring:
+                node.description = sig.docstring
             if not getattr(sig, "parameters") and dd and len(dd.params) > 0:
                 for p, v in dd.params.items():
                     sig.parameters[p] = DummyParam()
@@ -177,8 +178,8 @@ def get_members(
     """
     if not mod:
         return {}
-    name = parent if parent else mod.__name__
-    logger.debug(f">>>>>>>>> Analysing members for module: {name}")
+    module_name = parent if parent else mod.__name__
+    logger.debug(f">>>>>>>>> Analysing members for module: {module_name}")
     content = inspect.getmembers(
         mod,
         lambda x: inspect.isfunction(x)
@@ -202,7 +203,7 @@ def get_members(
                 # # are class parameters.
                 continue
             if inspect.isclass(m):
-                if m.__module__.find(name) < 0:
+                if m.__module__.find(module_name) < 0:
                     continue
                 logger.debug("Processing class '%s'", c)
                 nodes = get_class_members(m, parent=parent)
@@ -283,4 +284,5 @@ def module_hook(
             # member_count = sum([len(m) for m in modules.values()])
         except ImportError:
             logger.error("Module %s can't be loaded!", mod_name)
+            return ({}, None)
     return modules, mod.__doc__
