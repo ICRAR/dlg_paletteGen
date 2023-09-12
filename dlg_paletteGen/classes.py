@@ -223,7 +223,10 @@ class DummySig:
             call_line, rest = self.docstring.split("\n", 1)
             self.docstring = rest.replace("\n\n", "\n")
             # self.docstring = rest.strip()
-            params = re.findall(r"([\w_]+)\: ([\w_\:\.\[\]]+)", call_line)
+            # params = re.findall(r"([\w_]+)\: ([\w_\:\.\[\]]+)", call_line)
+            params = re.findall(
+                r"([\w_]+)[\: \,\=\)]([\w_\:\.\[\]]*)", call_line
+            )
             ret = re.findall(r"-> ([\w_\:\.\[\]]+)", call_line)
             ret = ret[0] if ret else None
             for k, v in params:
@@ -383,8 +386,11 @@ class DetailedDescription:
         if not dd:
             return ("", {})
         ds = dd.strip("\n")
-        indent = len(ds) - len(ds.lstrip())
-        ds = re.sub(r"\n {" + f"{indent}" + r"}", r"\n", ds)
+        # indent = len(ds) - len(ds.lstrip())
+        # ds = re.sub(r"\n {" + f"{indent}" + r"}", r"\n", ds)
+        ds = re.sub(
+            re.findall(r"(\n *)Parameters\n *----------\n", dd)[0], "\n", dd
+        )
         ds = ds.lstrip()
         dss = ds.split("\nParameters\n----------\n")
         if len(dss) == 2:

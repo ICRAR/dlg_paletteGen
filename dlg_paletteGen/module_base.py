@@ -17,7 +17,7 @@ from .support_functions import (
 )
 
 
-def get_class_members(cls):
+def get_class_members(cls, parent=None):
     """
     Inspect members of a class
     """
@@ -43,7 +43,7 @@ def get_class_members(cls):
         if m.__qualname__.startswith(
             cls.__name__
         ) or m.__qualname__.startswith("PyCapsule"):
-            node = inspect_member(m, module=cls)
+            node = inspect_member(m, module=cls, parent=parent)
             if not node:
                 logger.debug("Inspection of '%s' failed.", m.__qualname__)
                 continue
@@ -86,7 +86,13 @@ def inspect_member(member, module=None, parent=None):
     dd = None
 
     doc = inspect.getdoc(member)
-    if doc and len(doc) > 0:
+    if (
+        doc
+        and len(doc) > 0
+        and not doc.startswith(
+            "Initialize self.  See help(type(self)) for accurate signature."
+        )
+    ):
         logger.debug(
             f"Process documentation of {type(member).__name__} {name}"
         )
@@ -144,10 +150,12 @@ def inspect_member(member, module=None, parent=None):
         # now populate with default fields.
     node = populateDefaultFields(node)
     load_name = member.__qualname__
-    if hasattr(member, "__module__"):
+    if hasattr(member, "__module__") and member.__module__:
         load_name = f"{member.__module__}.{load_name}"
     elif hasattr(member, "__package__"):
         load_name = f"{member.__package__}.{load_name}"
+    elif parent:
+        load_name = f"{parent}.{load_name}"
     if load_name.find("PyCapsule"):
         load_name = load_name.replace("PyCapsule", module.__name__)
     node.fields["func_name"]["value"] = load_name
@@ -197,7 +205,7 @@ def get_members(
                 if m.__module__.find(name) < 0:
                     continue
                 logger.debug("Processing class '%s'", c)
-                nodes = get_class_members(m)
+                nodes = get_class_members(m, parent=parent)
                 logger.debug("Class members: %s", nodes.keys())
 
             else:
