@@ -23,7 +23,7 @@ This was the original approach taken by `dlg_paletteGen`. It takes a code source
 For dedicated DALiuGE components it is possible to use [custom doxygen tagging](https://daliuge.readthedocs.io/en/latest/development/app_development/eagle_app_integration.html#component-doxygen-markup-guide) to inform the tool.
 
 ### Module inspection palette generation
-The second mode is to work off almost any installed python module directly. In most cases this will provide a more acurate reflection of the package to be treated. This is exclusively using the `DALiuGE` python function wrapper class mentioned above and does not require to write or change any code at all. If the code can be run in you python environment, `DALiuGE` can use it as well! Palette generation for packages even as big as the whole of [astropy](https://www.astropy.org) or [numpy](https://numpy.org) takes only a few seconds, but generates very big palettes with thousands of components.
+The second mode is to work off almost any installed python module directly. This is extremely powerful and totally generic: If the code can be run in you python environment, `DALiuGE` can use it as well! In most cases it will provide a more acurate reflection of the package to be treated and does not require to write any special code or change any code at all. Palette generation for packages even as big as the whole of [astropy](https://www.astropy.org) or [numpy](https://numpy.org) takes only a few seconds, but generates very big palettes with thousands of components, or alternatively, a whole set of sub-module level palettes, when using the `-S` (`--split`) command line switch.
 
 ## Component types
 The tool supports components derived from a number of Python types:
