@@ -4,6 +4,12 @@ Changelog
 
 (unreleased)
 ------------
+- Updated documentation. [Andreas Wicenec]
+
+
+0.2.5 (2023-09-12)
+------------------
+- Release: version 0.2.5 🚀 [Andreas Wicenec]
 - Fixed func_name and scipy issues. [Andreas Wicenec]
 - Fixed typo. [Andreas Wicenec]
 
