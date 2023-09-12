@@ -4,6 +4,9 @@ Changelog
 
 (unreleased)
 ------------
+- Added palette descriptions from modules. [Andreas Wicenec]
+- Fixed construct node extraction. [Andreas Wicenec]
+- Release: version 0.2.4 🚀 [Andreas Wicenec]
 - Updated documentation. [Andreas Wicenec]
 
 
