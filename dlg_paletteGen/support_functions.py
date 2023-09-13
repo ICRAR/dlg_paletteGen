@@ -395,7 +395,7 @@ def populateFields(parameters: dict, dd) -> dict:
                 v.default, tuple
             ):  # type: ignore
                 value = v.default  # type: ignore
-            elif v.default != inspect._empty:
+            elif hasattr(v.default, "type") and v.default != inspect._empty:
                 if isinstance(v.default, str):  # type: ignore
                     value = v.default  # type: ignore
         except ValueError:

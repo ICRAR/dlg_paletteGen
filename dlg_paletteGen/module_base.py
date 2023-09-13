@@ -235,7 +235,7 @@ def get_members(
                         # pass
             if member:  # we've found what we wanted
                 break
-    logger.debug("Analysed %d members in module %s", count, name)
+    logger.debug("Analysed %d members in module %s", count, module_name)
     return members
 
 
