@@ -449,7 +449,7 @@ class GenericGatherApp(BarrierAppDROP):
 # @param category PythonApp
 # @param construct Gather
 # @param tag daliuge
-# @param num_of_inputs 4/Integer/ConstructParameter/NoPort/ReadWrite//False/False/The Gather “width”, stating how many inputs each Gather instance will handle
+# @param num_of_inputs 4/Integer/ConstructParameter/NoPort/ReadWrite//False/False/The Gather width, stating how many inputs each Gather instance will handle
 # @param function sum/Select/ApplicationArgument/NoPort/ReadWrite/sum,prod,min,max,add,multiply,maximum,minimum/False/False/The function used for gathering
 # @param reduce_axes None/String/ApplicationArgument/NoPort/ReadOnly//False/False/The array axes to reduce, None reduces all axes for sum, prod, max, min functions
 # @param dropclass dlg.apps.simple.GenericNpyGatherApp/String/ComponentParameter/NoPort/ReadOnly//False/False/Application class
