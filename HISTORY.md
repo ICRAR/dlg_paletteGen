@@ -4,6 +4,12 @@ Changelog
 
 (unreleased)
 ------------
+- Fixed issues with rascil. [Andreas Wicenec]
+
+
+0.2.8 (2023-09-14)
+------------------
+- Release: version 0.2.8 🚀 [Andreas Wicenec]
 - Another try fixing decoding. [Andreas Wicenec]
 - Try fixing decode error. [Andreas Wicenec]
 - Fixed test. [Andreas Wicenec]
