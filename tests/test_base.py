@@ -533,8 +533,12 @@ def test_direct_module(tmpdir: str, shared_datadir: str):
     :param shared_datadir: the path the the local directory
     """
     modules, module_doc = module_hook(
-        "numpy.exceptions.AxisError", recursive=True
+        "rascil.processing_components.filter_skycomponents_by_flux",
+        recursive=True,
     )
+    # modules, module_doc = module_hook(
+    #     "numpy.exceptions.AxisError", recursive=True
+    # )
     nodes = []
     for members in modules.values():
         for node in members.values():

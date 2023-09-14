@@ -398,13 +398,32 @@ def populateFields(parameters: dict, dd) -> dict:
     for p, v in parameters.items():
         field = initializeField(p)
         try:
-            if isinstance(v.default, list) or isinstance(
-                v.default, tuple
-            ):  # type: ignore
+            if isinstance(v.default, (list, tuple)):
                 value = v.default  # type: ignore
             elif hasattr(v.default, "type") and v.default != inspect._empty:
                 if isinstance(v.default, str):  # type: ignore
                     value = v.default  # type: ignore
+            elif isinstance(
+                v.default,
+                (
+                    int,
+                    float,
+                    bool,
+                    complex,
+                    str,
+                    dict,
+                ),
+            ):
+                if isinstance(v.default, float) and abs(v.default) == float(
+                    "inf"
+                ):
+                    value = v.default.__repr__()  # type: ignore
+                else:
+                    value = v.default  # type: ignore
+                field[p].type = type(v.default).__name__
+            elif hasattr(v.default, "dtype"):
+                value = v.default.__repr__()
+                field[p].type = type(v.default).__name__
         except (ValueError, AttributeError):
             value = (
                 f"{type(v.default).__module__}"  # type: ignore
@@ -415,15 +434,16 @@ def populateFields(parameters: dict, dd) -> dict:
         field[p].description = (
             dd.params[p]["desc"] if dd and p in dd.params else ""
         )
-        if isinstance(v.annotation, str):
-            field[p].type = v.annotation
-        elif (
-            hasattr(v.annotation, "__name__")
-            and v.annotation != inspect._empty
-        ):
-            field[p].type = v.annotation.__name__
-        else:
-            field[p].type = "Object"
+        if not field[p]["type"]:
+            if isinstance(v.annotation, str):
+                field[p].type = v.annotation
+            elif (
+                hasattr(v.annotation, "__name__")
+                and v.annotation != inspect._empty
+            ):
+                field[p].type = v.annotation.__name__
+            else:
+                field[p].type = "Object"
         field[p].parameterType = "ApplicationArgument"
         field[p].options = None
         field[p].positional = (
