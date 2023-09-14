@@ -4,6 +4,14 @@ Changelog
 
 (unreleased)
 ------------
+- Another try fixing decoding. [Andreas Wicenec]
+- Try fixing decode error. [Andreas Wicenec]
+- Fixed test. [Andreas Wicenec]
+
+
+0.2.7 (2023-09-12)
+------------------
+- Release: version 0.2.7 🚀 [Andreas Wicenec]
 - Some fixes for radler. [Andreas Wicenec]
 
 
