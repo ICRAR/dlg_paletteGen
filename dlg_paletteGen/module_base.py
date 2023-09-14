@@ -272,7 +272,8 @@ def module_hook(
             module_members.extend([k.split(".") for k in members.keys()])
             modules.update({mod_name: members})
             # mod_count += 1
-            if not member and recursive and mod:
+            sub_modules = []
+            if not member and recursive and mod and mod not in sub_modules:
                 sub_modules = get_submodules(mod)
                 # if len(sub_modules) > 0:
                 logger.debug("Iterating over sub_modules of %s", mod_name)

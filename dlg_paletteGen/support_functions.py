@@ -237,18 +237,23 @@ def get_submodules(module):
         return iter([])
     submods = []
     if hasattr(module, "__all__"):
-        sub_mods = dict(
-            inspect.getmembers(
-                module,
-                lambda x: inspect.ismodule(x)
-                or inspect.isfunction(x)
-                or inspect.ismethod(x)
-                or inspect.isbuiltin(x),
+        for mod in module.__all__:
+            submod = f"{module.__name__}.{mod}"
+            logger.debug("Trying to import %s", submod)
+            traverse = True if submod not in submods else False
+            m = import_using_name(
+                f"{module.__name__}.{mod}", traverse=traverse
             )
+            if (
+                inspect.ismodule(m)
+                or inspect.isfunction(m)
+                or inspect.ismethod(m)
+                or inspect.isbuiltin(m)
+            ):
+                submods.append(f"{submod}")
+        logger.info(
+            "Found submodules of %s in __all__: %s", module.__name__, submods
         )
-        submods = [
-            f"{module.__name__}.{m}" for m in module.__all__ if m in sub_mods
-        ]
     elif hasattr(module, "__path__"):
         sub_modules = iter_modules(module.__path__)
         submods = [
@@ -283,7 +288,9 @@ def import_using_name(mod_name: str, traverse: bool = False):
     """
     logger.debug("Importing %s", mod_name)
     parts = mod_name.split(".")
-    exists = parts[0] in sys.modules if not traverse else False
+    exists = ".".join(parts[:-1]) in sys.modules if not traverse else False
+    if parts[-1].startswith("_"):
+        return None
     try:  # direct import first
         mod = importlib.import_module(mod_name)
     except ModuleNotFoundError:
@@ -339,7 +346,7 @@ def import_using_name(mod_name: str, traverse: bool = False):
                             raise ValueError(
                                 "Problem importing module %s, %s" % (mod, e)
                             )
-                logger.debug("Loaded module: %s", mod.__name__)
+                logger.debug("Loaded module: %s", mod_name)
             else:
                 logger.debug(
                     "Recursive import failed! %s", parts[0] in sys.modules
@@ -398,7 +405,7 @@ def populateFields(parameters: dict, dd) -> dict:
             elif hasattr(v.default, "type") and v.default != inspect._empty:
                 if isinstance(v.default, str):  # type: ignore
                     value = v.default  # type: ignore
-        except ValueError:
+        except (ValueError, AttributeError):
             value = (
                 f"{type(v.default).__module__}"  # type: ignore
                 + f".{type(v.default).__name__}"  # type: ignore

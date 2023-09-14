@@ -291,26 +291,33 @@ class DetailedDescription:
         logger.debug("Processing rEST style doc_strings")
         result = {}
 
-        if detailed_description.find("Returns:") >= 0:
+        indent = re.findall(r"(\n *):param", detailed_description)
+        if indent:
+            ds = re.sub(
+                re.findall(r"(\n *):param", detailed_description)[0],
+                "\n",
+                detailed_description,
+            )
+        else:
+            ds = detailed_description
+        ds = ds.lstrip()
+
+        if ds.find("Returns:") >= 0:
             split_str = "Returns:"
-        elif detailed_description.find(":returns") >= 0:
-            split_str = ":returns"
+        elif ds.find(":returns:") >= 0:
+            split_str = ":returns:"
+        elif ds.find(":return:") >= 0:  # take care of mis-spelling
+            split_str = ":return:"
         else:
             split_str = ""
-        detailed_description = (
-            detailed_description.split(split_str)[0]
-            if split_str
-            else detailed_description
-        )
+        ds = ds.split(split_str)[0] if split_str else ds
         param_lines = [
-            p.replace("\n", "").strip()
-            for p in detailed_description.split(":param")[1:]
+            p.replace("\n", "").strip() for p in ds.split(":param")[1:]
         ]
         type_lines = [
-            p.replace("\n", "").strip()
-            for p in detailed_description.split(":type")[1:]
+            p.replace("\n", "").strip() for p in ds.split(":type")[1:]
         ]
-        # param_lines = [line.strip() for line in detailed_description]
+        # param_lines = [line.strip() for line in ds]
 
         for p_line in param_lines:
             # logger.debug("p_line: %s", p_line)
@@ -327,7 +334,7 @@ class DetailedDescription:
                 index_of_second_colon + 2 :  # noqa: E203
             ].strip()  # noqa: E203
             t_ind = param_description.find(":type")
-            t_ind = t_ind if t_ind > -1 else None
+            t_ind = t_ind if t_ind > -1 else None  # type: ignore
             param_description = param_description[:t_ind]
             # logger.debug("%s description: %s", param_name,
             # param_description)
@@ -365,7 +372,7 @@ class DetailedDescription:
                 index_of_second_colon + 2 :  # noqa: E203
             ].strip()
             p_ind = param_type.find(":param")
-            p_ind = p_ind if p_ind > -1 else None
+            p_ind = p_ind if p_ind > -1 else None  # type: ignore
             param_type = param_type[:p_ind]
             param_type = typeFix(param_type)
 
@@ -377,7 +384,7 @@ class DetailedDescription:
                     "Type spec without matching description %s", param_name
                 )
 
-        return detailed_description.split(":param")[0].strip(), result
+        return ds.split(":param")[0].strip(), result
 
     def _process_Numpy(self, dd: str) -> tuple:
         """
@@ -391,8 +398,6 @@ class DetailedDescription:
         if not dd:
             return ("", {})
         ds = dd.strip("\n")
-        # indent = len(ds) - len(ds.lstrip())
-        # ds = re.sub(r"\n {" + f"{indent}" + r"}", r"\n", ds)
         ds = re.sub(
             re.findall(r"(\n *)Parameters\n *----------\n", dd)[0], "\n", dd
         )
