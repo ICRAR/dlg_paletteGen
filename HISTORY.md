@@ -4,6 +4,12 @@ Changelog
 
 (unreleased)
 ------------
+- Fixed type assignments in rascil. [Andreas Wicenec]
+
+
+0.2.9 (2023-09-14)
+------------------
+- Release: version 0.2.9 🚀 [Andreas Wicenec]
 - Release: version 0.2.8 🚀 [Andreas Wicenec]
 - Fixed issues with rascil. [Andreas Wicenec]
 
