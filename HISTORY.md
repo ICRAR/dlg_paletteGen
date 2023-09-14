@@ -4,6 +4,7 @@ Changelog
 
 (unreleased)
 ------------
+- Release: version 0.2.8 🚀 [Andreas Wicenec]
 - Fixed issues with rascil. [Andreas Wicenec]
 
 
