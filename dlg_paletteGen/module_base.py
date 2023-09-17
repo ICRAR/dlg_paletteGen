@@ -243,7 +243,7 @@ def module_hook(
     mod_name: str, modules: dict = {}, recursive: bool = True
 ) -> tuple:
     """
-    Function dissecting the an imported module.
+    Function dissecting an imported module.
 
     :param mod_name: str, the name of the module to be treated
     :param modules: dictionary of modules

@@ -37,7 +37,7 @@ def get_args(args=None):
     """
     Deal with the command line arguments
 
-    :returns (
+    :returns: (
                 args.idir:str,
                 args.tag:str,
                 args.ofile:str,
@@ -138,7 +138,7 @@ def check_environment_variables() -> bool:
     """
     Check environment variables and set them if not defined.
 
-    :returns True
+    :returns: True
     """
     required_environment_variables = [
         "PROJECT_NAME",
@@ -169,7 +169,7 @@ def nodes_from_module(module_path: str, recursive: bool = True) -> tuple:
     :param module_path: dot delimited module path
     :param recursive: flag indicating wether to recurse down the hierarchy
 
-    :returns list of nodes (for now)
+    :returns: list of nodes (for now)
     """
     modules, module_doc = module_hook(module_path, recursive=recursive)
     # member_count = sum([len(m) for m in modules])
@@ -206,6 +206,8 @@ def palettes_from_module(
     :param split: If True (default False), the module will be split into
                   palettes one for each sub-module.
     :param recursive: flag indicating wether to recurse down the hierarchy
+
+    returns: None
     """
     if split:
         mod = import_using_name(module_path, traverse=True)

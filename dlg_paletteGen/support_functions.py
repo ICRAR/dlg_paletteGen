@@ -8,7 +8,7 @@ import sys
 import tempfile
 import xml.etree.ElementTree as ET
 from pkgutil import iter_modules
-from typing import Union
+from typing import Union, Any
 
 import benedict
 from blockdag import build_block_dag
@@ -18,8 +18,10 @@ from .classes import (
     DOXYGEN_SETTINGS,
     DOXYGEN_SETTINGS_C,
     DOXYGEN_SETTINGS_PYTHON,
+    VALUE_TYPES,
     Language,
     logger,
+    typeFix,
 )
 
 
@@ -124,7 +126,7 @@ def process_xml() -> str:
     """
     Run xsltproc on the output produced by doxygen.
 
-    :returns output_xml_filename: str
+    :returns: str, output_xml_filename
     """
     # run xsltproc
     outdir = DOXYGEN_SETTINGS["OUTPUT_DIRECTORY"]
@@ -224,9 +226,9 @@ def get_submodules(module):
     This will also return sub-packages. Third tuple
     item is a flag ispkg indicating that.
 
-    :module module: module object to be searched
+    :param: module, module object to be searched
 
-    :returns iterator[tuple]
+    :returns: iterator[tuple]
     """
     if not inspect.ismodule(module):
         logger.warning(
@@ -356,17 +358,17 @@ def import_using_name(mod_name: str, traverse: bool = False):
 
 
 def initializeField(
-    name="dummy",
-    value="dummy",
-    defaultValue="dummy",
-    description="dummy",
-    vtype="String",
-    parameterType="ComponentParameter",
-    usage="NoPort",
-    options=None,
-    readonly=False,
-    precious=False,
-    positional=False,
+    name: str = "dummy",
+    value: Any = "dummy",
+    defaultValue: Any = "dummy",
+    description: str = "no description found",
+    vtype: Union[str, None] = None,
+    parameterType: str = "ComponentParameter",
+    usage: str = "NoPort",
+    options: list = [],
+    readonly: bool = False,
+    precious: bool = False,
+    positional: bool = False,
 ):
     """
     Construct a dummy field
@@ -396,59 +398,82 @@ def populateFields(parameters: dict, dd) -> dict:
     value = None
 
     for p, v in parameters.items():
-        field = initializeField(p)
-        try:
-            if isinstance(v.default, (list, tuple)):
-                value = v.default  # type: ignore
-            elif hasattr(v.default, "type") and v.default != inspect._empty:
-                if isinstance(v.default, str):  # type: ignore
-                    value = v.default  # type: ignore
-            elif isinstance(
-                v.default,
-                (
-                    int,
-                    float,
-                    bool,
-                    complex,
-                    str,
-                    dict,
-                ),
-            ):
-                if isinstance(v.default, float) and abs(v.default) == float(
-                    "inf"
-                ):
-                    value = v.default.__repr__()  # type: ignore
-                else:
-                    value = v.default  # type: ignore
-                field[p].type = type(v.default).__name__
-            elif hasattr(v.default, "dtype"):
-                value = v.default.__repr__()
-                field[p].type = type(v.default).__name__
-        except (ValueError, AttributeError):
-            value = (
-                f"{type(v.default).__module__}"  # type: ignore
-                + f".{type(v.default).__name__}"  # type: ignore
-            )
-
-        field[p].value = field[p].defaultValue = value
-        field[p].description = (
-            dd.params[p]["desc"] if dd and p in dd.params else ""
+        value = (
+            v.default if not isinstance(v.default, inspect._empty) else "None"
         )
-        if not field[p]["type"]:
+        field = initializeField(p)
+        # if there is a type hint use that
+        if v.annotation != inspect._empty:
             if isinstance(v.annotation, str):
                 field[p].type = v.annotation
             elif (
                 hasattr(v.annotation, "__name__")
                 and v.annotation != inspect._empty
             ):
-                field[p].type = v.annotation.__name__
+                field[p].type = (
+                    v.annotation.__name__
+                    if not v.annotation.__name__ == "Optional"
+                    else "None"
+                )
             else:
                 field[p].type = "Object"
+        else:  # no type hint
+            try:
+                if isinstance(v.default, (list, tuple)):
+                    value = v.default  # type: ignore
+                    field[p].type = VALUE_TYPES[type(v.default)]
+                elif (
+                    hasattr(v.default, "type") and v.default != inspect._empty
+                ):
+                    if isinstance(v.default, str):  # type: ignore
+                        value = v.default  # type: ignore
+                elif isinstance(
+                    v.default,
+                    (
+                        int,
+                        float,
+                        bool,
+                        complex,
+                        str,
+                        dict,
+                    ),
+                ):
+                    if isinstance(v.default, float) and abs(
+                        v.default
+                    ) == float("inf"):
+                        value = v.default.__repr__()  # type: ignore
+                    else:
+                        value = v.default  # type: ignore
+                    field[p].type = type(v.default).__name__
+                elif hasattr(v.default, "dtype"):
+                    value = v.default.__repr__()
+                    field[p].type = type(v.default).__name__
+            except (ValueError, AttributeError):
+                value = (
+                    f"{type(v.default).__module__}"  # type: ignore
+                    + f".{type(v.default).__name__}"  # type: ignore
+                )
+
+        if isinstance(value, type):
+            value = None
+        field[p].value = field[p].defaultValue = value
+        param_desc = dd.params[p] if dd and p in dd.params else None
+        field[p].description = dd.params[p]["desc"] if param_desc else ""
         field[p].parameterType = "ApplicationArgument"
         field[p].options = None
         field[p].positional = (
             True if v.kind == inspect.Parameter.POSITIONAL_ONLY else False
         )
+        if not field[p].type:
+            if param_desc and param_desc["type"]:
+                field[p].type = dd.params[p]["type"]
+            else:
+                field[p].type = "Object"  # if we don't know what it is
+        field[p].type = typeFix(field[p].type)
+        if field[p].type == "Json" or field[p].type.startswith(
+            "Object"
+        ):  # we want to carry these as strings
+            field[p].value = field[p].defaultValue = field[p].value.__repr__()
         fields.update(field)
 
     logger.debug("Parameters %s", fields)

@@ -2,6 +2,7 @@ import json
 import logging
 import os
 import subprocess
+import sys
 
 from dlg_paletteGen.classes import DOXYGEN_SETTINGS
 from dlg_paletteGen.cli import NAME, check_environment_variables, get_args
@@ -533,7 +534,7 @@ def test_direct_module(tmpdir: str, shared_datadir: str):
     :param shared_datadir: the path the the local directory
     """
     modules, module_doc = module_hook(
-        "rascil.processing_components.filter_skycomponents_by_flux",
+        "dlg_paletteGen.source_base.create_field",
         recursive=True,
     )
     # modules, module_doc = module_hook(
@@ -560,3 +561,25 @@ def test_import_using_name(tmpdir: str, shared_datadir: str):
     # by test framework already.
     mod = import_using_name(module_name, traverse=True)
     assert mod.__name__ == "urllib.request"
+
+
+def test_typeFix(tmpdir: str, shared_datadir: str):
+    """
+    Test the type guessing functions
+    """
+    sys.path.append(str(shared_datadir.absolute()))
+    logging.info("path: %s", input)
+    output_directory = str(tmpdir)
+    output_file = f"{output_directory}/t.palette"
+
+    module_name = "example_options.testField"
+    modules, module_doc = module_hook(
+        module_name,
+        recursive=True,
+    )
+    assert list(modules.keys())[-1] == "example_options"
+    nodes = []
+    for members in modules.values():
+        for node in members.values():
+            nodes.append(node)
+    prepare_and_write_palette(nodes, output_file, module_doc=module_doc)

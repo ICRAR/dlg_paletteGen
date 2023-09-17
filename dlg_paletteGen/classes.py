@@ -6,7 +6,7 @@ import sys
 import types
 import xml.etree.ElementTree as ET
 from enum import Enum
-from typing import Union
+from typing import Union, Any
 
 
 class CustomFormatter(logging.Formatter):
@@ -58,96 +58,132 @@ def cleanString(input_text: str) -> str:
     return ansi_escape.sub("", input_text)
 
 
-def typeFix(value_type: str, default_value: str = "") -> str:
+def convert_type_str(input_type: str = "") -> str:
     """
-    Trying to fix or guess the type of a parameter
+    Convert the string provided into a supported type string
 
-    :param value_type: str, convert type string to something known
+    :param value_type: str, type string to be converted
 
-    :returns output_type: str, the converted type
+    :returns: str, supported type string
     """
-    typerex = r"[\(\[](bool|boolean|int|float|string|str)[\]\)]"
-    re_type = re.findall(typerex, value_type)
-    # fix some types
-    if re_type:
-        re_type = re_type[0]
-        if re_type in ["bool", "boolean"]:
-            value_type = "Boolean"
-            if default_value == "":
-                default_value = "False"
-        if re_type == "int":
-            value_type = "Integer"
-            if default_value == "":
-                default_value = "0"
-        if re_type == "float":
-            value_type = "Float"
-            if default_value == "":
-                default_value = "0"
-        if re_type in ["string", "str", "*", "**"]:
-            value_type = "String"
-    elif default_value != "":
-        value_type = default_value
+    if input_type in SVALUE_TYPES.values():
+        return input_type
+    try:
+        value_type = (
+            SVALUE_TYPES[input_type]
+            if input_type in SVALUE_TYPES
+            else f"Object.{input_type}"
+        )
+        val = None
+        if value_type == "String":
+            # if it is String we still want to guess better
+            try:
+                val = int(input_type)  # type: ignore
+                value_type = "Integer"
+                # print("Use Integer")
+            except TypeError:
+                if isinstance(input_type, types.BuiltinFunctionType):
+                    value_type = "String"
+            except ValueError:
+                try:
+                    val = float(  # noqa: F841
+                        input_type  # type: ignore
+                    )
+                    value_type = "Float"
+                except ValueError:
+                    if input_type and (
+                        input_type.lower() == "true"
+                        or input_type.lower() == "false"
+                    ):
+                        value_type = "Boolean"
+                        input_type = input_type.lower()
+                    else:
+                        value_type = "String"
+    except NameError or TypeError:  # type: ignore
+        raise
+    return value_type
+
+
+def guess_type_from_default(default_value: Any = "") -> str:
+    """
+    Try to guess the parameter type from a default_value provided.
+    The value can be of any type by itself, including a JSON string
+    containing a complex data structure.
+
+    :param default_value: any, the default_value
+
+    :returns: str, the type of the value as a supported string
+    """
+    try:
+        # we'll try to interpret what the type of the default_value is
+        # using ast
+        l: dict = {}
+        try:
+            eval(
+                compile(
+                    ast.parse(f"t = {default_value}"),
+                    filename="",
+                    mode="exec",
+                ),
+                l,
+            )
+            vt = type(l["t"])
+            if not isinstance(l["t"], type):
+                vt = l["t"]
+            else:
+                vt = str
+        except (NameError, SyntaxError):
+            vt = str
+    except:  # noqa: E722
+        return "Object"
+    return VALUE_TYPES[vt]
+
+
+def typeFix(value_type: str = "", default_value: Any = None) -> str:
+    """
+    Trying to fix or guess the type of a parameter. If a value_type is
+    provided, this will be used to determine the type.
+
+    :param value_type: str, convert type string to one of our strings
+    :param default_value: any, this will be used to determine the
+                          type if value_type is not specified.
+
+    :returns: str, the converted type as a supported string
+    """
+    if value_type in SVALUE_TYPES.values():
+        return value_type
+    if not value_type and default_value:
+        try:  # first check for standard types
+            value_type = type(default_value).__name__
+        except TypeError:
+            value_type = guess_type_from_default(default_value)
+    else:  # check the provided value_type string
+        typerex = r"[\(\[]{0,1}(bool|boolean|int|float|string|str)[\]\)]{0,1}"
+        re_type = re.findall(typerex, value_type)
+        #            fix some types
+        if re_type:
+            re_type = re_type[0]
+            if re_type in ["bool", "boolean"]:
+                value_type = "Boolean"
+                if default_value == "":
+                    default_value = "False"
+            if re_type == "int":
+                value_type = "Integer"
+                if default_value == "":
+                    default_value = "0"
+            if re_type == "float":
+                value_type = "Float"
+                if default_value == "":
+                    default_value = "0"
+            if re_type in ["string", "str", "*", "**"]:
+                value_type = "String"
+        elif default_value not in ["", None]:
+            value_type = default_value
 
     # try to guess the type based on the default value
     # TODO: try to parse default_value as JSON to detect JSON types
 
-    if (
-        not re_type
-        and default_value != ""
-        and default_value is not None
-        and default_value != "None"
-    ):
-        try:
-            # we'll try to interpret what the type of the default_value is
-            # using ast
-            l: dict = {}
-            try:
-                eval(
-                    compile(
-                        ast.parse(f"t = {default_value}"),
-                        filename="",
-                        mode="exec",
-                    ),
-                    l,
-                )
-                vt = type(l["t"])
-                if not isinstance(l["t"], type):
-                    default_value = l["t"]
-                else:
-                    vt = str
-            except NameError:
-                vt = str
-            except SyntaxError:
-                vt = str
-
-            value_type = VALUE_TYPES[vt] if vt in VALUE_TYPES else "String"
-            val = None
-            if value_type == "String":
-                # if it is String we need to do a few more tests
-                try:
-                    val = int(default_value)  # type: ignore
-                    value_type = "Integer"
-                    # print("Use Integer")
-                except TypeError:
-                    if isinstance(default_value, types.BuiltinFunctionType):
-                        value_type = "String"
-                except ValueError:
-                    try:
-                        val = float(  # noqa: F841
-                            default_value  # type: ignore
-                        )
-                        value_type = "Float"
-                    except ValueError:
-                        if default_value and (
-                            default_value.lower() == "true"
-                            or default_value.lower() == "false"
-                        ):
-                            value_type = "Boolean"
-                            default_value = default_value.lower()
-                        else:
-                            value_type = "String"
-        except NameError or TypeError:  # type: ignore
-            raise
+    value_type = convert_type_str(value_type)
     # we only want stuff in parentheses
     v_type = re.split(r"[\[\]\(\)]", value_type)
     value_type = v_type[1] if len(v_type) > 1 else v_type[0]
@@ -155,14 +191,22 @@ def typeFix(value_type: str, default_value: str = "") -> str:
 
 
 VALUE_TYPES = {
+    Any: "Any",
     str: "String",
     int: "Integer",
     float: "Float",
     bool: "Boolean",
     list: "Json",
-    dict: "Json",
+    dict: "dict",
     tuple: "Json",
 }
+
+SVALUE_TYPES = {
+    k.__name__: v for k, v in VALUE_TYPES.items() if hasattr(k, "__name__")
+}
+SVALUE_TYPES.update(
+    {"NoneType": "None", "Object.Object": "Object", "Any": "Any"}
+)
 
 BLOCKDAG_DATA_FIELDS = [
     "inputPorts",
