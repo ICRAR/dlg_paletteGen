@@ -4,6 +4,8 @@ Changelog
 
 (unreleased)
 ------------
+- Fixed type guessing, added test. [Andreas Wicenec]
+- Release: version 0.2.9 🚀 [Andreas Wicenec]
 - Fixed type assignments in rascil. [Andreas Wicenec]
 
 
