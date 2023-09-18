@@ -455,7 +455,7 @@ class DetailedDescription:
         has_params = description != rest
         # extract parameter documentation (up to Returns line)
         pds = re.split(r"\nReturns\n-------\n|\nRaises\n------\n", rest)
-        spds = re.split(r"([\w_]+) : ", pds[0])[1:]  # split param lines
+        spds = re.split(r"([\w_]+) *: ", pds[0])[1:]  # split param lines
         if has_params and len(spds) == 0:
             spds = re.split(r"([\w_]+)\n    ", pds[0])[1:]  # split param lines
         pdict = dict(zip(spds[::2], spds[1::2]))  # create initial param dict

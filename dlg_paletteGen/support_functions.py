@@ -402,6 +402,10 @@ def populateFields(parameters: dict, dd) -> dict:
         value = (
             v.default if not isinstance(v.default, inspect._empty) else "None"
         )
+        try:
+            json.dumps(value)
+        except TypeError:
+            value = None
         field = initializeField(p)
         # if there is a type hint use that
         if v.annotation != inspect._empty:
