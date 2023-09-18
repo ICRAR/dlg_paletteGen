@@ -4,6 +4,12 @@ Changelog
 
 (unreleased)
 ------------
+- More compliance with OSKAR. [Andreas Wicenec]
+
+
+0.3.0 (2023-09-17)
+------------------
+- Release: version 0.3.0 🚀 [Andreas Wicenec]
 - Fixed type guessing, added test. [Andreas Wicenec]
 - Release: version 0.2.9 🚀 [Andreas Wicenec]
 - Fixed type assignments in rascil. [Andreas Wicenec]
