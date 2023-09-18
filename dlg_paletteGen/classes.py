@@ -3,7 +3,6 @@ import inspect
 import logging
 import re
 import sys
-import types
 import xml.etree.ElementTree as ET
 from enum import Enum
 from typing import Any, Union
@@ -68,39 +67,11 @@ def convert_type_str(input_type: str = "") -> str:
     """
     if input_type in SVALUE_TYPES.values():
         return input_type
-    try:
-        value_type = (
-            SVALUE_TYPES[input_type]
-            if input_type in SVALUE_TYPES
-            else f"Object.{input_type}"
-        )
-        val = None
-        if value_type == "String":
-            # if it is String we still want to guess better
-            try:
-                val = int(input_type)  # type: ignore
-                value_type = "Integer"
-                # print("Use Integer")
-            except TypeError:
-                if isinstance(input_type, types.BuiltinFunctionType):
-                    value_type = "String"
-            except ValueError:
-                try:
-                    val = float(  # noqa: F841
-                        input_type  # type: ignore
-                    )
-                    value_type = "Float"
-                except ValueError:
-                    if input_type and (
-                        input_type.lower() == "true"
-                        or input_type.lower() == "false"
-                    ):
-                        value_type = "Boolean"
-                        input_type = input_type.lower()
-                    else:
-                        value_type = "String"
-    except NameError or TypeError:  # type: ignore
-        raise
+    value_type = (
+        SVALUE_TYPES[input_type]
+        if input_type in SVALUE_TYPES
+        else f"Object.{input_type}"
+    )
     return value_type
 
 
@@ -128,15 +99,13 @@ def guess_type_from_default(default_value: Any = "") -> str:
                 l,
             )
             vt = type(l["t"])
-            if not isinstance(l["t"], type):
+            if not isinstance(vt, type):
                 vt = l["t"]
-            else:
-                vt = str
         except (NameError, SyntaxError):
             vt = str
     except:  # noqa: E722
         return "Object"
-    return VALUE_TYPES[vt]
+    return VALUE_TYPES[vt] if vt in VALUE_TYPES else "Object"
 
 
 def typeFix(value_type: str = "", default_value: Any = None) -> str:
@@ -306,7 +275,7 @@ class DetailedDescription:
     KNOWN_FORMATS = {
         "rEST": r"\n(:param|:returns|Returns:) .*",
         "Google": r"\nArgs:",
-        "Numpy": r"\nParameters\n----------",
+        "Numpy": r"\n *Parameters:*\n *----------",
         "casa": r"\n-{2,20}? parameter",
     }
 
@@ -443,10 +412,12 @@ class DetailedDescription:
             return ("", {})
         ds = dd.strip("\n")
         ds = re.sub(
-            re.findall(r"(\n *)Parameters\n *----------\n", dd)[0], "\n", dd
+            re.findall(r"(\n *)Parameters:*\n *----------*\n", dd)[0],
+            "\n",
+            dd,
         )
         ds = ds.lstrip()
-        dss = ds.split("\nParameters\n----------\n")
+        dss = re.split(r"\nParameters:*\n----------*\n", ds)
         if len(dss) == 2:
             (description, rest) = dss
         else:

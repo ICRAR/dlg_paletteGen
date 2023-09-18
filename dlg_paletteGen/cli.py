@@ -95,7 +95,13 @@ def get_args(args=None):
     parser.add_argument(
         "-v",
         "--verbose",
-        help="increase output verbosity",
+        help="DEBUG level logging",
+        action="store_true",
+    )
+    parser.add_argument(
+        "-q",
+        "--quiet",
+        help="Only critical logging",
         action="store_true",
     )
     if not args:
@@ -108,9 +114,13 @@ def get_args(args=None):
             sys.exit(1)
         args = parser.parse_args()
     logger.setLevel(logging.INFO)
-    if args.verbose:
+    if args.quiet:
+        logger.setLevel(logging.CRITICAL)
+    elif args.verbose:
         logger.setLevel(logging.DEBUG)
     logger.debug("DEBUG logging switched on")
+    if args.module and not args.split and args.ofile == ".":
+        args.ofile = f"{args.module.replace('.','_')}.palette"
     if args.recursive:
         DOXYGEN_SETTINGS.update({"RECURSIVE": "YES"})
         logger.info("Recursive flag ON")

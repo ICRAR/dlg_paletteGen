@@ -391,21 +391,19 @@ def initializeField(
     return field
 
 
-def populateFields(parameters: dict, dd) -> dict:
+def populateFields(parameters: dict, dd, member=None) -> dict:
     """
-    Populate a field from signature parameters.
+    Populate a field from signature parameters and mixin
+    documentation if available.
     """
     fields = {}
     value = None
+    descr_miss = []
 
     for p, v in parameters.items():
         value = (
             v.default if not isinstance(v.default, inspect._empty) else "None"
         )
-        try:
-            json.dumps(value)
-        except TypeError:
-            value = None
         field = initializeField(p)
         # if there is a type hint use that
         if v.annotation != inspect._empty:
@@ -451,7 +449,11 @@ def populateFields(parameters: dict, dd) -> dict:
                         value = v.default  # type: ignore
                     field[p].type = type(v.default).__name__
                 elif hasattr(v.default, "dtype"):
-                    value = v.default.__repr__()
+                    try:
+                        value = v.default.__repr__()
+                    except TypeError as e:
+                        if e.__repr__().find("numpy.bool_") > -1:
+                            value = "bool"
                     field[p].type = type(v.default).__name__
             except (ValueError, AttributeError):
                 value = (
@@ -461,9 +463,24 @@ def populateFields(parameters: dict, dd) -> dict:
 
         if isinstance(value, type):
             value = None
+        try:
+            json.dumps(value)
+        except TypeError:
+            logger.debug("Object not serializable: %s", value)
+            value = type(value).__name__
         field[p].value = field[p].defaultValue = value
-        param_desc = dd.params[p] if dd and p in dd.params else None
-        field[p].description = dd.params[p]["desc"] if param_desc else ""
+        param_desc = {"desc": "", "type": "Object"}
+        if dd and p in dd.params:
+            param_desc = dd.params[p]
+        elif p != "self":
+            descr_miss.append(p)
+        elif p == "self":
+            param_desc["desc"] = "Reference to object"
+        if dd and p in dd.params and param_desc != "self":
+            field[p].description = dd.params[p]["desc"]
+        else:
+            field[p].description = param_desc["desc"]
+            field[p].type = param_desc["type"]
         field[p].parameterType = "ApplicationArgument"
         field[p].options = None
         field[p].positional = (
@@ -482,6 +499,13 @@ def populateFields(parameters: dict, dd) -> dict:
         fields.update(field)
 
     logger.debug("Parameters %s", fields)
+    if descr_miss:
+        logger.warning(
+            "%s: Parameters %s missing matching description!",
+            member,
+            descr_miss,
+        )
+
     return fields
 
 

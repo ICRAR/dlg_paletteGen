@@ -121,7 +121,9 @@ def inspect_member(member, module=None, parent=None):
         "pybind11_type",
         "builtin_function_or_method",
     ]:
-        logger.debug("!!! PyBind11 or builtin: Creating dummy signature !!!")
+        logger.debug(
+            "!!! %s PyBind11 or builtin: Creating dummy signature !!!", member
+        )
         try:
             # this will fail for e.g. pybind11 modules
             sig = inspect.signature(member)  # type: ignore
@@ -131,10 +133,14 @@ def inspect_member(member, module=None, parent=None):
             node.description = sig.docstring
     else:
         try:
-            # this will fail for e.g. pybind11 modules
+            # this will fail for some weird modules
             sig = inspect.signature(member)  # type: ignore
         except ValueError:
-            logger.warning("Unable to get signature of %s: ", name)
+            logger.warning(
+                "Unable to get signature of %s: %s",
+                name,
+                type(member).__name__,
+            )
             sig = DummySig(member)
             if sig.docstring:
                 node.description = sig.docstring
@@ -142,7 +148,7 @@ def inspect_member(member, module=None, parent=None):
                 for p, v in dd.params.items():
                     sig.parameters[p] = DummyParam()
     # fill custom ApplicationArguments first
-    fields = populateFields(sig.parameters, dd)
+    fields = populateFields(sig.parameters, dd, member=member.__name__)
     ind = -1
     for k, field in fields.items():
         ind += 1

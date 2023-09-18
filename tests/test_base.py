@@ -3,8 +3,9 @@ import logging
 import os
 import subprocess
 import sys
+import pytest
 
-from dlg_paletteGen.classes import DOXYGEN_SETTINGS
+from dlg_paletteGen.classes import DOXYGEN_SETTINGS, guess_type_from_default
 from dlg_paletteGen.cli import NAME, check_environment_variables, get_args
 from dlg_paletteGen.module_base import module_hook
 from dlg_paletteGen.source_base import Language, process_compounddefs
@@ -293,6 +294,7 @@ def test_direct_cli():
         verbose = False
         split = False
         c = False
+        quiet = False
 
         def __len__(self):
             return 8
@@ -533,17 +535,45 @@ def test_direct_module(tmpdir: str, shared_datadir: str):
     :param tmpdir: the path to the temp directory to use
     :param shared_datadir: the path the the local directory
     """
-    # modules, module_doc = module_hook(
-    #     "dlg_paletteGen.source_base.create_field",
-    #     recursive=True,
-    # )
-    modules, module_doc = module_hook("dlg_paletteGen.classes", recursive=True)
+    module_name = "dlg_paletteGen.classes"
+    modules, module_doc = module_hook(module_name, recursive=True)
     nodes = []
     for members in modules.values():
         for node in members.values():
             nodes.append(node)
     assert len(modules) == 1
     prepare_and_write_palette(nodes, "test.palette", module_doc=module_doc)
+
+
+def test_direct_tabascal(tmpdir: str, shared_datadir: str):
+    """
+    Test the module processing format by calling the methods directly.
+
+    :param tmpdir: the path to the temp directory to use
+    :param shared_datadir: the path the the local directory
+    """
+    sys.path.append(str(shared_datadir.absolute()))
+    logging.info("path: %s", input)
+    output_directory = str(tmpdir)
+    output_file = f"{output_directory}/t.palette"
+
+    module_name = "example_tabascal.generate_random_sky"
+    modules, module_doc = module_hook(
+        module_name,
+        recursive=True,
+    )
+    assert (
+        modules["example_tabascal"]["generate_random_sky"]["fields"]["fov"][
+            "value"
+        ]
+        == 1.0
+    )
+
+    nodes = []
+    for members in modules.values():
+        for node in members.values():
+            nodes.append(node)
+    prepare_and_write_palette(nodes, output_file, module_doc=module_doc)
 
 
 def test_import_using_name(tmpdir: str, shared_datadir: str):
@@ -553,12 +583,18 @@ def test_import_using_name(tmpdir: str, shared_datadir: str):
     :param tmpdir: the path to the temp directory to use
     :param shared_datadir: the path the the local directory
     """
+    # module_name = "urllib.request.URLopener.retrieve"
+    module_name = "numpy.array"
+    mod = import_using_name(module_name, traverse=True)
+    assert mod.__name__ == "numpy"
+
     module_name = "urllib.request.URLopener.retrieve"
-    # module_name = "cpl.core.Bivector"
-    # traverse is important, because urllib had been imported
-    # by test framework already.
     mod = import_using_name(module_name, traverse=True)
     assert mod.__name__ == "urllib.request"
+
+    module_name = "print"
+    with pytest.raises(ImportError):
+        mod = import_using_name(module_name, traverse=True)
 
 
 def test_typeFix(tmpdir: str, shared_datadir: str):
@@ -581,3 +617,29 @@ def test_typeFix(tmpdir: str, shared_datadir: str):
         for node in members.values():
             nodes.append(node)
     prepare_and_write_palette(nodes, output_file, module_doc=module_doc)
+
+
+def test_guess_type_from_default():
+    """
+    Test the function
+    """
+    assert guess_type_from_default(234) == "Integer"
+    assert guess_type_from_default(234.0) == "Float"
+    assert guess_type_from_default("[2,3,4]") == "Json"
+    assert guess_type_from_default({234}) == "Object"
+
+
+def test_full_numpy(tmpdir: str, shared_datadir: str):
+    """
+    Test loading all of numpy. This takes a bit of time.
+
+    :param tmpdir: the path to the temp directory to use
+    :param shared_datadir: the path the the local directory
+    """
+    module_name = "numpy"
+    modules, module_doc = module_hook(module_name, recursive=True)
+    nodes = []
+    for members in modules.values():
+        for node in members.values():
+            nodes.append(node)
+    assert len(modules) in [1109, 1112]
