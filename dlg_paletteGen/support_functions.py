@@ -8,7 +8,7 @@ import sys
 import tempfile
 import xml.etree.ElementTree as ET
 from pkgutil import iter_modules
-from typing import Union, Any
+from typing import Any, Union
 
 import benedict
 from blockdag import build_block_dag

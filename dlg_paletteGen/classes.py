@@ -6,7 +6,7 @@ import sys
 import types
 import xml.etree.ElementTree as ET
 from enum import Enum
-from typing import Union, Any
+from typing import Any, Union
 
 
 class CustomFormatter(logging.Formatter):
@@ -475,7 +475,8 @@ class DetailedDescription:
     def _process_Google(self, dd: str):
         """
         Process the Google-style docstring
-        TODO: not yet implemented
+        TODO: still some corner cases of OSKAR to be fixed:
+        oskar.Telescope.set_noise_freq
 
         :param dd: str, the content of the detailed description tag
 
@@ -491,23 +492,46 @@ class DetailedDescription:
         # extract parameter documentation (up to Returns line)
         pds = rest.split("\nReturns:\n")[0]
         indent = len(re.findall(r"^ *", pds)[0])
-        pds = re.sub(r"\n" + r" " * indent, "\n", pds)  # remove indentation
-
+        pds = re.sub(
+            r"\n" + r" " * indent, "\n", "\n" + pds
+        )  # remove indentation
         # split param lines
-        spds = re.split(r"[\n ]+([\w_]+)\s?\(([`\:\w+\.\[\]\, ]+)\)\s?:", pds)[
-            1:
-        ]
-        pdict = dict(
-            zip(spds[::3], zip(spds[1::3], spds[2::3]))
-        )  # create initial param dict
-        pdict = {
-            k: {
-                "desc": v[1].replace("\n", " ").strip(),  # type: ignore
-                "type": typeFix(v[0]),  # type: ignore
-            }
-            for k, v in pdict.items()
-        }
-        # extract return documentation
+        spds = re.findall(r"\n([\w_.]+)\s*:[\n ]*([\w \-_\,\.']+)", pds)
+        if not spds:
+            logger.debug(">>> pds matching: spds no match 1")
+            spds = re.findall(
+                r"\n([\w_.]+)\s*\(([\w\-_ .\,]+)\]*\):[\n ]*([\w \-_\,\'.]+)",
+                pds,
+            )
+        if not spds:
+            logger.debug(">>> pds matching: spds no match 2")
+            spds = re.findall(
+                r"\n([\w_]+)\s\((?:Optional\[)*([\w_\.\-]*)[\, ]"
+                + r"*([\w\-_ ]+)\]*\):[\n ]*([\w \-_\,\.\/\^']+)",
+                pds,
+            )
+        try:
+            pdict = {}
+            for item in spds:
+                if len(item) == 4:
+                    pdict[item[0]] = {
+                        "type": f"{item[1]},{item[2]}",
+                        "desc": item[3],
+                    }
+                elif len(item) == 3:
+                    pdict[item[0]] = {"type": item[1], "desc": item[2]}
+                elif (
+                    len(item) == 2 and len(pds.split("\n")[0].split(":")) == 2
+                ):
+                    pdict[item[0]] = {"desc": item[1], "type": "Object"}
+                elif (
+                    len(item) == 2 and len(pds.split("\n")[0].split(":")) == 1
+                ):
+                    pdict[item[0]] = {"type": item[1], "desc": ""}
+
+        except IndexError:
+            logger.debug(">>> spds matching failed %s %s:", pds, spds)
+            raise
         rest = pds[1] if len(pds) > 1 else ""
         return description, pdict
 

@@ -533,13 +533,11 @@ def test_direct_module(tmpdir: str, shared_datadir: str):
     :param tmpdir: the path to the temp directory to use
     :param shared_datadir: the path the the local directory
     """
-    modules, module_doc = module_hook(
-        "dlg_paletteGen.source_base.create_field",
-        recursive=True,
-    )
     # modules, module_doc = module_hook(
-    #     "numpy.exceptions.AxisError", recursive=True
+    #     "dlg_paletteGen.source_base.create_field",
+    #     recursive=True,
     # )
+    modules, module_doc = module_hook("dlg_paletteGen.classes", recursive=True)
     nodes = []
     for members in modules.values():
         for node in members.values():

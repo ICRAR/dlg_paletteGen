@@ -143,9 +143,16 @@ def inspect_member(member, module=None, parent=None):
                     sig.parameters[p] = DummyParam()
     # fill custom ApplicationArguments first
     fields = populateFields(sig.parameters, dd)
+    ind = -1
     for k, field in fields.items():
-        if k == "self" and member.__name__ in ["__init__", "__cls__"]:
-            continue
+        ind += 1
+        if k == "self" and ind == 0:
+            if member.__name__ in ["__init__", "__cls__"]:
+                fields["self"].usage = "OutputPort"
+            else:
+                fields["self"].usage = "InputPort"
+            fields["self"].type = f"Object.{node.name.split('.')[0]}"
+
         node.fields.update({k: field})
 
         # now populate with default fields.
