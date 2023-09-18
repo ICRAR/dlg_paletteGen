@@ -181,6 +181,7 @@ def write_palette_json(
     palette.modelData.lastModifiedDatetime = (
         datetime.datetime.now().timestamp()
     )
+    palette.modelData.numLGNodes = len(nodes)
 
     palette.nodeDataArray = nodes
 
@@ -619,6 +620,7 @@ def constructPalette():
                 "lastModifiedName": "wici",
                 "lastModifiedEmail": "",
                 "lastModifiedDatetime": datetime.datetime.now().timestamp(),
+                "numLGNodes": 0,
             },
             "nodeDataArray": [],
             "linkDataArray": [],
