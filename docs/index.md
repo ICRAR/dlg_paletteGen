@@ -2,8 +2,8 @@
 
 This is the palette generator of the [DALiuGE](https://daliuge.readthedocs.io) system.
 
-It processes a file or a directory of source files and
-produces a DALiuGE compatible palette file containing the
+It parses the content of an installed module or processes a file or a directory of source files and
+produces DALiuGE compatible palette files containing the
 information required to use the identified functions and classes and methods to construct computational workflows in [EAGLE](https://eagle-dlg.readthedocs.io).
 For more detailed information please refer to the [usage documentation](
 https://ICRAR.github.io/dlg_paletteGen/Usage) and the [detailed documentation](

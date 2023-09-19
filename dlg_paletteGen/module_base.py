@@ -157,7 +157,6 @@ def inspect_member(member, module=None, parent=None):
                 fields["self"].usage = "OutputPort"
             else:
                 fields["self"].usage = "InputPort"
-            fields["self"].type = f"Object.{node.name.split('.')[0]}"
 
         node.fields.update({k: field})
 
@@ -172,6 +171,8 @@ def inspect_member(member, module=None, parent=None):
         load_name = f"{parent}.{load_name}"
     if load_name.find("PyCapsule"):
         load_name = load_name.replace("PyCapsule", module.__name__)
+    if "self" in node.fields:
+        node.fields["self"]["type"] = load_name.rsplit(".", 1)[0]
     node.fields["func_name"]["value"] = load_name
     node.fields["func_name"]["defaultValue"] = load_name
     if hasattr(sig, "ret"):

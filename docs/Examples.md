@@ -4,7 +4,7 @@
 ### Extract astropy modules
 First `pip install astropy` into the virtual environment where `dlg_paletteGen` is also installed. Then execute:
 ```
-dlg-paletteGen -rsSm astropy
+dlg-paletteGen -rsSm astropy . .
 ```
 This will generate quite a bit of screen output, but finally you will see the extraction summary:
 ```
@@ -36,6 +36,8 @@ Wrote astropy_wcs.palette with 61 components
 
 ```
 All of the palettes will be generated in the current directory, but you can call the code from any directory you like.
+
+NOTE: You can also run the command above with an additional `q` flag, in which case there is no screen logging produced at all, but the palettes are still generated the same way.
 
 ## Programmatic examples
 The source code repository of this tool contains a complete set of example code using the supported docstring and type hinting. These examples are also used to test the code itself. Please see the files in the subdirectory ```tests/data```.

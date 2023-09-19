@@ -13,23 +13,16 @@ or
 ```bash
 $ dlg-paletteGen -h
 
-usage: dlg-paletteGen [-h] [-V] [-m MODULE] [-t TAG] [-c] [-r] [-S] [-s] [-v] idir ofile
-
-This is the palette generator of the DALiuGE system.
-
-It processes a file or a directory of source files and
-produces a DALiuGE compatible palette file containing the
-information required to use functions and components in graphs.
 For more information please refer to the documentation
 https://icrar.github.io/dlg_paletteGen/
 
-Version: 0.2.5
+Version: 0.3.1
 
 positional arguments:
   idir                  input directory path or file name
   ofile                 output file name
 
-options:
+optional arguments:
   -h, --help            show this help message and exit
   -V, --version         show tool version and exit
   -m MODULE, --module MODULE
@@ -39,14 +32,15 @@ options:
   -r, --recursive       Traverse sub-directories
   -S, --split           Split into sub-module palettes
   -s, --parse_all       Parse non DAliuGE compliant functions and methods
-  -v, --verbose         increase output verbosity
+  -v, --verbose         DEBUG level logging
+  -q, --quiet           Only critical logging
 
 ```
 ## Mandatory (positional) Arguments
 ### idir
 Path specification to a directory or a single file to be examined. See also `--recursive`. NOTE: If a module is specified using `--module` this is ignored, but still required for backwards compatibility reasons.
 ### ofile
-Path specification to an output file, which will be used to write the JSON version of the extracted palette to. NOTE: If a module is specified using `--module` AND also `--split` is specified this is used as a prefix to the generated palette names. A `.` will be ignored.
+Path specification to an output file, which will be used to write the JSON version of the extracted palette to. If `--module` is specified and `ofile` is a `.` the module name will be used as the palette file name. If `--split` is also specified the value of `ofile` will be used as a prefix to all palette files.
 ## Optional Arguments
 ### --help (-h)
 Show the helptext displayed in the `Usage` paragraph above.

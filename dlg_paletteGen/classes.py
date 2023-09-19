@@ -70,7 +70,7 @@ def convert_type_str(input_type: str = "") -> str:
     value_type = (
         SVALUE_TYPES[input_type]
         if input_type in SVALUE_TYPES
-        else f"Object.{input_type}"
+        else f"{input_type}"
     )
     return value_type
 
@@ -126,6 +126,8 @@ def typeFix(value_type: str = "", default_value: Any = None) -> str:
             value_type = type(default_value).__name__
         except TypeError:
             value_type = guess_type_from_default(default_value)
+    elif value_type == inspect._empty and not default_value:
+        return SVALUE_TYPES["NoneType"]
     else:  # check the provided value_type string
         typerex = r"[\(\[]{0,1}(bool|boolean|int|float|string|str)[\]\)]{0,1}"
         re_type = re.findall(typerex, value_type)
@@ -233,23 +235,29 @@ class DummySig:
         parameters = {}
         ret = None
         if self.docstring:
-            call_line = self.docstring.split("\n", 1)
-            if len(call_line) == 2:
-                call_line, rest = call_line
-            else:
-                call_line = call_line[0]
-                rest = ""
-            self.docstring = rest.replace("\n\n", "\n")
-            # self.docstring = rest.strip()
-            # params = re.findall(r"([\w_]+)\: ([\w_\:\.\[\]]+)", call_line)
-            params = re.findall(
-                r"([\w_]+)[\: \,\=\)]([\w_\:\.\[\]]*)", call_line
-            )
-            ret = re.findall(r"-> ([\w_\:\.\[\]]+)", call_line)
+            try:
+                call_line, self.docstring = re.split(
+                    r"\) *\n", self.docstring, 1
+                )
+                params = re.findall(r"\(.*\n*.*\)", call_line)[0]
+                params = re.sub(r"\n {2,}", " ", params)
+                params = re.findall(
+                    r"(?:([\w_\.]+)(?:[\: ]*([\w_\:\.\[\]]*)"
+                    + +r"(?: *= *([\w\.]*))*\,*))",
+                    params,
+                )
+                ret = re.findall(r"-> ([\w_\:\.\[\]]+)", call_line)
+            except:  # noqa: E722
+                logger.debug(
+                    ">>>> param matching failed: %s",
+                    self.docstring,
+                )
+                return {}, None
             ret = ret[0] if ret else None
-            for k, v in params:
+            for k, t, v in params:
                 parameters[k] = DummyParam()
-                parameters[k].annotation = v
+                parameters[k].annotation = t
+                parameters[k].default = v
         elif self.docstring and len(self.docstring) == 0:
             logger.warning("Module %s docstring is empty.", self.docstring)
         elif self.docstring and len(self.docstring) > 0:
@@ -730,8 +738,9 @@ class GreatGrandChild:
             for gggchild in ggchild:
                 if gggchild.tag == "type":
                     value_type = gggchild.text  # type:ignore
-                    if value_type not in VALUE_TYPES.values():
-                        value_type = f"Object.{value_type}"
+                    # Not sure whether we should do this:
+                    # if value_type not in VALUE_TYPES.values():
+                    #     value_type = f"Object.{value_type}"
                     # also look at children with ref tag
                     for ggggchild in gggchild:
                         if ggggchild.tag == "ref":

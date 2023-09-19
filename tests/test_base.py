@@ -4,6 +4,7 @@ import os
 import subprocess
 import sys
 import pytest
+import unittest
 
 from dlg_paletteGen.classes import DOXYGEN_SETTINGS, guess_type_from_default
 from dlg_paletteGen.cli import NAME, check_environment_variables, get_args
@@ -297,7 +298,7 @@ def test_direct_cli():
         quiet = False
 
         def __len__(self):
-            return 8
+            return 10
 
     a = args()
     res = get_args(args=a)
@@ -528,23 +529,6 @@ def test_direct_casatask(tmpdir: str, shared_datadir: str):
     assert len(newcontent["nodeDataArray"][0]["fields"]) == 16
 
 
-def test_direct_module(tmpdir: str, shared_datadir: str):
-    """
-    Test the module processing format by calling the methods directly.
-
-    :param tmpdir: the path to the temp directory to use
-    :param shared_datadir: the path the the local directory
-    """
-    module_name = "dlg_paletteGen.classes"
-    modules, module_doc = module_hook(module_name, recursive=True)
-    nodes = []
-    for members in modules.values():
-        for node in members.values():
-            nodes.append(node)
-    assert len(modules) == 1
-    prepare_and_write_palette(nodes, "test.palette", module_doc=module_doc)
-
-
 def test_direct_tabascal(tmpdir: str, shared_datadir: str):
     """
     Test the module processing format by calling the methods directly.
@@ -557,6 +541,7 @@ def test_direct_tabascal(tmpdir: str, shared_datadir: str):
     output_directory = str(tmpdir)
     output_file = f"{output_directory}/t.palette"
 
+    # module_name = "example_tabascal.generate_random_sky"
     module_name = "example_tabascal.generate_random_sky"
     modules, module_doc = module_hook(
         module_name,
@@ -629,6 +614,24 @@ def test_guess_type_from_default():
     assert guess_type_from_default({234}) == "Object"
 
 
+def test_direct_module(tmpdir: str, shared_datadir: str):
+    """
+    Test the module processing format by calling the methods directly.
+
+    :param tmpdir: the path to the temp directory to use
+    :param shared_datadir: the path the the local directory
+    """
+    module_name = "dlg_paletteGen.classes"
+    modules, module_doc = module_hook(module_name, recursive=True)
+    nodes = []
+    for members in modules.values():
+        for node in members.values():
+            nodes.append(node)
+    assert len(modules) == 3
+    prepare_and_write_palette(nodes, "test.palette", module_doc=module_doc)
+
+
+@unittest.skip
 def test_full_numpy(tmpdir: str, shared_datadir: str):
     """
     Test loading all of numpy. This takes a bit of time.

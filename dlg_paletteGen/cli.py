@@ -219,11 +219,12 @@ def palettes_from_module(
 
     returns: None
     """
+    sub_modules = [module_path]
     if split:
         mod = import_using_name(module_path, traverse=True)
-        sub_modules = list(get_submodules(mod))
-        logger.info(
-            "Splitting module %s in sub-module palettes: %s",
+        sub_modules.extend(list(get_submodules(mod)))
+        logger.debug(
+            "Splitting module %s into sub-module palettes: %s",
             module_path,
             sub_modules,
         )
@@ -232,7 +233,10 @@ def palettes_from_module(
     files = {}
     for m in sub_modules:
         logger.info("Extracting nodes from module: %s", m)
-        nodes, module_doc = nodes_from_module(m, recursive=recursive)
+        if m == module_path:
+            nodes, module_doc = nodes_from_module(m, recursive=False)
+        else:
+            nodes, module_doc = nodes_from_module(m, recursive=recursive)
         if len(nodes) == 0:
             continue
         filename = (
@@ -291,8 +295,6 @@ def main():  # pragma: no cover
         palettes_from_module(
             module_path, outfile=outputfile, recursive=recursive, split=split
         )
-        # nodes = nodes_from_module(module_path, recursive=recursive)
-        # prepare_and_write_palette(nodes, outputfile)
     else:
         # add extra doxygen setting for input and output locations
         DOXYGEN_SETTINGS.update(

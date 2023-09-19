@@ -18,6 +18,7 @@ from .classes import (
     DOXYGEN_SETTINGS,
     DOXYGEN_SETTINGS_C,
     DOXYGEN_SETTINGS_PYTHON,
+    SVALUE_TYPES,
     VALUE_TYPES,
     Language,
     logger,
@@ -254,7 +255,7 @@ def get_submodules(module):
                 or inspect.isbuiltin(m)
             ):
                 submods.append(f"{submod}")
-        logger.info(
+        logger.debug(
             "Found submodules of %s in __all__: %s", module.__name__, submods
         )
     elif hasattr(module, "__path__"):
@@ -401,12 +402,10 @@ def populateFields(parameters: dict, dd, member=None) -> dict:
     descr_miss = []
 
     for p, v in parameters.items():
-        value = (
-            v.default if not isinstance(v.default, inspect._empty) else "None"
-        )
+        value = v.default if type(v.default) is not inspect._empty else "None"
         field = initializeField(p)
         # if there is a type hint use that
-        if v.annotation != inspect._empty:
+        if v.annotation is not inspect._empty:
             if isinstance(v.annotation, str):
                 field[p].type = v.annotation
             elif (
@@ -421,45 +420,49 @@ def populateFields(parameters: dict, dd, member=None) -> dict:
             else:
                 field[p].type = "Object"
         else:  # no type hint
-            try:
-                if isinstance(v.default, (list, tuple)):
-                    value = v.default  # type: ignore
-                    field[p].type = VALUE_TYPES[type(v.default)]
-                elif (
-                    hasattr(v.default, "type") and v.default != inspect._empty
-                ):
-                    if isinstance(v.default, str):  # type: ignore
+            if v.default is inspect._empty:
+                field[p].type = SVALUE_TYPES["NoneType"]
+            else:
+                try:
+                    if isinstance(v.default, (list, tuple)):
                         value = v.default  # type: ignore
-                elif isinstance(
-                    v.default,
-                    (
-                        int,
-                        float,
-                        bool,
-                        complex,
-                        str,
-                        dict,
-                    ),
-                ):
-                    if isinstance(v.default, float) and abs(
-                        v.default
-                    ) == float("inf"):
-                        value = v.default.__repr__()  # type: ignore
-                    else:
-                        value = v.default  # type: ignore
-                    field[p].type = type(v.default).__name__
-                elif hasattr(v.default, "dtype"):
-                    try:
-                        value = v.default.__repr__()
-                    except TypeError as e:
-                        if e.__repr__().find("numpy.bool_") > -1:
-                            value = "bool"
-                    field[p].type = type(v.default).__name__
-            except (ValueError, AttributeError):
-                value = (
-                    f"{type(v.default).__module__}"  # type: ignore
-                    + f".{type(v.default).__name__}"  # type: ignore
-                )
+                        field[p].type = VALUE_TYPES[type(v.default)]
+                    elif (
+                        hasattr(v.default, "type")
+                        and v.default != inspect._empty
+                    ):
+                        if isinstance(v.default, str):  # type: ignore
+                            value = v.default  # type: ignore
+                    elif isinstance(
+                        v.default,
+                        (
+                            int,
+                            float,
+                            bool,
+                            complex,
+                            str,
+                            dict,
+                        ),
+                    ):
+                        if isinstance(v.default, float) and abs(
+                            v.default
+                        ) == float("inf"):
+                            value = v.default.__repr__()  # type: ignore
+                        else:
+                            value = v.default  # type: ignore
+                        field[p].type = type(v.default).__name__
+                    elif hasattr(v.default, "dtype"):
+                        try:
+                            value = v.default.__repr__()
+                        except TypeError as e:
+                            if e.__repr__().find("numpy.bool_") > -1:
+                                value = "bool"
+                        field[p].type = type(v.default).__name__
+                except (ValueError, AttributeError):
+                    value = (
+                        f"{type(v.default).__module__}"  # type: ignore
+                        + f".{type(v.default).__name__}"  # type: ignore
+                    )
 
         if isinstance(value, type):
             value = None
@@ -476,6 +479,7 @@ def populateFields(parameters: dict, dd, member=None) -> dict:
             descr_miss.append(p)
         elif p == "self":
             param_desc["desc"] = "Reference to object"
+            param_desc["type"] = v.annotation
         if dd and p in dd.params and param_desc != "self":
             field[p].description = dd.params[p]["desc"]
         else:
@@ -492,8 +496,8 @@ def populateFields(parameters: dict, dd, member=None) -> dict:
             else:
                 field[p].type = "Object"  # if we don't know what it is
         field[p].type = typeFix(field[p].type)
-        if field[p].type == "Json" or field[p].type.startswith(
-            "Object"
+        if not isinstance(field[p].value, str) and (
+            field[p].type in ["Json"] or field[p].type.startswith("Object")
         ):  # we want to carry these as strings
             field[p].value = field[p].defaultValue = field[p].value.__repr__()
         fields.update(field)
