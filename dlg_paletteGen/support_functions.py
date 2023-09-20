@@ -21,6 +21,7 @@ from .classes import (
     SVALUE_TYPES,
     VALUE_TYPES,
     Language,
+    guess_type_from_default,
     logger,
     typeFix,
 )
@@ -402,31 +403,38 @@ def populateFields(parameters: dict, dd, member=None) -> dict:
     descr_miss = []
 
     for p, v in parameters.items():
-        value = v.default if type(v.default) is not inspect._empty else "None"
+        param_desc = {
+            "desc": "",
+            "type": "Object",
+        }  # temporarily holds results
         field = initializeField(p)
+
+        # get value and type
+        value = v.default if type(v.default) is not inspect._empty else "None"
         # if there is a type hint use that
         if v.annotation is not inspect._empty:
             if isinstance(v.annotation, str):
-                field[p].type = v.annotation
+                param_desc["type"] = v.annotation
             elif (
                 hasattr(v.annotation, "__name__")
-                and v.annotation != inspect._empty
+                and v.annotation is not inspect._empty
             ):
-                field[p].type = (
+                param_desc["type"] = (
                     v.annotation.__name__
                     if not v.annotation.__name__ == "Optional"
                     else "None"
                 )
             else:
-                field[p].type = "Object"
+                param_desc["type"] = "Object"
         else:  # no type hint
-            if v.default is inspect._empty:
-                field[p].type = SVALUE_TYPES["NoneType"]
-            else:
+            if v.default is inspect._empty:  # and also no default value
+                param_desc["type"] = SVALUE_TYPES["NoneType"]
+            else:  # there is a default value
+                # TODO: merge this with classes.guess_type_from_default
                 try:
                     if isinstance(v.default, (list, tuple)):
                         value = v.default  # type: ignore
-                        field[p].type = VALUE_TYPES[type(v.default)]
+                        param_desc["type"] = VALUE_TYPES[type(v.default)]
                     elif (
                         hasattr(v.default, "type")
                         and v.default != inspect._empty
@@ -450,20 +458,28 @@ def populateFields(parameters: dict, dd, member=None) -> dict:
                             value = v.default.__repr__()  # type: ignore
                         else:
                             value = v.default  # type: ignore
-                        field[p].type = type(v.default).__name__
+                        param_desc["type"] = type(v.default).__name__
                     elif hasattr(v.default, "dtype"):
                         try:
                             value = v.default.__repr__()
                         except TypeError as e:
                             if e.__repr__().find("numpy.bool_") > -1:
                                 value = "bool"
-                        field[p].type = type(v.default).__name__
+                        param_desc["type"] = type(v.default).__name__
                 except (ValueError, AttributeError):
                     value = (
                         f"{type(v.default).__module__}"  # type: ignore
                         + f".{type(v.default).__name__}"  # type: ignore
                     )
+                type_guess = guess_type_from_default(v.default)
+                if type_guess != typeFix(param_desc["type"]):
+                    logger.warning(
+                        ">>> Type %s, guessed %s",
+                        typeFix(param_desc["type"]),
+                        type_guess,
+                    )
 
+        # final check of the value
         if isinstance(value, type):
             value = None
         try:
@@ -471,35 +487,30 @@ def populateFields(parameters: dict, dd, member=None) -> dict:
         except TypeError:
             logger.debug("Object not serializable: %s", value)
             value = type(value).__name__
+        if not isinstance(value, str) and (
+            param_desc["type"] in ["Json"]
+            or param_desc["type"].startswith("Object")
+        ):  # we want to carry these as strings
+            value = value.__repr__()
+
+        # now merge with description from docstring, if available
+        if dd:
+            if p in dd.params and p != "self":
+                param_desc["desc"] = dd.params[p]["desc"]
+            elif p != "self":
+                descr_miss.append(p)
+            elif p == "self":
+                param_desc["desc"] = "Reference to object"
+
+        # populate the field itself
         field[p].value = field[p].defaultValue = value
-        param_desc = {"desc": "", "type": "Object"}
-        if dd and p in dd.params:
-            param_desc = dd.params[p]
-        elif p != "self":
-            descr_miss.append(p)
-        elif p == "self":
-            param_desc["desc"] = "Reference to object"
-            param_desc["type"] = v.annotation
-        if dd and p in dd.params and param_desc != "self":
-            field[p].description = dd.params[p]["desc"]
-        else:
-            field[p].description = param_desc["desc"]
-            field[p].type = param_desc["type"]
+        field[p].type = typeFix(param_desc["type"])
+        field[p].description = param_desc["desc"]
         field[p].parameterType = "ApplicationArgument"
         field[p].options = None
         field[p].positional = (
             True if v.kind == inspect.Parameter.POSITIONAL_ONLY else False
         )
-        if not field[p].type:
-            if param_desc and param_desc["type"]:
-                field[p].type = dd.params[p]["type"]
-            else:
-                field[p].type = "Object"  # if we don't know what it is
-        field[p].type = typeFix(field[p].type)
-        if not isinstance(field[p].value, str) and (
-            field[p].type in ["Json"] or field[p].type.startswith("Object")
-        ):  # we want to carry these as strings
-            field[p].value = field[p].defaultValue = field[p].value.__repr__()
         fields.update(field)
 
     logger.debug("Parameters %s", fields)

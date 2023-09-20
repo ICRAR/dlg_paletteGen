@@ -228,13 +228,15 @@ def palettes_from_module(
             module_path,
             sub_modules,
         )
+        top_recursive = False
     else:
+        top_recursive = True
         sub_modules = [module_path]
     files = {}
     for m in sub_modules:
         logger.info("Extracting nodes from module: %s", m)
         if m == module_path:
-            nodes, module_doc = nodes_from_module(m, recursive=False)
+            nodes, module_doc = nodes_from_module(m, recursive=top_recursive)
         else:
             nodes, module_doc = nodes_from_module(m, recursive=recursive)
         if len(nodes) == 0:
