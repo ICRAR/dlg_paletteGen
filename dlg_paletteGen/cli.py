@@ -253,8 +253,7 @@ def palettes_from_module(
             m,
         )
     logger.info(
-        "\n\n>>>>>>> Extraction summary <<<<<<<<\n%s\n%s\n",
-        module_doc,
+        "\n\n>>>>>>> Extraction summary <<<<<<<<\n%s\n",
         "\n".join(
             [f"Wrote {k} with {v} components" for k, v in files.items()]
         ),

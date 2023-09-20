@@ -561,7 +561,7 @@ def test_direct_tabascal(tmpdir: str, shared_datadir: str):
     prepare_and_write_palette(nodes, output_file, module_doc=module_doc)
 
 
-def test_import_using_name(tmpdir: str, shared_datadir: str):
+def test_import_using_name(tmpdir: str, shared_datadir: str, caplog):
     """
     Directly test the import_using_name function
 
@@ -578,8 +578,8 @@ def test_import_using_name(tmpdir: str, shared_datadir: str):
     assert mod.__name__ == "urllib.request"
 
     module_name = "print"
-    with pytest.raises(ImportError):
-        mod = import_using_name(module_name, traverse=True)
+    mod = import_using_name(module_name, traverse=True)
+    assert "Error when loading module print" in caplog.text
 
 
 def test_typeFix(tmpdir: str, shared_datadir: str):

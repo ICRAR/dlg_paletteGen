@@ -239,11 +239,11 @@ class DummySig:
                 call_line, self.docstring = re.split(
                     r"\) *\n", self.docstring, 1
                 )
+                call_line += ")"
                 params = re.findall(r"\(.*\n*.*\)", call_line)[0]
                 params = re.sub(r"\n {2,}", " ", params)
                 params = re.findall(
-                    r"(?:([\w_\.]+)(?:[\: ]*([\w_\:\.\[\]]*)"
-                    + +r"(?: *= *([\w\.]*))*\,*))",
+                    r"(?:([\w_\.]+)(?:[\: ]*([\w_\:\.\[\]]*)(?: *= *([\w\.\'\-]*))*\,*))",  # noqa E501
                     params,
                 )
                 ret = re.findall(r"-> ([\w_\:\.\[\]]+)", call_line)

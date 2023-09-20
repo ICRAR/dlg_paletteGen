@@ -19,7 +19,6 @@ from .classes import (
     DOXYGEN_SETTINGS_C,
     DOXYGEN_SETTINGS_PYTHON,
     SVALUE_TYPES,
-    VALUE_TYPES,
     Language,
     guess_type_from_default,
     logger,
@@ -309,11 +308,11 @@ def import_using_name(mod_name: str, traverse: bool = False):
                 try:
                     mod = importlib.import_module(parts[0])
                 except ImportError as e:
-                    logger.debug(
+                    logger.error(
                         "Error when loading module %s: %s"
                         % (parts[0], str(e)),
                     )
-                    raise ImportError
+                    return None
                 for m in parts[1:]:
                     try:
                         logger.debug("Getting attribute %s", m)
@@ -412,72 +411,51 @@ def populateFields(parameters: dict, dd, member=None) -> dict:
         # get value and type
         value = v.default if type(v.default) is not inspect._empty else "None"
         # if there is a type hint use that
-        if v.annotation is not inspect._empty:
-            if isinstance(v.annotation, str):
-                param_desc["type"] = v.annotation
-            elif (
-                hasattr(v.annotation, "__name__")
-                and v.annotation is not inspect._empty
-            ):
-                param_desc["type"] = (
-                    v.annotation.__name__
-                    if not v.annotation.__name__ == "Optional"
-                    else "None"
-                )
-            else:
-                param_desc["type"] = "Object"
-        else:  # no type hint
-            if v.default is inspect._empty:  # and also no default value
-                param_desc["type"] = SVALUE_TYPES["NoneType"]
-            else:  # there is a default value
-                # TODO: merge this with classes.guess_type_from_default
-                try:
-                    if isinstance(v.default, (list, tuple)):
+        if v.default is inspect._empty:  # and also no default value
+            param_desc["type"] = SVALUE_TYPES["NoneType"]
+        else:  # there is a default value
+            # TODO: merge this with classes.guess_type_from_default
+            try:
+                if isinstance(v.default, (list, tuple)):
+                    value = v.default  # type: ignore
+                    # param_desc["type"] = VALUE_TYPES[type(v.default)]
+                elif (
+                    hasattr(v.default, "type") and v.default != inspect._empty
+                ):
+                    if isinstance(v.default, str):  # type: ignore
                         value = v.default  # type: ignore
-                        param_desc["type"] = VALUE_TYPES[type(v.default)]
-                    elif (
-                        hasattr(v.default, "type")
-                        and v.default != inspect._empty
-                    ):
-                        if isinstance(v.default, str):  # type: ignore
-                            value = v.default  # type: ignore
-                    elif isinstance(
-                        v.default,
-                        (
-                            int,
-                            float,
-                            bool,
-                            complex,
-                            str,
-                            dict,
-                        ),
-                    ):
-                        if isinstance(v.default, float) and abs(
-                            v.default
-                        ) == float("inf"):
-                            value = v.default.__repr__()  # type: ignore
-                        else:
-                            value = v.default  # type: ignore
-                        param_desc["type"] = type(v.default).__name__
-                    elif hasattr(v.default, "dtype"):
-                        try:
-                            value = v.default.__repr__()
-                        except TypeError as e:
-                            if e.__repr__().find("numpy.bool_") > -1:
-                                value = "bool"
-                        param_desc["type"] = type(v.default).__name__
-                except (ValueError, AttributeError):
-                    value = (
-                        f"{type(v.default).__module__}"  # type: ignore
-                        + f".{type(v.default).__name__}"  # type: ignore
-                    )
-                type_guess = guess_type_from_default(v.default)
-                if type_guess != typeFix(param_desc["type"]):
-                    logger.warning(
-                        ">>> Type %s, guessed %s",
-                        typeFix(param_desc["type"]),
-                        type_guess,
-                    )
+                elif isinstance(
+                    v.default,
+                    (
+                        int,
+                        float,
+                        bool,
+                        complex,
+                        str,
+                        dict,
+                    ),
+                ):
+                    if isinstance(v.default, float) and abs(
+                        v.default
+                    ) == float("inf"):
+                        value = v.default.__repr__()  # type: ignore
+                    else:
+                        value = v.default  # type: ignore
+                    # param_desc["type"] = type(v.default).__name__
+                elif hasattr(v.default, "dtype"):
+                    try:
+                        value = v.default.__repr__()
+                    except TypeError as e:
+                        if e.__repr__().find("numpy.bool_") > -1:
+                            value = "bool"
+                    # param_desc["type"] = type(v.default).__name__
+            except (ValueError, AttributeError):
+                value = (
+                    f"{type(v.default).__module__}"  # type: ignore
+                    + f".{type(v.default).__name__}"  # type: ignore
+                )
+            type_guess = guess_type_from_default(v.default)
+            param_desc["type"] = type_guess
 
         # final check of the value
         if isinstance(value, type):
