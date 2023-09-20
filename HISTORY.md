@@ -4,6 +4,16 @@ Changelog
 
 (unreleased)
 ------------
+- Simplified populateFields, fixed recursion. [Andreas Wicenec]
+- Doc updates and fixes for numpy. [Andreas Wicenec]
+- Better test coverage, removed stale code. [Andreas Wicenec]
+- Addition for tabascal oddities. [Andreas Wicenec]
+- Added number of nodes to palette meta. [Andreas Wicenec]
+
+
+0.3.1 (2023-09-18)
+------------------
+- Release: version 0.3.1 🚀 [Andreas Wicenec]
 - More compliance with OSKAR. [Andreas Wicenec]
 
 
