@@ -18,6 +18,7 @@ from .classes import (
     DOXYGEN_SETTINGS,
     DOXYGEN_SETTINGS_C,
     DOXYGEN_SETTINGS_PYTHON,
+    VALUE_TYPES,
     SVALUE_TYPES,
     Language,
     guess_type_from_default,
@@ -392,6 +393,61 @@ def initializeField(
     return field
 
 
+def get_value_type_from_default(default):
+    """
+    Extract value and type from default value
+    """
+    param_desc = {
+        "value": None,
+        "desc": "",
+        "type": "Object",
+    }  # temporarily holds results
+    # get value and type
+    value = ptype = (
+        f"{type(default).__module__}"  # type: ignore
+        + f".{type(default).__name__}"  # type: ignore
+    )
+    if default is inspect._empty or ptype == "builtins.NoneType":
+        value = "None"
+        ptype = SVALUE_TYPES["NoneType"]
+    else:  # there is a default value
+        try:
+            ptype = type(default)
+            if ptype in VALUE_TYPES:
+                if isinstance(default, float) and abs(default) == float("inf"):
+                    value = default.__repr__()  # type: ignore
+                else:
+                    value = default
+            elif hasattr(default, "dtype"):
+                try:
+                    value = default.__repr__()
+                except TypeError as e:
+                    if e.__repr__().find("numpy.bool_") > -1:
+                        value = "bool"
+        except (ValueError, AttributeError):
+            value = ptype = (
+                f"{type(default).__module__}"  # type: ignore
+                + f".{type(default).__name__}"  # type: ignore
+            )
+
+        # final checks of the value
+        if isinstance(value, type):
+            value = None
+        try:
+            json.dumps(value)
+        except TypeError:
+            # this is a complex type
+            logger.debug("Object not JSON serializable: %s", value)
+            ptype = type(value).__name__
+        if not isinstance(value, (str, bool)) and (
+            ptype in ["Json"]
+        ):  # we want to carry these as strings
+            value = value.__name__()
+    param_desc["value"] = value
+    param_desc["type"] = typeFix(ptype)
+    return param_desc
+
+
 def populateFields(parameters: dict, dd, member=None) -> dict:
     """
     Populate a field from signature parameters and mixin
@@ -402,75 +458,9 @@ def populateFields(parameters: dict, dd, member=None) -> dict:
     descr_miss = []
 
     for p, v in parameters.items():
-        param_desc = {
-            "desc": "",
-            "type": "Object",
-        }  # temporarily holds results
         field = initializeField(p)
 
-        # get value and type
-        value = v.default if type(v.default) is not inspect._empty else "None"
-        # if there is a type hint use that
-        if v.default is inspect._empty:  # and also no default value
-            param_desc["type"] = SVALUE_TYPES["NoneType"]
-        else:  # there is a default value
-            # TODO: merge this with classes.guess_type_from_default
-            try:
-                if isinstance(v.default, (list, tuple)):
-                    value = v.default  # type: ignore
-                    # param_desc["type"] = VALUE_TYPES[type(v.default)]
-                elif (
-                    hasattr(v.default, "type") and v.default != inspect._empty
-                ):
-                    if isinstance(v.default, str):  # type: ignore
-                        value = v.default  # type: ignore
-                elif isinstance(
-                    v.default,
-                    (
-                        int,
-                        float,
-                        bool,
-                        complex,
-                        str,
-                        dict,
-                    ),
-                ):
-                    if isinstance(v.default, float) and abs(
-                        v.default
-                    ) == float("inf"):
-                        value = v.default.__repr__()  # type: ignore
-                    else:
-                        value = v.default  # type: ignore
-                    # param_desc["type"] = type(v.default).__name__
-                elif hasattr(v.default, "dtype"):
-                    try:
-                        value = v.default.__repr__()
-                    except TypeError as e:
-                        if e.__repr__().find("numpy.bool_") > -1:
-                            value = "bool"
-                    # param_desc["type"] = type(v.default).__name__
-            except (ValueError, AttributeError):
-                value = (
-                    f"{type(v.default).__module__}"  # type: ignore
-                    + f".{type(v.default).__name__}"  # type: ignore
-                )
-            type_guess = guess_type_from_default(v.default)
-            param_desc["type"] = type_guess
-
-        # final check of the value
-        if isinstance(value, type):
-            value = None
-        try:
-            json.dumps(value)
-        except TypeError:
-            logger.debug("Object not serializable: %s", value)
-            value = type(value).__name__
-        if not isinstance(value, str) and (
-            param_desc["type"] in ["Json"]
-            or param_desc["type"].startswith("Object")
-        ):  # we want to carry these as strings
-            value = value.__repr__()
-
+        param_desc = get_value_type_from_default(v.default)
         # now merge with description from docstring, if available
         if dd:
             if p in dd.params and p != "self":
@@ -482,7 +472,44 @@ def populateFields(parameters: dict, dd, member=None) -> dict:
 
         # populate the field itself
         field[p].value = field[p].defaultValue = value
-        field[p].type = typeFix(param_desc["type"])
+
+        # deal with the type
+        if (
+            v.annotation  # type from inspect is first choice.
+            and v.annotation not in [None, inspect._empty]
+            and (
+                hasattr(v.annotation, "__name__")
+                or hasattr(v.annotation, "__repr__")
+            )
+        ):
+            if (
+                hasattr(v.annotation, "__name__")
+                and hasattr(v.annotation, "__module__")
+                and v.annotation.__module__ != "builtins"
+            ):
+                field[p][
+                    "type"
+                ] = f"{v.annotation.__module__}.{v.annotation.__name__}"
+            elif hasattr(v.annotation, "__name__"):
+                field[p]["type"] = typeFix(f"{v.annotation.__name__}")
+            else:
+                field[p].type = v.annotation.__repr__()
+        # else we use the type from default value
+        elif param_desc["type"]:
+            field[p].type = param_desc["type"]
+        elif dd and p in dd.params and dd.params[p]["type"]:
+            # type from docstring
+            # TODO: should probably check a bit more
+            field[p].type = typeFix(dd.params[p]["type"])
+        else:
+            field[p].type = SVALUE_TYPES["NoneType"]
+
+        if field[p].type not in SVALUE_TYPES.values():
+            # complex types can't be specified on a simple form field
+            # thus we assume they are provided through a port.
+            # Like this we can support any type.
+            field[p].usage = "InputPort"
+            field[p].value = None
         field[p].description = param_desc["desc"]
         field[p].parameterType = "ApplicationArgument"
         field[p].options = None
@@ -506,7 +533,7 @@ def constructNode(
     category: str = "PythonApp",
     key: int = -1,
     name: str = "example_function",
-    description: str = "No description found",
+    description: str = "",
     repositoryUrl: str = "dlg_paletteGen.generated",
     commitHash: str = "0.1",
     paletteDownlaodUrl: str = "",

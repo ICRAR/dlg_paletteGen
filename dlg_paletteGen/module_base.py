@@ -40,9 +40,11 @@ def get_class_members(cls, parent=None):
     logger.debug("Member functions of class %s: %s", cls, content)
     class_members = {}
     for _, m in content:
-        if m.__qualname__.startswith(
-            cls.__name__
-        ) or m.__qualname__.startswith("PyCapsule"):
+        if (
+            m.__qualname__.startswith(cls.__name__)
+            or m.__qualname__.startswith("PyCapsule")
+            or m.__qualname__ == "object.__init__"
+        ):
             node = inspect_member(m, module=cls, parent=parent)
             if not node:
                 logger.debug("Inspection of '%s' failed.", m.__qualname__)
@@ -68,9 +70,11 @@ def inspect_member(member, module=None, parent=None):
             name = name.replace(
                 "PyCapsule", f"{module.__module__}.{module.__name__}"
             )
+        elif name == "object.__init__":
+            name = f"{module.__name__}.__init__"
     else:
         name = (
-            f"{parent}.{member.__name__}"
+            f"{member.__name__}"
             if hasattr(member, "__name__")
             else f"{module.__name__}.Unknown"
         )
@@ -150,18 +154,6 @@ def inspect_member(member, module=None, parent=None):
     # fill custom ApplicationArguments first
     fields = populateFields(sig.parameters, dd, member=member.__name__)
     ind = -1
-    for k, field in fields.items():
-        ind += 1
-        if k == "self" and ind == 0:
-            if member.__name__ in ["__init__", "__cls__"]:
-                fields["self"].usage = "OutputPort"
-            else:
-                fields["self"].usage = "InputPort"
-
-        node.fields.update({k: field})
-
-        # now populate with default fields.
-    node = populateDefaultFields(node)
     load_name = member.__qualname__
     if hasattr(member, "__module__") and member.__module__:
         load_name = f"{member.__module__}.{load_name}"
@@ -171,8 +163,26 @@ def inspect_member(member, module=None, parent=None):
         load_name = f"{parent}.{load_name}"
     if load_name.find("PyCapsule"):
         load_name = load_name.replace("PyCapsule", module.__name__)
-    if "self" in node.fields:
-        node.fields["self"]["type"] = load_name.rsplit(".", 1)[0]
+    if load_name.find("object.__init__"):
+        load_name = load_name.replace("object.__init__", node.name)
+    for k, field in fields.items():
+        ind += 1
+        if k == "self" and ind == 0:
+            if member.__name__ in ["__init__", "__cls__"]:
+                fields["self"].usage = "OutputPort"
+            else:
+                fields["self"].usage = "InputPort"
+            fields["self"].type = ".".join(load_name.split(".")[:-1])
+            if fields["self"].type == "numpy.ndarray":
+                # just to make sure the type hints match the object type
+                fields["self"].type = "numpy.array"
+
+        node.fields.update({k: field})
+
+        # now populate with default fields.
+    node = populateDefaultFields(node)
+    # if "self" in node.fields:
+    #     node.fields["self"]["type"] = load_name.rsplit(".", 1)[0]
     node.fields["func_name"]["value"] = load_name
     node.fields["func_name"]["defaultValue"] = load_name
     if hasattr(sig, "ret"):
@@ -199,7 +209,8 @@ def get_members(
         lambda x: inspect.isfunction(x)
         or inspect.ismethod(x)
         or inspect.isclass(x)
-        or inspect.isbuiltin(x),
+        or inspect.isbuiltin(x)
+        or inspect.ismethoddescriptor(x),
     )
     count = 0
     # logger.debug("Members of %s: %s", name, [c for c, m in content])

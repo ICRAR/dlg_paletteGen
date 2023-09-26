@@ -621,7 +621,8 @@ def test_direct_module(tmpdir: str, shared_datadir: str):
     :param tmpdir: the path to the temp directory to use
     :param shared_datadir: the path the the local directory
     """
-    module_name = "dlg_paletteGen.classes"
+    # module_name = "dlg_paletteGen.classes"
+    module_name = "aoflagger.ImageSet"
     modules, module_doc = module_hook(module_name, recursive=True)
     nodes = []
     for members in modules.values():

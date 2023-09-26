@@ -126,9 +126,14 @@ def typeFix(value_type: str = "", default_value: Any = None) -> str:
             value_type = type(default_value).__name__
         except TypeError:
             value_type = guess_type_from_default(default_value)
-    elif value_type == inspect._empty and not default_value:
+    elif not value_type or value_type == inspect._empty and not default_value:
         return SVALUE_TYPES["NoneType"]
     else:  # check the provided value_type string
+        if not isinstance(value_type, str):
+            value_type = (
+                f"{value_type.__module__}"  # type: ignore
+                + f".{value_type.__name__}"  # type: ignore
+            )
         typerex = r"[\(\[]{0,1}(bool|boolean|int|float|string|str)[\]\)]{0,1}"
         re_type = re.findall(typerex, value_type)
         #            fix some types
@@ -151,9 +156,6 @@ def typeFix(value_type: str = "", default_value: Any = None) -> str:
         elif default_value not in ["", None]:
             value_type = default_value
 
-    # try to guess the type based on the default value
-    # TODO: try to parse default_value as JSON to detect JSON types
-
     value_type = convert_type_str(value_type)
     # we only want stuff in parentheses
     v_type = re.split(r"[\[\]\(\)]", value_type)
@@ -161,6 +163,7 @@ def typeFix(value_type: str = "", default_value: Any = None) -> str:
     return value_type
 
 
+# these are our supported base types
 VALUE_TYPES = {
     Any: "Any",
     str: "String",
@@ -176,7 +179,12 @@ SVALUE_TYPES = {
     k.__name__: v for k, v in VALUE_TYPES.items() if hasattr(k, "__name__")
 }
 SVALUE_TYPES.update(
-    {"NoneType": "None", "Object.Object": "Object", "Any": "Any"}
+    {
+        "NoneType": "UNSPECIFIED",
+        "Object.Object": "Object",
+        "Any": "Any",
+        "builtins.NoneType": "UNSPECIFIED",
+    }
 )
 
 BLOCKDAG_DATA_FIELDS = [
@@ -236,10 +244,15 @@ class DummySig:
         ret = None
         if self.docstring:
             try:
-                call_line, self.docstring = re.split(
-                    r"\) *\n", self.docstring, 1
-                )
-                call_line += ")"
+                # call_line, self.docstring = re.split(
+                #     r"\) *\n", self.docstring, 1
+                # )
+                doc_split = re.split(r"\n", self.docstring, 1)
+                if len(doc_split) == 1:
+                    call_line = doc_split[0]
+                elif len(doc_split) > 1:
+                    call_line, self.docstring = doc_split[:2]
+                # call_line += ")"
                 params = re.findall(r"\(.*\n*.*\)", call_line)[0]
                 params = re.sub(r"\n {2,}", " ", params)
                 params = re.findall(
@@ -256,6 +269,10 @@ class DummySig:
             ret = ret[0] if ret else None
             for k, t, v in params:
                 parameters[k] = DummyParam()
+                if isinstance(t, str) and typeFix(t) in VALUE_TYPES.values():
+                    t = [k for k, v in VALUE_TYPES.items() if v == typeFix(t)][
+                        0
+                    ]
                 parameters[k].annotation = t
                 parameters[k].default = v
         elif self.docstring and len(self.docstring) == 0:
