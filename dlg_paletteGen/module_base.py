@@ -170,6 +170,8 @@ def inspect_member(member, module=None, parent=None):
         if k == "self" and ind == 0:
             if member.__name__ in ["__init__", "__cls__"]:
                 fields["self"].usage = "OutputPort"
+            elif inspect.ismethoddescriptor(member):
+                fields["self"].usage = "InputOutput"
             else:
                 fields["self"].usage = "InputPort"
             fields["self"].type = ".".join(load_name.split(".")[:-1])

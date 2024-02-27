@@ -75,13 +75,14 @@ def convert_type_str(input_type: str = "") -> str:
     return value_type
 
 
-def guess_type_from_default(default_value: Any = "") -> str:
+def guess_type_from_default(default_value: Any = "", raw=False) -> str:
     """
     Try to guess the parameter type from a default_value provided.
     The value can be of any type by itself, including a JSON string
     containing a complex data structure.
 
     :param default_value: any, the default_value
+    :param raw: bool, return raw type object, rather than string
 
     :returns: str, the type of the value as a supported string
     """
@@ -105,7 +106,10 @@ def guess_type_from_default(default_value: Any = "") -> str:
             vt = str
     except:  # noqa: E722
         return "Object"
-    return VALUE_TYPES[vt] if vt in VALUE_TYPES else "Object"
+    if not raw:
+        return VALUE_TYPES[vt] if vt in VALUE_TYPES else "Object"
+    else:
+        return vt if vt in VALUE_TYPES else object
 
 
 def typeFix(value_type: str = "", default_value: Any = None) -> str:
@@ -232,6 +236,7 @@ class DummySig:
     """
 
     def __init__(self, module):
+        self.module = module
         self.name = module.__name__
         self.docstring = inspect.getdoc(module)
         self.parameters, self.ret = self.get_pb11_sig()
@@ -244,10 +249,10 @@ class DummySig:
         ret = None
         if self.docstring:
             try:
-                # call_line, self.docstring = re.split(
-                #     r"\) *\n", self.docstring, 1
-                # )
-                doc_split = re.split(r"\n", self.docstring, 1)
+                # TODO: replace the parsing of the call_line with ast
+                # NOTE: ast does not seem to deal with return types
+                # NOTE: numpy.array has a '*' on the call_line, which is invalid!
+                doc_split = re.split(r"\n *\n", self.docstring, 1)
                 if len(doc_split) == 1:
                     call_line = doc_split[0]
                 elif len(doc_split) > 1:
@@ -267,12 +272,28 @@ class DummySig:
                 )
                 return {}, None
             ret = ret[0] if ret else None
+            if inspect.ismethoddescriptor(self.module):
+                # make sure methoddescriptors have a self parameter
+                parameters["self"] = DummyParam()
+                if hasattr(self.module, "__objclass__"):
+                    parameters[
+                        "self"
+                    ].annotation = f"{self.module.__objclass__}"
+                elif hasattr(self.module, "__module__"):
+                    parameters["self"].annotation = f"{self.module.__module__}"
             for k, t, v in params:
                 parameters[k] = DummyParam()
-                if isinstance(t, str) and typeFix(t) in VALUE_TYPES.values():
+                # replace with actual supported type rather than string
+                if (
+                    t
+                    and isinstance(t, str)
+                    and typeFix(t) in VALUE_TYPES.values()
+                ):
                     t = [k for k, v in VALUE_TYPES.items() if v == typeFix(t)][
                         0
                     ]
+                elif not t and v:  # try to guess from default value
+                    t = guess_type_from_default(v, raw=True)
                 parameters[k].annotation = t
                 parameters[k].default = v
         elif self.docstring and len(self.docstring) == 0:
@@ -483,7 +504,14 @@ class DetailedDescription:
         dd = dd.replace(" " * indent, "")
         # remove indent from lines
         # extract main documentation (up to Parameters line)
-        (description, rest) = dd.split("\nArgs:\n")
+        description = dd
+        rest = ""
+        sdd = dd.split("\nArgs:\n", 1)
+        if len(sdd) > 1:
+            (description, rest) = sdd
+        elif len(sdd) == 1:
+            description = sdd[0]
+
         # logger.debug("Splitting: %s %s", description, rest)
         # extract parameter documentation (up to Returns line)
         pds = rest.split("\nReturns:\n")[0]

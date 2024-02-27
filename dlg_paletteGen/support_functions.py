@@ -21,7 +21,6 @@ from .classes import (
     VALUE_TYPES,
     SVALUE_TYPES,
     Language,
-    guess_type_from_default,
     logger,
     typeFix,
 )
@@ -103,9 +102,7 @@ def process_doxygen(language: Language = Language.PYTHON):
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
     )
-    logger.info(
-        "Wrote doxygen configuration file (Doxyfile) to " + doxygen_filename
-    )
+    logger.info("Wrote doxygen configuration file (Doxyfile) to " + doxygen_filename)
 
     # modify options in the Doxyfile
     modify_doxygen_options(doxygen_filename, DOXYGEN_SETTINGS)
@@ -180,21 +177,18 @@ def write_palette_json(
     palette.modelData.repositoryUrl = git_repo
     palette.modelData.commitHash = version
     palette.modelData.signature = block_dag["signature"]  # type: ignore
-    palette.modelData.lastModifiedDatetime = (
-        datetime.datetime.now().timestamp()
-    )
+    palette.modelData.lastModifiedDatetime = datetime.datetime.now().timestamp()
     palette.modelData.numLGNodes = len(nodes)
 
     palette.nodeDataArray = nodes
 
     # write palette to file
-    with open(output_filename, "w") as outfile:
+    logger.debug(">>> palette: %s", palette)
+    with open(output_filename, "w", encoding="utf-8") as outfile:
         json.dump(palette, outfile, indent=4)
 
 
-def prepare_and_write_palette(
-    nodes: list, output_filename: str, module_doc: str = ""
-):
+def prepare_and_write_palette(nodes: list, output_filename: str, module_doc: str = ""):
     """
     Prepare and write the palette in JSON format.
 
@@ -246,9 +240,7 @@ def get_submodules(module):
             submod = f"{module.__name__}.{mod}"
             logger.debug("Trying to import %s", submod)
             traverse = True if submod not in submods else False
-            m = import_using_name(
-                f"{module.__name__}.{mod}", traverse=traverse
-            )
+            m = import_using_name(f"{module.__name__}.{mod}", traverse=traverse)
             if (
                 inspect.ismodule(m)
                 or inspect.isfunction(m)
@@ -256,9 +248,7 @@ def get_submodules(module):
                 or inspect.isbuiltin(m)
             ):
                 submods.append(f"{submod}")
-        logger.debug(
-            "Found submodules of %s in __all__: %s", module.__name__, submods
-        )
+        logger.debug("Found submodules of %s in __all__: %s", module.__name__, submods)
     elif hasattr(module, "__path__"):
         sub_modules = iter_modules(module.__path__)
         submods = [
@@ -310,8 +300,7 @@ def import_using_name(mod_name: str, traverse: bool = False):
                     mod = importlib.import_module(parts[0])
                 except ImportError as e:
                     logger.error(
-                        "Error when loading module %s: %s"
-                        % (parts[0], str(e)),
+                        "Error when loading module %s: %s" % (parts[0], str(e)),
                     )
                     return None
                 for m in parts[1:]:
@@ -353,9 +342,7 @@ def import_using_name(mod_name: str, traverse: bool = False):
                             )
                 logger.debug("Loaded module: %s", mod_name)
             else:
-                logger.debug(
-                    "Recursive import failed! %s", parts[0] in sys.modules
-                )
+                logger.debug("Recursive import failed! %s", parts[0] in sys.modules)
                 return None
     return mod
 
@@ -376,8 +363,8 @@ def initializeField(
     """
     Construct a dummy field
     """
-    field = benedict.BeneDict()
-    fieldValue = benedict.BeneDict()
+    field = benedict.benedict()
+    fieldValue = benedict.benedict()
     fieldValue.name = name
     fieldValue.value = value
     fieldValue.defaultValue = defaultValue
@@ -389,7 +376,7 @@ def initializeField(
     fieldValue.options = options
     fieldValue.precious = precious
     fieldValue.positional = positional
-    field.__setattr__(name, fieldValue)
+    field.set(name, fieldValue)
     return field
 
 
@@ -477,19 +464,14 @@ def populateFields(parameters: dict, dd, member=None) -> dict:
         if (
             v.annotation  # type from inspect is first choice.
             and v.annotation not in [None, inspect._empty]
-            and (
-                hasattr(v.annotation, "__name__")
-                or hasattr(v.annotation, "__repr__")
-            )
+            and (hasattr(v.annotation, "__name__") or hasattr(v.annotation, "__repr__"))
         ):
             if (
                 hasattr(v.annotation, "__name__")
                 and hasattr(v.annotation, "__module__")
                 and v.annotation.__module__ != "builtins"
             ):
-                field[p][
-                    "type"
-                ] = f"{v.annotation.__module__}.{v.annotation.__name__}"
+                field[p]["type"] = f"{v.annotation.__module__}.{v.annotation.__name__}"
             elif hasattr(v.annotation, "__name__"):
                 field[p]["type"] = typeFix(f"{v.annotation.__name__}")
             else:
@@ -544,7 +526,7 @@ def constructNode(
     specified otherwise. For some reason sub-classing benedict
     did not work here, thus we use a function instead.
     """
-    Node = benedict.BeneDict()
+    Node = benedict.benedict()
     Node.category = category
     Node.key = key
     Node.name = name
@@ -553,7 +535,7 @@ def constructNode(
     Node.commitHash = commitHash
     Node.paletteDownloadUrl = paletteDownlaodUrl
     Node.dataHash = dataHash
-    Node.fields = benedict.BeneDict()
+    Node.fields = benedict.benedict()
     return Node
 
 
@@ -582,11 +564,7 @@ def populateDefaultFields(Node):
     et[n].value = 2
     et[n].defaultValue = 2
     et[n].type = "Integer"
-    et[
-        n
-    ].description = (
-        "Estimate of execution time (in seconds) for this application."
-    )
+    et[n].description = "Estimate of execution time (in seconds) for this application."
     et[n].parameterType = "ConstraintParameter"
     Node.fields.update(et)
 
@@ -647,7 +625,7 @@ def constructPalette():
     """
     Constructing the structure of a palette.
     """
-    palette = benedict.BeneDict(
+    palette = benedict.benedict(
         {
             "modelData": {
                 "filePath": "",
