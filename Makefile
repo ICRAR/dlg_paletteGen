@@ -27,14 +27,14 @@ install:          ## Install the project in dev mode.
 .PHONY: fmt
 fmt:              ## Format code using black & isort.
 	$(ENV_PREFIX)isort -m 3 dlg_paletteGen/ --tc
-	$(ENV_PREFIX)black -l 79 dlg_paletteGen/
-	$(ENV_PREFIX)black -l 79 tests/
+	$(ENV_PREFIX)black -l 90 dlg_paletteGen/
+	$(ENV_PREFIX)black -l 90 tests/
 
 .PHONY: lint
 lint:             ## Run pep8, black, mypy linters.
-	$(ENV_PREFIX)flake8 dlg_paletteGen/
-	$(ENV_PREFIX)black -l 79 --check dlg_paletteGen/
-	$(ENV_PREFIX)black -l 79 --check tests/
+	$(ENV_PREFIX)flake8 --max-line-length 90 dlg_paletteGen/
+	$(ENV_PREFIX)black -l 90 --check dlg_paletteGen/
+	$(ENV_PREFIX)black -l 90 --check tests/
 	$(ENV_PREFIX)mypy --ignore-missing-imports dlg_paletteGen/
 
 .PHONY: test

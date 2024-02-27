@@ -68,9 +68,7 @@ def convert_type_str(input_type: str = "") -> str:
     if input_type in SVALUE_TYPES.values():
         return input_type
     value_type = (
-        SVALUE_TYPES[input_type]
-        if input_type in SVALUE_TYPES
-        else f"{input_type}"
+        SVALUE_TYPES[input_type] if input_type in SVALUE_TYPES else f"{input_type}"
     )
     return value_type
 
@@ -86,6 +84,7 @@ def guess_type_from_default(default_value: Any = "", raw=False) -> str:
 
     :returns: str, the type of the value as a supported string
     """
+    vt = None
     try:
         # we'll try to interpret what the type of the default_value is
         # using ast
@@ -99,17 +98,19 @@ def guess_type_from_default(default_value: Any = "", raw=False) -> str:
                 ),
                 l,
             )
-            vt = type(l["t"])
-            if not isinstance(vt, type):
+            vtype = type(l["t"])
+            if not isinstance(vtype, type):
                 vt = l["t"]
+            else:
+                vt = vtype
         except (NameError, SyntaxError):
-            vt = str
+            vt = "String"
     except:  # noqa: E722
         return "Object"
     if not raw:
         return VALUE_TYPES[vt] if vt in VALUE_TYPES else "Object"
-    else:
-        return vt if vt in VALUE_TYPES else object
+
+    return vt if vt in VALUE_TYPES else "Object"
 
 
 def typeFix(value_type: str = "", default_value: Any = None) -> str:
@@ -138,7 +139,7 @@ def typeFix(value_type: str = "", default_value: Any = None) -> str:
                 f"{value_type.__module__}"  # type: ignore
                 + f".{value_type.__name__}"  # type: ignore
             )
-        typerex = r"[\(\[]{0,1}(bool|boolean|int|float|string|str)[\]\)]{0,1}"
+        typerex = r"[\(\[]{0,1}(bool|boolean|int|float|string|str|type)[\]\)]{0,1}"
         re_type = re.findall(typerex, value_type)
         #            fix some types
         if re_type:
@@ -157,6 +158,9 @@ def typeFix(value_type: str = "", default_value: Any = None) -> str:
                     default_value = "0"
             if re_type in ["string", "str", "*", "**"]:
                 value_type = "String"
+            if re_type == "type":
+                value_type = "Object"
+                default_value = None
         elif default_value not in ["", None]:
             value_type = default_value
 
@@ -177,16 +181,16 @@ VALUE_TYPES = {
     list: "Json",
     dict: "dict",
     tuple: "Json",
+    type: "Object",
 }
 
-SVALUE_TYPES = {
-    k.__name__: v for k, v in VALUE_TYPES.items() if hasattr(k, "__name__")
-}
+SVALUE_TYPES = {k.__name__: v for k, v in VALUE_TYPES.items() if hasattr(k, "__name__")}
 SVALUE_TYPES.update(
     {
         "NoneType": "UNSPECIFIED",
         "Object.Object": "Object",
-        "Any": "Any",
+        "typing.Any": "Any",
+        "type": "Object",
         "builtins.NoneType": "UNSPECIFIED",
     }
 )
@@ -276,22 +280,14 @@ class DummySig:
                 # make sure methoddescriptors have a self parameter
                 parameters["self"] = DummyParam()
                 if hasattr(self.module, "__objclass__"):
-                    parameters[
-                        "self"
-                    ].annotation = f"{self.module.__objclass__}"
+                    parameters["self"].annotation = f"{self.module.__objclass__}"
                 elif hasattr(self.module, "__module__"):
                     parameters["self"].annotation = f"{self.module.__module__}"
             for k, t, v in params:
                 parameters[k] = DummyParam()
                 # replace with actual supported type rather than string
-                if (
-                    t
-                    and isinstance(t, str)
-                    and typeFix(t) in VALUE_TYPES.values()
-                ):
-                    t = [k for k, v in VALUE_TYPES.items() if v == typeFix(t)][
-                        0
-                    ]
+                if t and isinstance(t, str) and typeFix(t) in VALUE_TYPES.values():
+                    t = [k for k, v in VALUE_TYPES.items() if v == typeFix(t)][0]
                 elif not t and v:  # try to guess from default value
                     t = guess_type_from_default(v, raw=True)
                 parameters[k].annotation = t
@@ -299,9 +295,7 @@ class DummySig:
         elif self.docstring and len(self.docstring) == 0:
             logger.warning("Module %s docstring is empty.", self.docstring)
         elif self.docstring and len(self.docstring) > 0:
-            logger.info(
-                'Non-standard PB11 docstring found: "%s"', self.docstring
-            )
+            logger.info('Non-standard PB11 docstring found: "%s"', self.docstring)
         return parameters, ret
 
 
@@ -370,12 +364,8 @@ class DetailedDescription:
         else:
             split_str = ""
         ds = ds.split(split_str)[0] if split_str else ds
-        param_lines = [
-            p.replace("\n", "").strip() for p in ds.split(":param")[1:]
-        ]
-        type_lines = [
-            p.replace("\n", "").strip() for p in ds.split(":type")[1:]
-        ]
+        param_lines = [p.replace("\n", "").strip() for p in ds.split(":param")[1:]]
+        type_lines = [p.replace("\n", "").strip() for p in ds.split(":type")[1:]]
         # param_lines = [line.strip() for line in ds]
 
         for p_line in param_lines:
@@ -399,18 +389,14 @@ class DetailedDescription:
             # param_description)
 
             if len(type_lines) != 0:
-                result.update(
-                    {param_name: {"desc": param_description, "type": None}}
-                )
+                result.update({param_name: {"desc": param_description, "type": None}})
             else:
                 result.update(
                     {
                         param_name: {
                             "desc": param_description,
                             "type": typeFix(
-                                re.split(
-                                    r"[,\s\n]", param_description.strip()
-                                )[0]
+                                re.split(r"[,\s\n]", param_description.strip())[0]
                             ),
                         }
                     }
@@ -427,9 +413,7 @@ class DetailedDescription:
                 continue
 
             param_name = t_line[:index_of_second_colon].strip()
-            param_type = t_line[
-                index_of_second_colon + 2 :  # noqa: E203
-            ].strip()
+            param_type = t_line[index_of_second_colon + 2 :].strip()  # noqa: E203
             p_ind = param_type.find(":param")
             p_ind = p_ind if p_ind > -1 else None  # type: ignore
             param_type = param_type[:p_ind]
@@ -439,9 +423,7 @@ class DetailedDescription:
             if param_name in result:
                 result[param_name]["type"] = param_type
             else:
-                logger.warning(
-                    "Type spec without matching description %s", param_name
-                )
+                logger.warning("Type spec without matching description %s", param_name)
 
         return ds.split(":param")[0].strip(), result
 
@@ -516,9 +498,7 @@ class DetailedDescription:
         # extract parameter documentation (up to Returns line)
         pds = rest.split("\nReturns:\n")[0]
         indent = len(re.findall(r"^ *", pds)[0])
-        pds = re.sub(
-            r"\n" + r" " * indent, "\n", "\n" + pds
-        )  # remove indentation
+        pds = re.sub(r"\n" + r" " * indent, "\n", "\n" + pds)  # remove indentation
         # split param lines
         spds = re.findall(r"\n([\w_.]+)\s*:[\n ]*([\w \-_\,\.']+)", pds)
         if not spds:
@@ -544,13 +524,9 @@ class DetailedDescription:
                     }
                 elif len(item) == 3:
                     pdict[item[0]] = {"type": item[1], "desc": item[2]}
-                elif (
-                    len(item) == 2 and len(pds.split("\n")[0].split(":")) == 2
-                ):
+                elif len(item) == 2 and len(pds.split("\n")[0].split(":")) == 2:
                     pdict[item[0]] = {"desc": item[1], "type": "Object"}
-                elif (
-                    len(item) == 2 and len(pds.split("\n")[0].split(":")) == 1
-                ):
+                elif len(item) == 2 and len(pds.split("\n")[0].split(":")) == 1:
                     pdict[item[0]] = {"type": item[1], "desc": ""}
 
         except IndexError:
@@ -586,17 +562,13 @@ class DetailedDescription:
             start_ind = 0
         try:
             end_ind = [
-                idx
-                for idx, s in enumerate(dList)
-                if re.findall(r"-{1,20} example", s)
+                idx for idx, s in enumerate(dList) if re.findall(r"-{1,20} example", s)
             ][0]
         except IndexError:
             end_ind = -1
         paramsList = dList[start_ind:end_ind]
         paramsSidx = [
-            idx + 1
-            for idx, p in enumerate(paramsList)
-            if len(p) > 0 and p[0] != " "
+            idx + 1 for idx, p in enumerate(paramsList) if len(p) > 0 and p[0] != " "
         ]
         paramsEidx = paramsSidx[1:] + [len(paramsList) - 1]
         paramFirstLine = [
@@ -610,9 +582,7 @@ class DetailedDescription:
             if paramsSidx[i] < paramsEidx[i]:
                 pl = [
                     p.strip()
-                    for p in paramsList[
-                        paramsSidx[i] : paramsEidx[i] - 1  # noqa: E203
-                    ]
+                    for p in paramsList[paramsSidx[i] : paramsEidx[i] - 1]  # noqa: E203
                     if len(p.strip()) > 0
                 ]
                 paramDocs[i] = paramDocs[i] + " " + " ".join(pl)
@@ -715,9 +685,7 @@ class GreatGrandChild:
         """
 
         # logger.debug("Initialized ggchild member: %s", self.member)
-        logger.debug(
-            "New GreatGrandChild element: %s", ggchild.tag  # type: ignore
-        )
+        logger.debug("New GreatGrandChild element: %s", ggchild.tag)  # type: ignore
         if ggchild.tag == "name":  # type: ignore
             self.func_name = (
                 ggchild.text  # type: ignore
@@ -834,15 +802,11 @@ class GreatGrandChild:
                     f"{default_value}/{value_type}/ApplicationArgument/{port}/"
                     + f"{access}//False/False/{member_desc}"
                 )
-                logger.debug(
-                    "adding param: %s", {"key": str(name), "value": value}
-                )
+                logger.debug("adding param: %s", {"key": str(name), "value": value})
                 self.member["params"].update({name: value})
 
         elif ggchild.tag == "definition":  # type: ignore
-            self.return_type = ggchild.text.strip().split(" ")[  # type: ignore
-                0
-            ]
+            self.return_type = ggchild.text.strip().split(" ")[0]  # type: ignore
             func_path = ggchild.text.strip().split(" ")[-1]  # type: ignore
             # skip function if it begins with a single underscore,
             # but keep __init__ and __call__
@@ -869,16 +833,11 @@ class GreatGrandChild:
                     self.func_title,
                     self.func_name,
                 )
-            elif (
-                self.func_name.startswith("_")
-                or self.func_path.find("._") >= 0
-            ):
+            elif self.func_name.startswith("_") or self.func_path.find("._") >= 0:
                 logger.debug("Skipping %s.%s", self.func_path, self.func_name)
                 self.member = None  # type: ignore
             else:
-                self.func_title = (
-                    f"{self.func_path.rsplit('.',1)[-1]}.{self.func_name}"
-                )
+                self.func_title = f"{self.func_path.rsplit('.',1)[-1]}.{self.func_name}"
                 self.func_name = f"{self.func_path}.{self.func_name}"
             if self.member:
                 self.return_type = (
@@ -945,10 +904,7 @@ class Child:
         )
         if parent and hasattr(parent, "casa_mode"):
             self.casa_mode = parent.casa_mode
-        if (
-            child.tag == "detaileddescription"  # type: ignore
-            and len(child) > 0
-        ):
+        if child.tag == "detaileddescription" and len(child) > 0:  # type: ignore
             logger.debug("Parsing detaileddescription")
             # logger.debug("Child: %s", ET.tostring(child, encoding="unicode"))
             self.type = "description"
@@ -977,9 +933,7 @@ class Child:
                 parent.member if parent else "<undefined>",
             )
             for grandchild in child:
-                gmember = self._process_grandchild(
-                    grandchild, language, parent=parent
-                )
+                gmember = self._process_grandchild(grandchild, language, parent=parent)
                 if gmember is None:
                     logger.debug("Bailing out of grandchild processing!")
                     continue
@@ -1009,10 +963,7 @@ class Child:
         member: dict = {"params": {}}
         # logger.debug("Initialized grandchild member: %s", member)
 
-        if (
-            gchild.tag == "memberdef"  # type: ignore
-            and gchild.get("kind") == "function"
-        ):
+        if gchild.tag == "memberdef" and gchild.get("kind") == "function":  # type: ignore
             logger.debug("Start processing of new function definition.")
 
             member["params"].update(
@@ -1084,9 +1035,7 @@ class Child:
             for ggchild in gchild:
                 gg.process_GreatGrandChild(ggchild, parent_member=self)
                 if gg.member is None:
-                    logger.debug(
-                        "Bailing out ggchild processing: %s", gg.member
-                    )
+                    logger.debug("Bailing out ggchild processing: %s", gg.member)
                     del gg
                     return None
             if gg.member != member and gg.member["params"] not in [None, {}]:

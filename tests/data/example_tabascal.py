@@ -63,11 +63,7 @@ def generate_random_sky(
 
     d_ra, d_dec = positions[:, :n_src]
 
-    spectral_indices = rng.normal(
-        loc=spec_idx_mean, scale=spec_idx_std, size=(n_src,)
-    )
-    I = I[:, None] * (
-        (freqs[None, :] / freqs[0]) ** -spectral_indices[:, None]
-    )
+    spectral_indices = rng.normal(loc=spec_idx_mean, scale=spec_idx_std, size=(n_src,))
+    I = I[:, None] * ((freqs[None, :] / freqs[0]) ** -spectral_indices[:, None])
 
     return I, d_ra, d_dec

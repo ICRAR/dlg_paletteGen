@@ -199,8 +199,7 @@ class concat:
                 "timesort=" + repr(_pc.document["timesort"]),
                 "copypointing=" + repr(_pc.document["copypointing"]),
                 "visweightscale=" + repr(_pc.document["visweightscale"]),
-                "forcesingleephemfield="
-                + repr(_pc.document["forcesingleephemfield"]),
+                "forcesingleephemfield=" + repr(_pc.document["forcesingleephemfield"]),
             ],
         )
         task_result = None

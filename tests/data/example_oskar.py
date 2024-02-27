@@ -318,9 +318,7 @@ class Sky(object):
         self.capsule_ensure()
         _sky_lib.filter_by_flux(self._capsule, min_flux_jy, max_flux_jy)
 
-    def filter_by_radius(
-        self, inner_radius_deg, outer_radius_deg, ra0_deg, dec0_deg
-    ):
+    def filter_by_radius(self, inner_radius_deg, outer_radius_deg, ra0_deg, dec0_deg):
         """Filters the sky model according to source radius from phase centre.
 
         Sources outside the range are deleted.
@@ -567,8 +565,7 @@ class Sky(object):
             )
             for i in range(0, len(array)):
                 file.write(
-                    "point(%10.6f, %10.6f) # point=x\n"
-                    % (array[i, 0], array[i, 1])
+                    "point(%10.6f, %10.6f) # point=x\n" % (array[i, 0], array[i, 1])
                 )
 
     # Properties

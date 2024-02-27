@@ -202,9 +202,7 @@ def alert_if_missing(message: str, fields: list, internal_name: str):
     :param internal_name: str, identifier name of field to check
     """
     if find_field_by_name(fields, internal_name) is None:
-        logger.warning(
-            message + " component missing " + internal_name + " field"
-        )
+        logger.warning(message + " component missing " + internal_name + " field")
         pass
 
 
@@ -234,8 +232,7 @@ def parse_value(component_name: str, field_name: str, value: str) -> tuple:
         return ()
     elif len(parts) > 9:
         logger.warning(
-            component_name
-            + " too many parts in field definition. Combining last. "
+            component_name + " too many parts in field definition. Combining last. "
         )
         parts[8] = "/".join(parts[8:])
 
@@ -428,11 +425,7 @@ def create_palette_node_from_params(params) -> tuple:
             # check that type is a known value
             if not FieldType.has_key(field_type):
                 logger.warning(
-                    text
-                    + " '"
-                    + internal_name
-                    + "' field_type is Unknown: "
-                    + field_type
+                    text + " '" + internal_name + "' field_type is Unknown: " + field_type
                 )
 
             # check that usage is a known value
@@ -526,9 +519,7 @@ def process_compounddefs(
     compounds = xml_root.findall("./compounddef")
     for compounddef in compounds:
         # are we processing an EAGLE component?
-        eagle_tags = compounddef.findall(
-            "./detaileddescription/para/simplesect/title"
-        )
+        eagle_tags = compounddef.findall("./detaileddescription/para/simplesect/title")
         is_eagle_node = False
         if (
             len(eagle_tags) == 2
@@ -575,9 +566,7 @@ def process_compounddefs(
                     if alreadyPresent:
                         # TODO: Originally this was suppressed, but in reality
                         # multiple functions with the same name are possible
-                        logger.warning(
-                            "Function has multiple entires: %s", n["text"]
-                        )
+                        logger.warning("Function has multiple entires: %s", n["text"])
                     if n["description"] == "" and f["description"] != "":
                         n["description"] = f["description"]
                     nodes.append(n)
@@ -591,9 +580,7 @@ def process_compounddefs(
     return nodes
 
 
-def process_compounddef_default(
-    compounddef: ET.Element, language: Language
-) -> list:
+def process_compounddef_default(compounddef: ET.Element, language: Language) -> list:
     """
     Process a compound definition
 
@@ -625,9 +612,7 @@ def process_compounddef_default(
     for t in enumerate(ctags):
         if t[1] in tags:
             child = compounddef[t[0]]
-            logger.debug(
-                "Handling child: %s; using parent: %s", t, compound.type
-            )
+            logger.debug("Handling child: %s; using parent: %s", t, compound.type)
             childO = Child(child, language, parent=cdescrObj)
             if childO.members not in [None, []]:
                 result.append(childO.members)
@@ -724,10 +709,7 @@ def create_construct_node(node_type: str, node: dict) -> dict:
     # check that type is in the list of known types
     if node_type not in KNOWN_CONSTRUCT_TYPES:
         logger.warning(
-            " construct for node'"
-            + node["text"]
-            + "' has unknown type: "
-            + node_type
+            " construct for node'" + node["text"] + "' has unknown type: " + node_type
         )
         logger.info("Known types are: %s", KNOWN_CONSTRUCT_TYPES)
         pass
@@ -1026,12 +1008,7 @@ def params_to_nodes(params: dict, tag: str) -> list:
 
             # if a construct is found, add to nodes
             if data["construct"] != "":
-                logger.info(
-                    "Adding component: "
-                    + data["construct"]
-                    + "/"
-                    + node["text"]
-                )
+                logger.info("Adding component: " + data["construct"] + "/" + node["text"])
                 construct_node = create_construct_node(data["construct"], node)
                 construct_node["repositoryUrl"] = git_repo
                 construct_node["commitHash"] = version

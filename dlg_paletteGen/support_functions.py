@@ -2,6 +2,7 @@ import datetime
 import importlib
 import inspect
 import json
+import numpy
 import os
 import subprocess
 import sys
@@ -18,8 +19,8 @@ from .classes import (
     DOXYGEN_SETTINGS,
     DOXYGEN_SETTINGS_C,
     DOXYGEN_SETTINGS_PYTHON,
-    VALUE_TYPES,
     SVALUE_TYPES,
+    VALUE_TYPES,
     Language,
     logger,
     typeFix,
@@ -395,7 +396,7 @@ def get_value_type_from_default(default):
         + f".{type(default).__name__}"  # type: ignore
     )
     if default is inspect._empty or ptype == "builtins.NoneType":
-        value = "None"
+        value = None
         ptype = SVALUE_TYPES["NoneType"]
     else:  # there is a default value
         try:
@@ -458,7 +459,7 @@ def populateFields(parameters: dict, dd, member=None) -> dict:
                 param_desc["desc"] = "Reference to object"
 
         # populate the field itself
-        field[p].value = field[p].defaultValue = value
+        field[p].value = field[p].defaultValue = param_desc["value"]
 
         # deal with the type
         if (

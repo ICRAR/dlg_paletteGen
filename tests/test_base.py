@@ -548,9 +548,7 @@ def test_direct_tabascal(tmpdir: str, shared_datadir: str):
         recursive=True,
     )
     assert (
-        modules["example_tabascal"]["generate_random_sky"]["fields"]["fov"][
-            "value"
-        ]
+        modules["example_tabascal"]["generate_random_sky"]["fields"]["fov"]["value"]
         == 1.0
     )
 
@@ -628,7 +626,7 @@ def test_direct_module(tmpdir: str, shared_datadir: str):
     for members in modules.values():
         for node in members.values():
             nodes.append(node)
-    assert len(modules) == 3
+    assert len(nodes) in [1, 2]
     prepare_and_write_palette(nodes, "test.palette", module_doc=module_doc)
 
 

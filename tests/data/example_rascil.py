@@ -45,13 +45,9 @@ def calibrate_list_rsexecute_workflow(
     """
 
     if global_solution:
-        log.info(
-            "calibration_solve: Performing global solution of gains for all vis"
-        )
+        log.info("calibration_solve: Performing global solution of gains for all vis")
     else:
-        log.info(
-            "calibration_solve: Performing separate solution of gains for each vis"
-        )
+        log.info("calibration_solve: Performing separate solution of gains for each vis")
 
     def calibration_solve(vis, modelvis=None, gt=None):
         return solve_calibrate_chain(
@@ -79,15 +75,13 @@ def calibrate_list_rsexecute_workflow(
     if global_solution and (len(vis_list) > 1):
         # The conversion is a no op if it's actually a vis
         point_vislist = [
-            rsexecute.execute(divide_visibility, nout=1)(
-                vis_list[i], model_vislist[i]
-            )
+            rsexecute.execute(divide_visibility, nout=1)(vis_list[i], model_vislist[i])
             for i, _ in enumerate(vis_list)
         ]
 
-        global_point_vis_list = rsexecute.execute(
-            concatenate_visibility, nout=1
-        )(point_vislist, dim="frequency")
+        global_point_vis_list = rsexecute.execute(concatenate_visibility, nout=1)(
+            point_vislist, dim="frequency"
+        )
         global_point_vis_list = rsexecute.execute(
             integrate_visibility_by_channel, nout=1
         )(global_point_vis_list)

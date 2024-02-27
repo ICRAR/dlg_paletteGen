@@ -62,9 +62,7 @@ def get_args(args=None):
     )
     parser.add_argument("idir", help="input directory path or file name")
     parser.add_argument("ofile", help="output file name")
-    parser.add_argument(
-        "-m", "--module", help="Module load path name", default=""
-    )
+    parser.add_argument("-m", "--module", help="Module load path name", default="")
     parser.add_argument(
         "-t", "--tag", help="filter components with matching tag", default=""
     )
@@ -106,10 +104,7 @@ def get_args(args=None):
     )
     if not args:
         if len(sys.argv) == 1:
-            print(
-                "\x1b[31;20mInsufficient number of "
-                + "arguments provided!!!\n\x1b[0m"
-            )
+            print("\x1b[31;20mInsufficient number of " + "arguments provided!!!\n\x1b[0m")
             parser.print_help(sys.stderr)
             sys.exit(1)
         args = parser.parse_args()
@@ -161,9 +156,7 @@ def check_environment_variables() -> bool:
 
         if value is None:
             if variable == "PROJECT_NAME":
-                os.environ["PROJECT_NAME"] = os.path.basename(
-                    os.path.abspath(".")
-                )
+                os.environ["PROJECT_NAME"] = os.path.basename(os.path.abspath("."))
             elif variable == "PROJECT_VERSION":
                 os.environ["PROJECT_VERSION"] = "0.1"
             elif variable == "GIT_REPO":
@@ -241,9 +234,7 @@ def palettes_from_module(
             nodes, module_doc = nodes_from_module(m, recursive=recursive)
         if len(nodes) == 0:
             continue
-        filename = (
-            outfile if not split else f"{outfile}{m.replace('.','_')}.palette"
-        )
+        filename = outfile if not split else f"{outfile}{m.replace('.','_')}.palette"
         files[filename] = len(nodes)
         prepare_and_write_palette(nodes, filename, module_doc=module_doc)
         logger.info(
@@ -254,9 +245,7 @@ def palettes_from_module(
         )
     logger.info(
         "\n\n>>>>>>> Extraction summary <<<<<<<<\n%s\n",
-        "\n".join(
-            [f"Wrote {k} with {v} components" for k, v in files.items()]
-        ),
+        "\n".join([f"Wrote {k} with {v} components" for k, v in files.items()]),
     )
 
 
@@ -298,9 +287,7 @@ def main():  # pragma: no cover
         )
     else:
         # add extra doxygen setting for input and output locations
-        DOXYGEN_SETTINGS.update(
-            {"PROJECT_NAME": os.environ.get("PROJECT_NAME")}
-        )
+        DOXYGEN_SETTINGS.update({"PROJECT_NAME": os.environ.get("PROJECT_NAME")})
         DOXYGEN_SETTINGS.update({"INPUT": inputdir})
         DOXYGEN_SETTINGS.update({"OUTPUT_DIRECTORY": output_directory.name})
 

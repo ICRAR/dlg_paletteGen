@@ -8,6 +8,7 @@ Expected behavior follows preference order:
 
 Rationale: docstrings are the least likely to be well maintained.
 """
+
 import benedict
 from typing import Any, Union
 import numpy as np
@@ -24,7 +25,7 @@ def testField(
     test_kw_json: list = [3, 4, 5],
     test_kw_non_json: dict = {"a": "hello"},
     test_kw_complex1: np.array = np.array([123, 456]),
-    test_kw_complex2: benedict.BeneDict = benedict.BeneDict(),
+    test_kw_complex2: benedict.benedict = benedict.benedict(),
     test_kw_none: Union[str, None] = None,
 ) -> dict:
     """
@@ -43,8 +44,8 @@ def testField(
     :param test_kw_complex2: complex non-standard type (benedict dictionary)
     :param test_none: none type in default_value
     """
-    test_field = benedict.BeneDict()
-    fieldValue = benedict.BeneDict()
+    test_field = benedict.benedict()
+    fieldValue = benedict.benedict()
     fieldValue.pos_hint = test_pos_hint
     fieldValue.pos_hint_doc = test_pos_hint_doc
     fieldValue.pos_doc = test_pos_doc

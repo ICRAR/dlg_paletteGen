@@ -67,9 +67,7 @@ def inspect_member(member, module=None, parent=None):
     if inspect.isclass(module):
         name = member.__qualname__
         if name.startswith("PyCapsule"):
-            name = name.replace(
-                "PyCapsule", f"{module.__module__}.{module.__name__}"
-            )
+            name = name.replace("PyCapsule", f"{module.__module__}.{module.__name__}")
         elif name == "object.__init__":
             name = f"{module.__name__}.__init__"
     else:
@@ -97,9 +95,7 @@ def inspect_member(member, module=None, parent=None):
             "Initialize self.  See help(type(self)) for accurate signature."
         )
     ):
-        logger.debug(
-            f"Process documentation of {type(member).__name__} {name}"
-        )
+        logger.debug(f"Process documentation of {type(member).__name__} {name}")
         dd = DetailedDescription(doc)
         node.description = f"{dd.description.strip()}"
         if len(dd.params) > 0:
@@ -125,9 +121,7 @@ def inspect_member(member, module=None, parent=None):
         "pybind11_type",
         "builtin_function_or_method",
     ]:
-        logger.debug(
-            "!!! %s PyBind11 or builtin: Creating dummy signature !!!", member
-        )
+        logger.debug("!!! %s PyBind11 or builtin: Creating dummy signature !!!", member)
         try:
             # this will fail for e.g. pybind11 modules
             sig = inspect.signature(member)  # type: ignore
@@ -192,9 +186,7 @@ def inspect_member(member, module=None, parent=None):
     return node
 
 
-def get_members(
-    mod: types.ModuleType, module_members=[], parent=None, member=None
-):
+def get_members(mod: types.ModuleType, module_members=[], parent=None, member=None):
     """
     Get members of a module
 
@@ -237,9 +229,7 @@ def get_members(
                 logger.debug("Class members: %s", nodes.keys())
 
             else:
-                nodes = {
-                    m.__name__: inspect_member(m, module=mod, parent=parent)
-                }
+                nodes = {m.__name__: inspect_member(m, module=mod, parent=parent)}
 
             for name, node in nodes.items():
                 if name in module_members:
@@ -266,9 +256,7 @@ def get_members(
     return members
 
 
-def module_hook(
-    mod_name: str, modules: dict = {}, recursive: bool = True
-) -> tuple:
+def module_hook(mod_name: str, modules: dict = {}, recursive: bool = True) -> tuple:
     """
     Function dissecting an imported module.
 
@@ -305,9 +293,7 @@ def module_hook(
                 # if len(sub_modules) > 0:
                 logger.debug("Iterating over sub_modules of %s", mod_name)
                 for sub_mod in sub_modules:
-                    logger.info(
-                        "Treating sub-module: %s of %s", sub_mod, mod_name
-                    )
+                    logger.info("Treating sub-module: %s of %s", sub_mod, mod_name)
                     modules, _ = module_hook(sub_mod, modules=modules)
             # member_count = sum([len(m) for m in modules.values()])
         except ImportError:
