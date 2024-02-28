@@ -7,6 +7,7 @@ For more information please refer to the documentation
 https://icrar.github.io/dlg_paletteGen/
 
 """
+
 import argparse
 import logging
 import os
@@ -15,8 +16,8 @@ import tempfile
 
 import pkg_resources
 
-from .classes import DOXYGEN_SETTINGS, Language, logger
 from .module_base import module_hook
+from .settings import DOXYGEN_SETTINGS, Language, logger
 
 # isort: ignore
 from .source_base import process_compounddefs
@@ -185,7 +186,7 @@ def nodes_from_module(module_path: str, recursive: bool = True) -> tuple:
     nodes = []
     for _, members in modules.items():
         for _, node in members.items():
-            # TODO: remove once EAGLE can deal with dict fields
+            # TODO: remove once EAGLE can deal with dict fields pylint: disable=fixme
             if isinstance(node.fields, list):
                 continue
             node.fields = list(node.fields.values())
@@ -267,15 +268,15 @@ def main():  # pragma: no cover
         split,
         language,
     ) = get_args()
-    logger.info("PROJECT_NAME:" + os.environ.get("PROJECT_NAME"))
-    logger.info("PROJECT_VERSION:" + os.environ.get("PROJECT_VERSION"))
-    logger.info("GIT_REPO:" + os.environ.get("GIT_REPO"))
+    logger.info("PROJECT_NAME: %s", os.environ.get("PROJECT_NAME"))
+    logger.info("PROJECT_VERSION: %s", os.environ.get("PROJECT_VERSION"))
+    logger.info("GIT_REPO: %s", os.environ.get("GIT_REPO"))
 
-    logger.info("Input Directory:" + inputdir)
-    logger.info("Tag:" + tag)
-    logger.info("Output File:" + outputfile)
-    logger.info("Allow missing EAGLE_START:" + str(allow_missing_eagle_start))
-    logger.info("Module Path:" + module_path)
+    logger.info("Input Directory: %s", inputdir)
+    logger.info("Tag: %s", tag)
+    logger.info("Output File: %s", outputfile)
+    logger.info("Allow missing EAGLE_START: %s", str(allow_missing_eagle_start))
+    logger.info("Module Path: %s", module_path)
 
     # create a temp directory for the output of doxygen
     output_directory = tempfile.TemporaryDirectory()

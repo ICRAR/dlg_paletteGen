@@ -3,10 +3,9 @@ import logging
 import os
 import subprocess
 import sys
-import pytest
 import unittest
 
-from dlg_paletteGen.classes import DOXYGEN_SETTINGS, guess_type_from_default
+from dlg_paletteGen.settings import DOXYGEN_SETTINGS, guess_type_from_default
 from dlg_paletteGen.cli import NAME, check_environment_variables, get_args
 from dlg_paletteGen.module_base import module_hook
 from dlg_paletteGen.source_base import Language, process_compounddefs
@@ -258,10 +257,10 @@ def test_CLI_module(tmpdir: str, shared_datadir: str):
     :param tmpdir: the path to the temp directory to use
     :param shared_datadir: the path the the local directory
     """
-    input = str(shared_datadir.absolute())  # don't really need this
+    inp = str(shared_datadir.absolute())  # don't really need this
     output = tmpdir + "t.palette"
     p = start_process(
-        ("-rsm", "dlg_paletteGen", input, output),
+        ("-rsm", "dlg_paletteGen", inp, output),
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
     )
@@ -589,7 +588,7 @@ def test_typeFix(tmpdir: str, shared_datadir: str):
     output_directory = str(tmpdir)
     output_file = f"{output_directory}/t.palette"
 
-    module_name = "example_options.testField"
+    module_name = "example_options.testFieldSingle"
     modules, module_doc = module_hook(
         module_name,
         recursive=True,

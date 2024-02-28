@@ -2,7 +2,6 @@ import datetime
 import importlib
 import inspect
 import json
-import numpy
 import os
 import subprocess
 import sys
@@ -12,9 +11,10 @@ from pkgutil import iter_modules
 from typing import Any, Union
 
 import benedict
+import numpy
 from blockdag import build_block_dag
 
-from .classes import (
+from .settings import (
     BLOCKDAG_DATA_FIELDS,
     DOXYGEN_SETTINGS,
     DOXYGEN_SETTINGS_C,
@@ -338,9 +338,7 @@ def import_using_name(mod_name: str, traverse: bool = False):
                             mod = importlib.import_module(".".join(parts[:-1]))
                             break
                         except Exception as e:
-                            raise ValueError(
-                                "Problem importing module %s, %s" % (mod, e)
-                            )
+                            raise ValueError("Problem importing module %s, %s" % (mod, e))
                 logger.debug("Loaded module: %s", mod_name)
             else:
                 logger.debug("Recursive import failed! %s", parts[0] in sys.modules)
@@ -442,7 +440,6 @@ def populateFields(parameters: dict, dd, member=None) -> dict:
     documentation if available.
     """
     fields = {}
-    value = None
     descr_miss = []
 
     for p, v in parameters.items():
@@ -499,6 +496,16 @@ def populateFields(parameters: dict, dd, member=None) -> dict:
         field[p].positional = (
             True if v.kind == inspect.Parameter.POSITIONAL_ONLY else False
         )
+        if param_desc["type"] == "UNSPECIFIED" and param_desc["desc"].find(",") > 0:
+            dtype = param_desc["desc"].split(",", maxsplit=1)[0]
+            if dtype in SVALUE_TYPES:
+                param_desc["type"] = SVALUE_TYPES[dtype]
+        if param_desc["type"] and field[p].type in [None, "UNSPECIFIED"]:
+            field[p].type = param_desc["type"]
+        if isinstance(v.default, numpy.ndarray):
+            field[p].defaultValue = v.default.tolist()
+        if isinstance(field[p].value, numpy.ndarray):
+            field[p].value = field[p].value.tolist()
         fields.update(field)
 
     logger.debug("Parameters %s", fields)
@@ -540,7 +547,7 @@ def constructNode(
     return Node
 
 
-def populateDefaultFields(Node):
+def populateDefaultFields(Node):  # pylint: discard=invalid-name
     """
     Populate a palette node with the default
     field definitions. This is separate from the

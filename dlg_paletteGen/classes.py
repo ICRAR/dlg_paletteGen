@@ -1,237 +1,20 @@
-import ast
+"""
+The main classes used by this module.
+"""
+
 import inspect
-import logging
 import re
-import sys
 import xml.etree.ElementTree as ET
-from enum import Enum
-from typing import Any, Union
+from typing import Union
 
-
-class CustomFormatter(logging.Formatter):
-    high = "\x1b[34;1m"
-    grey = "\x1b[38;20m"
-    yellow = "\x1b[33;20m"
-    red = "\x1b[31;20m"
-    bold_red = "\x1b[31;1m"
-    reset = "\x1b[0m"
-    base_format = (
-        "%(asctime)s - %(name)s - %(levelname)s - %(message)s "
-        + "(%(filename)s:%(lineno)d)"
-    )
-
-    FORMATS = {
-        logging.DEBUG: high + base_format + reset,
-        logging.INFO: grey + base_format + reset,
-        logging.WARNING: yellow + base_format + reset,
-        logging.ERROR: red + base_format + reset,
-        logging.CRITICAL: bold_red + base_format + reset,
-    }
-
-    def format(self, record):
-        log_fmt = self.FORMATS.get(record.levelno)
-        formatter = logging.Formatter(log_fmt, "%Y-%m-%dT%H:%M:%S")
-        return formatter.format(record)
-
-
-# create console handler with a higher log level
-ch = logging.StreamHandler(sys.stdout)
-ch.setLevel(logging.DEBUG)
-
-ch.setFormatter(CustomFormatter())
-
-logger = logging.getLogger(__name__)
-logger.addHandler(ch)
-
-
-def cleanString(input_text: str) -> str:
-    """
-    Remove ANSI escape strings from input"
-
-    :param input_text: string to clean
-
-    :returns: str, cleaned string
-    """
-    # ansi_escape = re.compile(r'[@-Z\\-_]|\[[0-?]*[ -/]*[@-~]')
-    ansi_escape = re.compile(r"\[[0-?]*[ -/]*[@-~]")
-    return ansi_escape.sub("", input_text)
-
-
-def convert_type_str(input_type: str = "") -> str:
-    """
-    Convert the string provided into a supported type string
-
-    :param value_type: str, type string to be converted
-
-    :returns: str, supported type string
-    """
-    if input_type in SVALUE_TYPES.values():
-        return input_type
-    value_type = (
-        SVALUE_TYPES[input_type] if input_type in SVALUE_TYPES else f"{input_type}"
-    )
-    return value_type
-
-
-def guess_type_from_default(default_value: Any = "", raw=False) -> str:
-    """
-    Try to guess the parameter type from a default_value provided.
-    The value can be of any type by itself, including a JSON string
-    containing a complex data structure.
-
-    :param default_value: any, the default_value
-    :param raw: bool, return raw type object, rather than string
-
-    :returns: str, the type of the value as a supported string
-    """
-    vt = None
-    try:
-        # we'll try to interpret what the type of the default_value is
-        # using ast
-        l: dict = {}
-        try:
-            eval(
-                compile(
-                    ast.parse(f"t = {default_value}"),
-                    filename="",
-                    mode="exec",
-                ),
-                l,
-            )
-            vtype = type(l["t"])
-            if not isinstance(vtype, type):
-                vt = l["t"]
-            else:
-                vt = vtype
-        except (NameError, SyntaxError):
-            vt = "String"
-    except:  # noqa: E722
-        return "Object"
-    if not raw:
-        return VALUE_TYPES[vt] if vt in VALUE_TYPES else "Object"
-
-    return vt if vt in VALUE_TYPES else "Object"
-
-
-def typeFix(value_type: str = "", default_value: Any = None) -> str:
-    """
-    Trying to fix or guess the type of a parameter. If a value_type is
-    provided, this will be used to determine the type.
-
-    :param value_type: str, convert type string to one of our strings
-    :param default_value: any, this will be used to determine the
-                          type if value_type is not specified.
-
-    :returns: str, the converted type as a supported string
-    """
-    if value_type in SVALUE_TYPES.values():
-        return value_type
-    if not value_type and default_value:
-        try:  # first check for standard types
-            value_type = type(default_value).__name__
-        except TypeError:
-            value_type = guess_type_from_default(default_value)
-    elif not value_type or value_type == inspect._empty and not default_value:
-        return SVALUE_TYPES["NoneType"]
-    else:  # check the provided value_type string
-        if not isinstance(value_type, str):
-            value_type = (
-                f"{value_type.__module__}"  # type: ignore
-                + f".{value_type.__name__}"  # type: ignore
-            )
-        typerex = r"[\(\[]{0,1}(bool|boolean|int|float|string|str|type)[\]\)]{0,1}"
-        re_type = re.findall(typerex, value_type)
-        #            fix some types
-        if re_type:
-            re_type = re_type[0]
-            if re_type in ["bool", "boolean"]:
-                value_type = "Boolean"
-                if default_value == "":
-                    default_value = "False"
-            if re_type == "int":
-                value_type = "Integer"
-                if default_value == "":
-                    default_value = "0"
-            if re_type == "float":
-                value_type = "Float"
-                if default_value == "":
-                    default_value = "0"
-            if re_type in ["string", "str", "*", "**"]:
-                value_type = "String"
-            if re_type == "type":
-                value_type = "Object"
-                default_value = None
-        elif default_value not in ["", None]:
-            value_type = default_value
-
-    value_type = convert_type_str(value_type)
-    # we only want stuff in parentheses
-    v_type = re.split(r"[\[\]\(\)]", value_type)
-    value_type = v_type[1] if len(v_type) > 1 else v_type[0]
-    return value_type
-
-
-# these are our supported base types
-VALUE_TYPES = {
-    Any: "Any",
-    str: "String",
-    int: "Integer",
-    float: "Float",
-    bool: "Boolean",
-    list: "Json",
-    dict: "dict",
-    tuple: "Json",
-    type: "Object",
-}
-
-SVALUE_TYPES = {k.__name__: v for k, v in VALUE_TYPES.items() if hasattr(k, "__name__")}
-SVALUE_TYPES.update(
-    {
-        "NoneType": "UNSPECIFIED",
-        "Object.Object": "Object",
-        "typing.Any": "Any",
-        "type": "Object",
-        "builtins.NoneType": "UNSPECIFIED",
-    }
+from .settings import (
+    VALUE_TYPES,
+    Language,
+    cleanString,
+    guess_type_from_default,
+    logger,
+    typeFix,
 )
-
-BLOCKDAG_DATA_FIELDS = [
-    "inputPorts",
-    "outputPorts",
-    "applicationArgs",
-    "category",
-    "fields",
-]
-
-
-class Language(Enum):
-    UNKNOWN = 0
-    C = 1
-    PYTHON = 2
-
-
-DOXYGEN_SETTINGS = {
-    "OPTIMIZE_OUTPUT_JAVA": "YES",
-    "AUTOLINK_SUPPORT": "NO",
-    "IDL_PROPERTY_SUPPORT": "NO",
-    "EXCLUDE_PATTERNS": "*/web/*, CMakeLists.txt",
-    "VERBATIM_HEADERS": "NO",
-    "GENERATE_HTML": "NO",
-    "GENERATE_LATEX": "NO",
-    "GENERATE_XML": "YES",
-    "XML_PROGRAMLISTING": "NO",
-    "ENABLE_PREPROCESSING": "NO",
-    "CLASS_DIAGRAMS": "NO",
-}
-
-# extra doxygen setting for C repositories
-DOXYGEN_SETTINGS_C = {
-    "FILE_PATTERNS": "*.h, *.hpp",
-}
-
-DOXYGEN_SETTINGS_PYTHON = {
-    "FILE_PATTERNS": "*.py",
-}
 
 
 class DummySig:
@@ -265,7 +48,7 @@ class DummySig:
                 params = re.findall(r"\(.*\n*.*\)", call_line)[0]
                 params = re.sub(r"\n {2,}", " ", params)
                 params = re.findall(
-                    r"(?:([\w_\.]+)(?:[\: ]*([\w_\:\.\[\]]*)(?: *= *([\w\.\'\-]*))*\,*))",  # noqa E501
+                    r"(?:([\w_\.]+)(?:[\: ]*([\w_\:\.\[\]]*)(?: *= *([\w\.\'\-]*))*\,*))",
                     params,
                 )
                 ret = re.findall(r"-> ([\w_\:\.\[\]]+)", call_line)
@@ -300,6 +83,10 @@ class DummySig:
 
 
 class DummyParam:
+    """
+    Dummy Parameter class
+    """
+
     annotation = None
     kind = "POSITIONAL_OR_KEYWORD"
     default = inspect._empty
@@ -327,9 +114,7 @@ class DetailedDescription:
         self.format = ""
         self._identify_format()
         self.main_descr, self.params = self.process_descr()
-        self.brief_descr = (
-            self.main_descr.split(".")[0] + "." if self.main_descr else ""
-        )
+        self.brief_descr = self.main_descr.split(".")[0] + "." if self.main_descr else ""
 
     def _process_rEST(self, detailed_description) -> tuple:
         """
@@ -554,9 +339,7 @@ class DetailedDescription:
         dList = dStr.split("\n")
         try:
             start_ind = [
-                idx
-                for idx, s in enumerate(dList)
-                if re.findall(r"-{1,20} parameter", s)
+                idx for idx, s in enumerate(dList) if re.findall(r"-{1,20} parameter", s)
             ][0] + 1
         except IndexError:
             start_ind = 0
@@ -874,6 +657,10 @@ class GreatGrandChild:
 
 
 class Child:
+    """
+    Child class for hierarchy.
+    """
+
     def __init__(
         self,
         child: ET.Element,
@@ -937,7 +724,7 @@ class Child:
                 if gmember is None:
                     logger.debug("Bailing out of grandchild processing!")
                     continue
-                elif gmember != self.member:
+                if gmember != self.member:
                     # logger.debug("Adding grandchild members: %s", gmember)
                     self.member["params"].update(gmember["params"])
                     members.append(gmember)
