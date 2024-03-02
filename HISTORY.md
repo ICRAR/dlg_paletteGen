@@ -4,6 +4,7 @@ Changelog
 
 (unreleased)
 ------------
+- Release: version 0.3.3 🚀 [Andreas Wicenec]
 - Don't execute windows tests. [Andreas Wicenec]
 - Removed dask-ms from requirements. [Andreas Wicenec]
 - Removed casatools imports. [Andreas Wicenec]
