@@ -4,6 +4,14 @@ Changelog
 
 (unreleased)
 ------------
+- Don't execute windows tests. [Andreas Wicenec]
+- Removed dask-ms from requirements. [Andreas Wicenec]
+- Removed casatools imports. [Andreas Wicenec]
+
+
+0.3.3 (2024-03-02)
+------------------
+- Release: version 0.3.3 🚀 [Andreas Wicenec]
 - Bumped to new version of benedict. [Andreas Wicenec]
 - Refactoring. [Andreas Wicenec]
 - Fixed tests and format. [Andreas Wicenec]
