@@ -14,7 +14,6 @@ import xml.etree.ElementTree as ET
 from pkgutil import iter_modules
 from typing import Any, Union
 
-import benedict
 import numpy
 from blockdag import build_block_dag
 
@@ -342,9 +341,7 @@ def import_using_name(mod_name: str, traverse: bool = False):
                             mod = importlib.import_module(".".join(parts[:-1]))
                             break
                         except Exception as e:
-                            raise ValueError(
-                                "Problem importing module %s, %s" % (mod, e)
-                            )
+                            raise ValueError("Problem importing module %s, %s" % (mod, e))
                 logger.debug("Loaded module: %s", mod_name)
             else:
                 logger.debug("Recursive import failed! %s", parts[0] in sys.modules)
@@ -510,7 +507,7 @@ def populateFields(parameters: dict, dd, member=None) -> dict:
             field[p]["type"] = param_desc["type"]
         if isinstance(field[p]["value"], numpy.ndarray):
             try:
-                field[p]["value"] = field[p]["value"].tolist()
+                field[p]["value"] = field[p]["defaultValue"] = field[p]["value"].tolist()
             except NotImplementedError:
                 field[p]["value"] = []
         fields.update(field)
@@ -579,9 +576,7 @@ def populateDefaultFields(Node):  # pylint: disable=invalid-name
     et[n]["value"] = 2
     et[n]["defaultValue"] = 2
     et[n]["type"] = "Integer"
-    et[n][
-        "description"
-    ] = "Estimate of execution time (in seconds) for this application."
+    et[n]["description"] = "Estimate of execution time (in seconds) for this application."
     et[n]["parameterType"] = "ConstraintParameter"
     Node["fields"].update(et)
 

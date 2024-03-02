@@ -157,7 +157,7 @@ VALUE_TYPES = {
     list: "Json",
     dict: "dict",
     tuple: "Json",
-    numpy.ndarray: "numpy.ndarray",
+    numpy.ndarray: "numpy.array",
     type: "Object",
     any: "Object",
 }
