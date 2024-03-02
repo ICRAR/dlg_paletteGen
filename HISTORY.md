@@ -4,6 +4,17 @@ Changelog
 
 (unreleased)
 ------------
+- Bumped to new version of benedict. [Andreas Wicenec]
+- Refactoring. [Andreas Wicenec]
+- Fixed tests and format. [Andreas Wicenec]
+- Updated to python-benedict. [Andreas Wicenec]
+- Fixed aoflagger's way of documenting. [Andreas Wicenec]
+- Fixed treatment of embedded function parameters. [Andreas Wicenec]
+
+
+0.3.2 (2023-09-20)
+------------------
+- Release: version 0.3.2 🚀 [Andreas Wicenec]
 - Simplified populateFields, fixed recursion. [Andreas Wicenec]
 - Doc updates and fixes for numpy. [Andreas Wicenec]
 - Better test coverage, removed stale code. [Andreas Wicenec]
