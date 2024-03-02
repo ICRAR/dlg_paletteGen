@@ -12,4 +12,3 @@ gitchangelog
 mkdocs
 types-setuptools
 python-benedict
-dask-ms
