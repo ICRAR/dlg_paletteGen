@@ -1,6 +1,8 @@
 """
 dlg_paletteGen base functionality for the treatment of installed modules.
 """
+
+import functools
 import inspect
 import re
 import sys
@@ -40,6 +42,9 @@ def get_class_members(cls, parent=None):
     logger.debug("Member functions of class %s: %s", cls, content)
     class_members = {}
     for _, m in content:
+        if isinstance(m, functools.cached_property):
+            logger.error("Found cached_property object!")
+            continue
         if (
             m.__qualname__.startswith(cls.__name__)
             or m.__qualname__.startswith("PyCapsule")
@@ -49,7 +54,7 @@ def get_class_members(cls, parent=None):
             if not node:
                 logger.debug("Inspection of '%s' failed.", m.__qualname__)
                 continue
-            class_members.update({node.name: node})
+            class_members.update({node["name"]: node})
         else:
             logger.debug(
                 "class name %s not start of qualified name: %s",
@@ -82,7 +87,7 @@ def inspect_member(member, module=None, parent=None):
     #     if name.count(".") > 2
     #     else name
     # )
-    node.name = name
+    node["name"] = name
     logger.debug("Inspecting %s: %s", type(member).__name__, member.__name__)
 
     dd = None
@@ -97,7 +102,7 @@ def inspect_member(member, module=None, parent=None):
     ):
         logger.debug(f"Process documentation of {type(member).__name__} {name}")
         dd = DetailedDescription(doc)
-        node.description = f"{dd.description.strip()}"
+        node["description"] = f"{dd.description.strip()}"
         if len(dd.params) > 0:
             logger.debug("Identified parameters: %s", dd.params)
     if (
@@ -111,7 +116,7 @@ def inspect_member(member, module=None, parent=None):
             member.__name__,
         )
         dd = DetailedDescription(inspect.getdoc(module))
-        node.description += f"\n{dd.description.strip()}"
+        node["description"] += f"\n{dd.description.strip()}"
     elif hasattr(member, "__name__"):
         logger.debug("Member '%s' has no description!", name)
     else:
@@ -128,7 +133,7 @@ def inspect_member(member, module=None, parent=None):
         except ValueError:
             logger.debug("Unable to get signature of %s: ", name)
             sig = DummySig(member)
-            node.description = sig.docstring
+            node["description"] = sig.docstring
     else:
         try:
             # this will fail for some weird modules
@@ -141,7 +146,7 @@ def inspect_member(member, module=None, parent=None):
             )
             sig = DummySig(member)
             if sig.docstring:
-                node.description = sig.docstring
+                node["description"] = sig.docstring
             if not getattr(sig, "parameters") and dd and len(dd.params) > 0:
                 for p, v in dd.params.items():
                     sig.parameters[p] = DummyParam()
@@ -158,29 +163,29 @@ def inspect_member(member, module=None, parent=None):
     if load_name.find("PyCapsule"):
         load_name = load_name.replace("PyCapsule", module.__name__)
     if load_name.find("object.__init__"):
-        load_name = load_name.replace("object.__init__", node.name)
+        load_name = load_name.replace("object.__init__", node["name"])
     for k, field in fields.items():
         ind += 1
         if k == "self" and ind == 0:
             if member.__name__ in ["__init__", "__cls__"]:
-                fields["self"].usage = "OutputPort"
+                fields["self"]["usage"] = "OutputPort"
             elif inspect.ismethoddescriptor(member):
-                fields["self"].usage = "InputOutput"
+                fields["self"]["usage"] = "InputOutput"
             else:
-                fields["self"].usage = "InputPort"
-            fields["self"].type = ".".join(load_name.split(".")[:-1])
-            if fields["self"].type == "numpy.ndarray":
+                fields["self"]["usage"] = "InputPort"
+            fields["self"]["type"] = ".".join(load_name.split(".")[:-1])
+            if fields["self"]["type"] == "numpy.ndarray":
                 # just to make sure the type hints match the object type
-                fields["self"].type = "numpy.array"
+                fields["self"]["type"] = "numpy.array"
 
-        node.fields.update({k: field})
+        node["fields"].update({k: field})
 
         # now populate with default fields.
     node = populateDefaultFields(node)
     # if "self" in node.fields:
     #     node.fields["self"]["type"] = load_name.rsplit(".", 1)[0]
-    node.fields["func_name"]["value"] = load_name
-    node.fields["func_name"]["defaultValue"] = load_name
+    node["fields"]["func_name"]["value"] = load_name
+    node["fields"]["func_name"]["defaultValue"] = load_name
     if hasattr(sig, "ret"):
         logger.debug("Return type: %s", sig.ret)
     return node
@@ -266,7 +271,7 @@ def module_hook(mod_name: str, modules: dict = {}, recursive: bool = True) -> tu
 
     :returns: dict of modules processed
     """
-    member = None
+    member = mod = None
     module_members = []
     for m in modules.values():
         module_members.extend([k.split(".")[-1] for k in m.keys()])

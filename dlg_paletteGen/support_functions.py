@@ -1,3 +1,7 @@
+"""
+Support functions
+"""
+
 import datetime
 import importlib
 import inspect
@@ -48,10 +52,10 @@ def modify_doxygen_options(doxygen_filename: str, options: dict):
     :param doxygen_filename: str, the file name of the config file
     :param options: dict, dictionary of the options to be modified
     """
-    with open(doxygen_filename, "r") as dfile:
+    with open(doxygen_filename, "r", encoding="utf-8") as dfile:
         contents = dfile.readlines()
 
-    with open(doxygen_filename, "w") as dfile:
+    with open(doxygen_filename, "w", encoding="utf-8") as dfile:
         for index, line in enumerate(contents):
             if line[0] == "#":
                 continue
@@ -72,18 +76,18 @@ def modify_doxygen_options(doxygen_filename: str, options: dict):
                 dfile.write(line)
 
 
-next_key = -1
+NEXT_KEY = -1
 
 
 def get_next_key():
     """
     TODO: This needs to disappear!!
     """
-    global next_key
+    global NEXT_KEY
 
-    next_key -= 1
+    NEXT_KEY -= 1
 
-    return next_key + 1
+    return NEXT_KEY + 1
 
 
 def process_doxygen(language: Language = Language.PYTHON):
@@ -103,7 +107,7 @@ def process_doxygen(language: Language = Language.PYTHON):
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
     )
-    logger.info("Wrote doxygen configuration file (Doxyfile) to " + doxygen_filename)
+    logger.info("Wrote doxygen configuration file (Doxyfile) to %s", doxygen_filename)
 
     # modify options in the Doxyfile
     modify_doxygen_options(doxygen_filename, DOXYGEN_SETTINGS)
@@ -132,7 +136,7 @@ def process_xml() -> str:
     outdir = DOXYGEN_SETTINGS["OUTPUT_DIRECTORY"]
     output_xml_filename = outdir + "/xml/doxygen.xml"
 
-    with open(output_xml_filename, "w") as outfile:
+    with open(output_xml_filename, "w", encoding="utf-8") as outfile:
         subprocess.call(
             [
                 "xsltproc",
@@ -173,15 +177,15 @@ def write_palette_json(
     for i in range(len(nodes)):
         nodes[i]["dataHash"] = block_dag[i]["data_hash"]
     palette = constructPalette()
-    palette.modelData.detailedDescription = module_doc.strip()
-    palette.modelData.filePath = output_filename
-    palette.modelData.repositoryUrl = git_repo
-    palette.modelData.commitHash = version
-    palette.modelData.signature = block_dag["signature"]  # type: ignore
-    palette.modelData.lastModifiedDatetime = datetime.datetime.now().timestamp()
-    palette.modelData.numLGNodes = len(nodes)
+    palette["modelData"]["detailedDescription"] = module_doc.strip()
+    palette["modelData"]["filePath"] = output_filename
+    palette["modelData"]["repositoryUrl"] = git_repo
+    palette["modelData"]["commitHash"] = version
+    palette["modelData"]["signature"] = block_dag["signature"]  # type: ignore
+    palette["modelData"]["lastModifiedDatetime"] = datetime.datetime.now().timestamp()
+    palette["modelData"]["numLGNodes"] = len(nodes)
 
-    palette.nodeDataArray = nodes
+    palette["nodeDataArray"] = nodes
 
     # write palette to file
     logger.debug(">>> palette: %s", palette)
@@ -338,7 +342,9 @@ def import_using_name(mod_name: str, traverse: bool = False):
                             mod = importlib.import_module(".".join(parts[:-1]))
                             break
                         except Exception as e:
-                            raise ValueError("Problem importing module %s, %s" % (mod, e))
+                            raise ValueError(
+                                "Problem importing module %s, %s" % (mod, e)
+                            )
                 logger.debug("Loaded module: %s", mod_name)
             else:
                 logger.debug("Recursive import failed! %s", parts[0] in sys.modules)
@@ -362,20 +368,20 @@ def initializeField(
     """
     Construct a dummy field
     """
-    field = benedict.benedict()
-    fieldValue = benedict.benedict()
-    fieldValue.name = name
-    fieldValue.value = value
-    fieldValue.defaultValue = defaultValue
-    fieldValue.description = description
-    fieldValue.type = vtype
-    fieldValue.parameterType = parameterType
-    fieldValue.usage = usage
-    fieldValue.readonly = readonly
-    fieldValue.options = options
-    fieldValue.precious = precious
-    fieldValue.positional = positional
-    field.set(name, fieldValue)
+    field = {}  # type: ignore
+    fieldValue = {}
+    fieldValue["name"] = name
+    fieldValue["value"] = value
+    fieldValue["defaultValue"] = defaultValue
+    fieldValue["description"] = description
+    fieldValue["type"] = vtype  # type:ignore
+    fieldValue["parameterType"] = parameterType
+    fieldValue["usage"] = usage
+    fieldValue["readonly"] = readonly  # type:ignore
+    fieldValue["options"] = options  # type:ignore
+    fieldValue["precious"] = precious  # type:ignore
+    fieldValue["positional"] = positional  # type:ignore
+    field.__setitem__(name, fieldValue)
     return field
 
 
@@ -456,7 +462,7 @@ def populateFields(parameters: dict, dd, member=None) -> dict:
                 param_desc["desc"] = "Reference to object"
 
         # populate the field itself
-        field[p].value = field[p].defaultValue = param_desc["value"]
+        field[p]["value"] = field[p]["defaultValue"] = param_desc["value"]
 
         # deal with the type
         if (
@@ -473,39 +479,40 @@ def populateFields(parameters: dict, dd, member=None) -> dict:
             elif hasattr(v.annotation, "__name__"):
                 field[p]["type"] = typeFix(f"{v.annotation.__name__}")
             else:
-                field[p].type = v.annotation.__repr__()
+                field[p]["type"] = v.annotation.__repr__()
         # else we use the type from default value
         elif param_desc["type"]:
-            field[p].type = param_desc["type"]
+            field[p]["type"] = param_desc["type"]
         elif dd and p in dd.params and dd.params[p]["type"]:
             # type from docstring
             # TODO: should probably check a bit more
-            field[p].type = typeFix(dd.params[p]["type"])
+            field[p]["type"] = typeFix(dd.params[p]["type"])
         else:
-            field[p].type = SVALUE_TYPES["NoneType"]
+            field[p]["type"] = SVALUE_TYPES["NoneType"]
 
-        if field[p].type not in SVALUE_TYPES.values():
+        if field[p]["type"] not in SVALUE_TYPES.values():
             # complex types can't be specified on a simple form field
             # thus we assume they are provided through a port.
             # Like this we can support any type.
-            field[p].usage = "InputPort"
-            field[p].value = None
-        field[p].description = param_desc["desc"]
-        field[p].parameterType = "ApplicationArgument"
-        field[p].options = None
-        field[p].positional = (
+            field[p]["usage"] = "InputPort"
+            field[p]["value"] = None
+        field[p]["description"] = param_desc["desc"]
+        field[p]["parameterType"] = "ApplicationArgument"
+        field[p]["options"] = None
+        field[p]["positional"] = (
             True if v.kind == inspect.Parameter.POSITIONAL_ONLY else False
         )
         if param_desc["type"] == "UNSPECIFIED" and param_desc["desc"].find(",") > 0:
             dtype = param_desc["desc"].split(",", maxsplit=1)[0]
             if dtype in SVALUE_TYPES:
                 param_desc["type"] = SVALUE_TYPES[dtype]
-        if param_desc["type"] and field[p].type in [None, "UNSPECIFIED"]:
-            field[p].type = param_desc["type"]
-        if isinstance(v.default, numpy.ndarray):
-            field[p].defaultValue = v.default.tolist()
-        if isinstance(field[p].value, numpy.ndarray):
-            field[p].value = field[p].value.tolist()
+        if param_desc["type"] and field[p]["type"] in [None, "UNSPECIFIED"]:
+            field[p]["type"] = param_desc["type"]
+        if isinstance(field[p]["value"], numpy.ndarray):
+            try:
+                field[p]["value"] = field[p]["value"].tolist()
+            except NotImplementedError:
+                field[p]["value"] = []
         fields.update(field)
 
     logger.debug("Parameters %s", fields)
@@ -534,20 +541,20 @@ def constructNode(
     specified otherwise. For some reason sub-classing benedict
     did not work here, thus we use a function instead.
     """
-    Node = benedict.benedict()
-    Node.category = category
-    Node.key = key
-    Node.name = name
-    Node.description = description
-    Node.repositoryUrl = repositoryUrl
-    Node.commitHash = commitHash
-    Node.paletteDownloadUrl = paletteDownlaodUrl
-    Node.dataHash = dataHash
-    Node.fields = benedict.benedict()
+    Node = {}
+    Node["category"] = category
+    Node["key"] = key  # type:ignore
+    Node["name"] = name
+    Node["description"] = description
+    Node["repositoryUrl"] = repositoryUrl
+    Node["commitHash"] = commitHash
+    Node["paletteDownloadUrl"] = paletteDownlaodUrl
+    Node["dataHash"] = dataHash
+    Node["fields"] = {}  # type:ignore
     return Node
 
 
-def populateDefaultFields(Node):  # pylint: discard=invalid-name
+def populateDefaultFields(Node):  # pylint: disable=invalid-name
     """
     Populate a palette node with the default
     field definitions. This is separate from the
@@ -559,72 +566,74 @@ def populateDefaultFields(Node):  # pylint: discard=invalid-name
     # default field definitions
     n = "group_start"
     gs = initializeField(n)
-    gs[n].name = n
-    gs[n].type = "Boolean"
-    gs[n].value = "false"
-    gs[n].default_value = "false"
-    gs[n].description = "Is this node the start of a group?"
-    Node.fields.update(gs)
+    gs[n]["name"] = n
+    gs[n]["type"] = "Boolean"
+    gs[n]["value"] = "false"
+    gs[n]["default_value"] = "false"
+    gs[n]["description"] = "Is this node the start of a group?"
+    Node["fields"].update(gs)
 
     n = "execution_time"
     et = initializeField(n)
-    et[n].name = n
-    et[n].value = 2
-    et[n].defaultValue = 2
-    et[n].type = "Integer"
-    et[n].description = "Estimate of execution time (in seconds) for this application."
-    et[n].parameterType = "ConstraintParameter"
-    Node.fields.update(et)
+    et[n]["name"] = n
+    et[n]["value"] = 2
+    et[n]["defaultValue"] = 2
+    et[n]["type"] = "Integer"
+    et[n][
+        "description"
+    ] = "Estimate of execution time (in seconds) for this application."
+    et[n]["parameterType"] = "ConstraintParameter"
+    Node["fields"].update(et)
 
     n = "num_cpus"
     ncpus = initializeField(n)
-    ncpus[n].name = n
-    ncpus[n].value = 1
-    ncpus[n].default_value = 1
-    ncpus[n].type = "Integer"
-    ncpus[n].description = "Number of cores used."
-    ncpus[n].parameterType = "ConstraintParameter"
-    Node.fields.update(ncpus)
+    ncpus[n]["name"] = n
+    ncpus[n]["value"] = 1
+    ncpus[n]["default_value"] = 1
+    ncpus[n]["type"] = "Integer"
+    ncpus[n]["description"] = "Number of cores used."
+    ncpus[n]["parameterType"] = "ConstraintParameter"
+    Node["fields"].update(ncpus)
 
     n = "func_name"
     fn = initializeField(name=n)
-    fn[n].name = n
-    fn[n].value = "example.function"
-    fn[n].defaultValue = "example.function"
-    fn[n].type = "String"
-    fn[n].description = "Complete import path of function"
-    fn[n].readonly = True
-    Node.fields.update(fn)
+    fn[n]["name"] = n
+    fn[n]["value"] = "example.function"
+    fn[n]["defaultValue"] = "example.function"
+    fn[n]["type"] = "String"
+    fn[n]["description"] = "Complete import path of function"
+    fn[n]["readonly"] = True
+    Node["fields"].update(fn)
 
     n = "dropclass"
     dc = initializeField(n)
-    dc[n].name = n
-    dc[n].value = "dlg.apps.pyfunc.PyFuncApp"
-    dc[n].defaultValue = "dlg.apps.pyfunc.PyFuncApp"
-    dc[n].type = "String"
-    dc[n].description = "The python class that implements this application"
-    dc[n].readonly = True
-    Node.fields.update(dc)
+    dc[n]["name"] = n
+    dc[n]["value"] = "dlg.apps.pyfunc.PyFuncApp"
+    dc[n]["defaultValue"] = "dlg.apps.pyfunc.PyFuncApp"
+    dc[n]["type"] = "String"
+    dc[n]["description"] = "The python class that implements this application"
+    dc[n]["readonly"] = True
+    Node["fields"].update(dc)
 
     n = "input_parser"
     inpp = initializeField(name=n)
-    inpp[n].name = n
-    inpp[n].description = "Input port parsing technique"
-    inpp[n].value = "pickle"
-    inpp[n].defaultValue = "pickle"
-    inpp[n].type = "Select"
-    inpp[n].options = ["pickle", "eval", "npy", "path", "dataurl"]
-    Node.fields.update(inpp)
+    inpp[n]["name"] = n
+    inpp[n]["description"] = "Input port parsing technique"
+    inpp[n]["value"] = "pickle"
+    inpp[n]["defaultValue"] = "pickle"
+    inpp[n]["type"] = "Select"
+    inpp[n]["options"] = ["pickle", "eval", "npy", "path", "dataurl"]
+    Node["fields"].update(inpp)
 
     n = "output_parser"
     outpp = initializeField(name=n)
-    outpp[n].name = n
-    outpp[n].description = "Output port parsing technique"
-    outpp[n].value = "pickle"
-    outpp[n].defaultValue = "pickle"
-    outpp[n].type = "Select"
-    outpp[n].options = ["pickle", "eval", "npy", "path", "dataurl"]
-    Node.fields.update(outpp)
+    outpp[n]["name"] = n
+    outpp[n]["description"] = "Output port parsing technique"
+    outpp[n]["value"] = "pickle"
+    outpp[n]["defaultValue"] = "pickle"
+    outpp[n]["type"] = "Select"
+    outpp[n]["options"] = ["pickle", "eval", "npy", "path", "dataurl"]
+    Node["fields"].update(outpp)
 
     return Node
 
@@ -633,31 +642,29 @@ def constructPalette():
     """
     Constructing the structure of a palette.
     """
-    palette = benedict.benedict(
-        {
-            "modelData": {
-                "filePath": "",
-                "fileType": "palette",
-                "shortDescription": "",
-                "detailedDescription": "",
-                "repoService": "GitHub",
-                "repoBranch": "master",
-                "repo": "ICRAR/EAGLE_test_repo",
-                "eagleVersion": "",
-                "eagleCommitHash": "",
-                "schemaVersion": "AppRef",
-                "readonly": True,
-                "repositoryUrl": "",
-                "commitHash": "",
-                "downloadUrl": "",
-                "signature": "",
-                "lastModifiedName": "wici",
-                "lastModifiedEmail": "",
-                "lastModifiedDatetime": datetime.datetime.now().timestamp(),
-                "numLGNodes": 0,
-            },
-            "nodeDataArray": [],
-            "linkDataArray": [],
-        }
-    )  # type: ignore
+    palette = {
+        "modelData": {
+            "filePath": "",
+            "fileType": "palette",
+            "shortDescription": "",
+            "detailedDescription": "",
+            "repoService": "GitHub",
+            "repoBranch": "master",
+            "repo": "ICRAR/EAGLE_test_repo",
+            "eagleVersion": "",
+            "eagleCommitHash": "",
+            "schemaVersion": "AppRef",
+            "readonly": True,
+            "repositoryUrl": "",
+            "commitHash": "",
+            "downloadUrl": "",
+            "signature": "",
+            "lastModifiedName": "wici",
+            "lastModifiedEmail": "",
+            "lastModifiedDatetime": datetime.datetime.now().timestamp(),
+            "numLGNodes": 0,
+        },
+        "nodeDataArray": [],
+        "linkDataArray": [],
+    }
     return palette

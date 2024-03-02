@@ -105,7 +105,9 @@ def get_args(args=None):
     )
     if not args:
         if len(sys.argv) == 1:
-            print("\x1b[31;20mInsufficient number of " + "arguments provided!!!\n\x1b[0m")
+            print(
+                "\x1b[31;20mInsufficient number of " + "arguments provided!!!\n\x1b[0m"
+            )
             parser.print_help(sys.stderr)
             sys.exit(1)
         args = parser.parse_args()
@@ -187,9 +189,9 @@ def nodes_from_module(module_path: str, recursive: bool = True) -> tuple:
     for _, members in modules.items():
         for _, node in members.items():
             # TODO: remove once EAGLE can deal with dict fields pylint: disable=fixme
-            if isinstance(node.fields, list):
+            if isinstance(node["fields"], list):
                 continue
-            node.fields = list(node.fields.values())
+            node["fields"] = list(node["fields"].values())
             nodes.append(node)
     return nodes, module_doc
 

@@ -260,7 +260,7 @@ def test_CLI_module(tmpdir: str, shared_datadir: str):
     inp = str(shared_datadir.absolute())  # don't really need this
     output = tmpdir + "t.palette"
     p = start_process(
-        ("-rsm", "dlg_paletteGen", inp, output),
+        ("-rsm", "json", inp, output),
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
     )

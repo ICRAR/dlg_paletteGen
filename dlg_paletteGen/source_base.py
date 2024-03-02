@@ -2,6 +2,7 @@
 dlg_paletteGen base functionality for the treatment of source directories.
 
 """
+
 import csv
 import os
 import uuid
