@@ -1,3 +1,4 @@
+# pylint: disable=invalid-name
 """
 dlg_paletteGen base functionality for the treatment of installed modules.
 """
@@ -101,7 +102,7 @@ def inspect_member(member, module=None, parent=None):
         )
     ):
         logger.debug(f"Process documentation of {type(member).__name__} {name}")
-        dd = DetailedDescription(doc)
+        dd = DetailedDescription(doc, name=name)
         node["description"] = f"{dd.description.strip()}"
         if len(dd.params) > 0:
             logger.debug("Identified parameters: %s", dd.params)
@@ -115,7 +116,8 @@ def inspect_member(member, module=None, parent=None):
             module.__name__,
             member.__name__,
         )
-        dd = DetailedDescription(inspect.getdoc(module))
+        node["category"] = "PythonMemberFunction"
+        dd = DetailedDescription(inspect.getdoc(module), name=module.__name__)
         node["description"] += f"\n{dd.description.strip()}"
     elif hasattr(member, "__name__"):
         logger.debug("Member '%s' has no description!", name)
@@ -167,6 +169,7 @@ def inspect_member(member, module=None, parent=None):
     for k, field in fields.items():
         ind += 1
         if k == "self" and ind == 0:
+            node["category"] = "PythonMemberFunction"
             if member.__name__ in ["__init__", "__cls__"]:
                 fields["self"]["usage"] = "OutputPort"
             elif inspect.ismethoddescriptor(member):
@@ -238,7 +241,7 @@ def get_members(mod: types.ModuleType, module_members=[], parent=None, member=No
 
             for name, node in nodes.items():
                 if name in module_members:
-                    logger.debug("!!!!! found duplicate: %s", name)
+                    logger.info("!!!!! found duplicate: %s", name)
                 else:
                     module_members.append(name)
                     logger.debug(
@@ -257,7 +260,7 @@ def get_members(mod: types.ModuleType, module_members=[], parent=None, member=No
                         # pass
             if member:  # we've found what we wanted
                 break
-    logger.debug("Analysed %d members in module %s", count, module_name)
+    logger.info("Analysed %d members in module %s", count, module_name)
     return members
 
 

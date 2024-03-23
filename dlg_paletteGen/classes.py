@@ -106,15 +106,18 @@ class DetailedDescription:
         "casa": r"\n-{2,20}? parameter",
     }
 
-    def __init__(self, descr: str):
+    def __init__(self, descr: str, name=None):
         """
         :param descr: Text of the detaileddescription node
         """
+        self.name = name
         self.description = descr
         self.format = ""
         self._identify_format()
         self.main_descr, self.params = self.process_descr()
-        self.brief_descr = self.main_descr.split(".")[0] + "." if self.main_descr else ""
+        self.brief_descr = (
+            self.main_descr.split(".")[0] + "." if self.main_descr else ""
+        )
 
     def _process_rEST(self, detailed_description) -> tuple:
         """
@@ -339,7 +342,9 @@ class DetailedDescription:
         dList = dStr.split("\n")
         try:
             start_ind = [
-                idx for idx, s in enumerate(dList) if re.findall(r"-{1,20} parameter", s)
+                idx
+                for idx, s in enumerate(dList)
+                if re.findall(r"-{1,20} parameter", s)
             ][0] + 1
         except IndexError:
             start_ind = 0
@@ -414,10 +419,9 @@ class DetailedDescription:
             self.description = pd[0]
             self._gen_code_block()
             return self.description, pd[1]
-        else:
-            logger.debug("Format not recognized or can't execute %s", do)
-            logger.debug("Returning description unparsed!")
-            return (self._gen_code_block(), {})
+        logger.debug("Format not recognized or can't execute %s", do)
+        logger.debug("Returning description unparsed!")
+        return (self._gen_code_block(), {})
 
 
 class GreatGrandChild:

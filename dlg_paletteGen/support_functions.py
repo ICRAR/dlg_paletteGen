@@ -192,6 +192,26 @@ def write_palette_json(
         json.dump(palette, outfile, indent=4)
 
 
+def get_field_by_name(name: str, node, value_key: str = "") -> dict:
+    """
+    Get field dictionary from node providing a name.
+
+    :param name: the name of the field to retrieve
+    :param node: the node data structure
+    :value_key: the key of the attribute of the field to return
+
+    :returns the field dictionary or empty dict
+    """
+    try:
+        field = [f for f in node["fields"] if f["name"] == name][0]
+        if value_key and value_key in field:
+            return field[value_key]
+        else:
+            return field
+    except IndexError:
+        return []
+
+
 def prepare_and_write_palette(nodes: list, output_filename: str, module_doc: str = ""):
     """
     Prepare and write the palette in JSON format.
@@ -202,18 +222,29 @@ def prepare_and_write_palette(nodes: list, output_filename: str, module_doc: str
     """
     # add signature for whole palette using BlockDAG
     vertices = {}
+    v_ind = -1
     GITREPO = os.environ.get("GIT_REPO")
     VERSION = os.environ.get("PROJECT_VERSION")
 
+    funcs = []
+    f_nodes = []
     for i in range(len(nodes)):
-        vertices[i] = nodes[i]
+        func_name = get_field_by_name("func_name", nodes[i], value_key="value")
+        if func_name and func_name not in funcs:
+            funcs.append(func_name)
+            f_nodes.append(nodes[i])
+            v_ind += 1
+            vertices[v_ind] = nodes[i]
+            logger.debug("Added function %s: %s", func_name, v_ind)
+        elif func_name and func_name in funcs:
+            logger.debug("Removing duplicate function: %s", func_name)
     block_dag = build_block_dag(vertices, [], data_fields=BLOCKDAG_DATA_FIELDS)
 
     # write the output json file
     write_palette_json(
         output_filename,
         module_doc,
-        nodes,
+        f_nodes,
         GITREPO,
         VERSION,
         block_dag,
@@ -341,7 +372,9 @@ def import_using_name(mod_name: str, traverse: bool = False):
                             mod = importlib.import_module(".".join(parts[:-1]))
                             break
                         except Exception as e:
-                            raise ValueError("Problem importing module %s, %s" % (mod, e))
+                            raise ValueError(
+                                "Problem importing module %s, %s" % (mod, e)
+                            )
                 logger.debug("Loaded module: %s", mod_name)
             else:
                 logger.debug("Recursive import failed! %s", parts[0] in sys.modules)
@@ -456,7 +489,7 @@ def populateFields(parameters: dict, dd, member=None) -> dict:
             elif p != "self":
                 descr_miss.append(p)
             elif p == "self":
-                param_desc["desc"] = "Reference to object"
+                param_desc["desc"] = f"{dd.name} Object"
 
         # populate the field itself
         field[p]["value"] = field[p]["defaultValue"] = param_desc["value"]
@@ -507,7 +540,9 @@ def populateFields(parameters: dict, dd, member=None) -> dict:
             field[p]["type"] = param_desc["type"]
         if isinstance(field[p]["value"], numpy.ndarray):
             try:
-                field[p]["value"] = field[p]["defaultValue"] = field[p]["value"].tolist()
+                field[p]["value"] = field[p]["defaultValue"] = field[p][
+                    "value"
+                ].tolist()
             except NotImplementedError:
                 field[p]["value"] = []
         fields.update(field)
@@ -576,7 +611,9 @@ def populateDefaultFields(Node):  # pylint: disable=invalid-name
     et[n]["value"] = 2
     et[n]["defaultValue"] = 2
     et[n]["type"] = "Integer"
-    et[n]["description"] = "Estimate of execution time (in seconds) for this application."
+    et[n][
+        "description"
+    ] = "Estimate of execution time (in seconds) for this application."
     et[n]["parameterType"] = "ConstraintParameter"
     Node["fields"].update(et)
 
