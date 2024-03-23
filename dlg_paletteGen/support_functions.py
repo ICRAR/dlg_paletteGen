@@ -208,7 +208,7 @@ def get_field_by_name(name: str, node, value_key: str = "") -> dict:
             return field[value_key]
         else:
             return field
-    except IndexError:
+    except (IndexError, TypeError):
         return []
 
 
@@ -238,6 +238,9 @@ def prepare_and_write_palette(nodes: list, output_filename: str, module_doc: str
             logger.debug("Added function %s: %s", func_name, v_ind)
         elif func_name and func_name in funcs:
             logger.debug("Removing duplicate function: %s", func_name)
+        elif not func_name:
+            f_nodes.append(nodes[i])
+            vertices[i] = nodes[i]
     block_dag = build_block_dag(vertices, [], data_fields=BLOCKDAG_DATA_FIELDS)
 
     # write the output json file
