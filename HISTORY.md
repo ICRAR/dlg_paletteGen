@@ -4,6 +4,12 @@ Changelog
 
 (unreleased)
 ------------
+- Updated gituhub actions. [Andreas Wicenec]
+
+
+0.3.4 (2024-03-25)
+------------------
+- Release: version 0.3.4 🚀 [Andreas Wicenec]
 - Fixed linting errors. [Andreas Wicenec]
 - Fixed failing tests. [Andreas Wicenec]
 - Create PythonMemberFunction and PythonObject. [Andreas Wicenec]
