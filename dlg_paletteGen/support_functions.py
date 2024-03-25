@@ -187,7 +187,7 @@ def write_palette_json(
     palette["nodeDataArray"] = nodes
 
     # write palette to file
-    logger.debug(">>> palette: %s", palette)
+    # logger.debug(">>> palette: %s", palette)
     with open(output_filename, "w", encoding="utf-8") as outfile:
         json.dump(palette, outfile, indent=4)
 
@@ -231,6 +231,8 @@ def prepare_and_write_palette(nodes: list, output_filename: str, module_doc: str
     for i in range(len(nodes)):
         func_name = get_field_by_name("func_name", nodes[i], value_key="value")
         if func_name and func_name not in funcs:
+            # mod_name = func_name.split(".", 1)[0]
+            # if mod_name not in bi.keys():
             funcs.append(func_name)
             f_nodes.append(nodes[i])
             v_ind += 1
@@ -239,8 +241,9 @@ def prepare_and_write_palette(nodes: list, output_filename: str, module_doc: str
         elif func_name and func_name in funcs:
             logger.debug("Removing duplicate function: %s", func_name)
         elif not func_name:
+            v_ind += 1
             f_nodes.append(nodes[i])
-            vertices[i] = nodes[i]
+            vertices[v_ind] = nodes[i]
     block_dag = build_block_dag(vertices, [], data_fields=BLOCKDAG_DATA_FIELDS)
 
     # write the output json file
