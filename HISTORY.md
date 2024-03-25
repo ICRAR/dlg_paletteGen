@@ -4,6 +4,10 @@ Changelog
 
 (unreleased)
 ------------
+- Fixed linting errors. [Andreas Wicenec]
+- Fixed failing tests. [Andreas Wicenec]
+- Create PythonMemberFunction and PythonObject. [Andreas Wicenec]
+- Release: version 0.3.3 🚀 [Andreas Wicenec]
 - Release: version 0.3.3 🚀 [Andreas Wicenec]
 - Don't execute windows tests. [Andreas Wicenec]
 - Removed dask-ms from requirements. [Andreas Wicenec]
