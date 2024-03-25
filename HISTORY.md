@@ -4,6 +4,7 @@ Changelog
 
 (unreleased)
 ------------
+- Release: version 0.3.4 🚀 [Andreas Wicenec]
 - Updated gituhub actions. [Andreas Wicenec]
 
 
