@@ -4,6 +4,12 @@ Changelog
 
 (unreleased)
 ------------
+- Fixed value of complex types. [Andreas Wicenec]
+
+
+0.3.5 (2024-03-25)
+------------------
+- Release: version 0.3.5 🚀 [Andreas Wicenec]
 - Release: version 0.3.4 🚀 [Andreas Wicenec]
 - Updated gituhub actions. [Andreas Wicenec]
 
