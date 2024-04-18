@@ -105,7 +105,9 @@ def get_args(args=None):
     )
     if not args:
         if len(sys.argv) == 1:
-            print("\x1b[31;20mInsufficient number of " + "arguments provided!!!\n\x1b[0m")
+            print(
+                "\x1b[31;20mInsufficient number of " + "arguments provided!!!\n\x1b[0m"
+            )
             parser.print_help(sys.stderr)
             sys.exit(1)
         args = parser.parse_args()
@@ -237,7 +239,7 @@ def palettes_from_module(
             continue
         filename = outfile if not split else f"{outfile}{m.replace('.','_')}.palette"
         files[filename] = len(nodes)
-        prepare_and_write_palette(nodes, filename, module_doc=module_doc)
+        palette = prepare_and_write_palette(nodes, filename, module_doc=module_doc)
         logger.info(
             "%s palette file written with %s components\n%s",
             filename,
@@ -248,6 +250,7 @@ def palettes_from_module(
         "\n\n>>>>>>> Extraction summary <<<<<<<<\n%s\n",
         "\n".join([f"Wrote {k} with {v} components" for k, v in files.items()]),
     )
+    return palette
 
 
 def main():  # pragma: no cover
@@ -283,7 +286,7 @@ def main():  # pragma: no cover
 
     if len(module_path) > 0:
         outputfile = "" if outputfile == "." else outputfile
-        palettes_from_module(
+        palette = palettes_from_module(
             module_path, outfile=outputfile, recursive=recursive, split=split
         )
     else:
@@ -302,7 +305,8 @@ def main():  # pragma: no cover
         nodes = process_compounddefs(
             output_xml_filename, tag, allow_missing_eagle_start, language
         )
-        prepare_and_write_palette(nodes, outputfile)
+        palette = prepare_and_write_palette(nodes, outputfile)
         return
     # cleanup the output directory
     output_directory.cleanup()
+    return palette

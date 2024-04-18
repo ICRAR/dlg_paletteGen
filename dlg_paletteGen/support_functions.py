@@ -189,7 +189,12 @@ def write_palette_json(
     # write palette to file
     # logger.debug(">>> palette: %s", palette)
     with open(output_filename, "w", encoding="utf-8") as outfile:
-        json.dump(palette, outfile, indent=4)
+        try:
+            json.dump(palette, outfile, indent=4)
+            return palette
+        except TypeError:
+            logger.error("Problem serializing palette! Bailing out!!")
+            return palette
 
 
 def get_field_by_name(name: str, node, value_key: str = "") -> dict:
@@ -247,7 +252,7 @@ def prepare_and_write_palette(nodes: list, output_filename: str, module_doc: str
     block_dag = build_block_dag(vertices, [], data_fields=BLOCKDAG_DATA_FIELDS)
 
     # write the output json file
-    write_palette_json(
+    palette = write_palette_json(
         output_filename,
         module_doc,
         f_nodes,
@@ -256,6 +261,7 @@ def prepare_and_write_palette(nodes: list, output_filename: str, module_doc: str
         block_dag,
     )
     logger.debug("Wrote %s components to %s", len(nodes), output_filename)
+    return palette
 
 
 def get_submodules(module):
@@ -378,7 +384,9 @@ def import_using_name(mod_name: str, traverse: bool = False):
                             mod = importlib.import_module(".".join(parts[:-1]))
                             break
                         except Exception as e:
-                            raise ValueError("Problem importing module %s, %s" % (mod, e))
+                            raise ValueError(
+                                "Problem importing module %s, %s" % (mod, e)
+                            )
                 logger.debug("Loaded module: %s", mod_name)
             else:
                 logger.debug("Recursive import failed! %s", parts[0] in sys.modules)
@@ -464,7 +472,7 @@ def get_value_type_from_default(default):
         except TypeError:
             # this is a complex type
             logger.debug("Object not JSON serializable: %s", value)
-            ptype = type(value).__name__
+            ptype = value = type(value).__name__
         if not isinstance(value, (str, bool)) and (
             ptype in ["Json"]
         ):  # we want to carry these as strings
@@ -544,7 +552,9 @@ def populateFields(parameters: dict, dd, member=None) -> dict:
             field[p]["type"] = param_desc["type"]
         if isinstance(field[p]["value"], numpy.ndarray):
             try:
-                field[p]["value"] = field[p]["defaultValue"] = field[p]["value"].tolist()
+                field[p]["value"] = field[p]["defaultValue"] = field[p][
+                    "value"
+                ].tolist()
             except NotImplementedError:
                 field[p]["value"] = []
         fields.update(field)
@@ -613,7 +623,9 @@ def populateDefaultFields(Node):  # pylint: disable=invalid-name
     et[n]["value"] = 2
     et[n]["defaultValue"] = 2
     et[n]["type"] = "Integer"
-    et[n]["description"] = "Estimate of execution time (in seconds) for this application."
+    et[n][
+        "description"
+    ] = "Estimate of execution time (in seconds) for this application."
     et[n]["parameterType"] = "ConstraintParameter"
     Node["fields"].update(et)
 
