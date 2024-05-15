@@ -686,6 +686,12 @@ def constructPalette():
     """
     Constructing the structure of a palette.
     """
+
+    from .cli import (
+        NAME,
+        VERSION
+    )
+
     palette = {
         "modelData": {
             "filePath": "",
@@ -695,9 +701,10 @@ def constructPalette():
             "repoService": "GitHub",
             "repoBranch": "master",
             "repo": "ICRAR/EAGLE_test_repo",
-            "eagleVersion": "",
-            "eagleCommitHash": "",
-            "schemaVersion": "AppRef",
+            "generatorVersion": VERSION,
+            "generatorCommitHash": "",
+            "generatorName": NAME,
+            "schemaVersion": "OJS",
             "readonly": True,
             "repositoryUrl": "",
             "commitHash": "",
