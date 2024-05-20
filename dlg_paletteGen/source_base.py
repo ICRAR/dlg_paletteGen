@@ -40,6 +40,19 @@ KNOWN_DATA_CATEGORIES = [
     "EnvironmentVariables",
 ]
 
+KNOWN_CATEGORY_TYPES = [
+    "Data",
+    "Application",
+    "Construct",
+    "Group",
+    "Unknown",
+    "Service",
+    "Container",
+    "Socket",
+    "Control",
+    "Other",
+]
+
 
 class PGenEnum(str, Enum):
     @classmethod
@@ -347,6 +360,7 @@ def create_palette_node_from_params(params) -> tuple:
     description = ""
     comp_description = ""
     category = ""
+    categoryType = ""
     tag = ""
     construct = ""
     # inputPorts: list = []
@@ -370,6 +384,11 @@ def create_palette_node_from_params(params) -> tuple:
             text = value
         elif key == "description":
             comp_description = value
+        elif key == "categorytype":
+            if value not in KNOWN_CATEGORY_TYPES: 
+                logger.warning("'%s' is not a valid CategoryType", value)
+            else:
+                categoryType = value
         else:
             internal_name = key
 
@@ -479,6 +498,10 @@ def create_palette_node_from_params(params) -> tuple:
     # category
     check_required_fields_for_category(text, fields, category)
 
+    # Confirm CategoryType is specified
+    if categoryType == '':
+        alert_if_missing(text, [], "categorytype")
+
     # create and return the node
     GITREPO = os.environ.get("GIT_REPO")
     VERSION = os.environ.get("PROJECT_VERSION")
@@ -486,6 +509,7 @@ def create_palette_node_from_params(params) -> tuple:
         {"tag": tag, "construct": construct},
         {
             "category": category,
+            "categoryType": categoryType,
             "key": get_next_key(),
             "text": text,
             "description": comp_description,
