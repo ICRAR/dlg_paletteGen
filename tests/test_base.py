@@ -5,11 +5,12 @@ import subprocess
 import sys
 import unittest
 
-from dlg_paletteGen.settings import DOXYGEN_SETTINGS, guess_type_from_default
+from dlg_paletteGen.settings import DOXYGEN_SETTINGS
 from dlg_paletteGen.cli import NAME, check_environment_variables, get_args
 from dlg_paletteGen.module_base import module_hook
 from dlg_paletteGen.source_base import Language, process_compounddefs
 from dlg_paletteGen.support_functions import (
+    guess_type_from_default,
     import_using_name,
     prepare_and_write_palette,
     process_doxygen,

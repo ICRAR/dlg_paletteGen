@@ -71,17 +71,22 @@ def inspect_member(member, module=None, parent=None):
     """
     node = constructNode()
     if inspect.isclass(module):
-        name = member.__qualname__
+        name = qname = member.__qualname__
         if name.startswith("PyCapsule"):
             name = name.replace("PyCapsule", f"{module.__module__}.{module.__name__}")
         elif name == "object.__init__":
             name = f"{module.__name__}.__init__"
+    elif inspect.isclass(member):
+        name = qname = getattr(member, "__class__").__name__
     else:
         name = (
             f"{member.__name__}"
             if hasattr(member, "__name__")
             else f"{module.__name__}.Unknown"
         )
+        qname = getattr(member, "__qualname__") if hasattr(member, "__qualname__") else ""
+    if not name or not qname:
+        return {"fields": []}
     # shorten node name, else EAGLE components are cluttered.
     # name = (
     #     f"{name.split('.')[0]}.{'.'.join(name.split('.')[-2:])}"
@@ -89,7 +94,7 @@ def inspect_member(member, module=None, parent=None):
     #     else name
     # )
     node["name"] = name
-    logger.debug("Inspecting %s: %s", type(member).__name__, member.__name__)
+    logger.debug("Inspecting %s: %s", type(member).__name__, name)
 
     dd = None
 
@@ -107,14 +112,14 @@ def inspect_member(member, module=None, parent=None):
         if len(dd.params) > 0:
             logger.debug("Identified parameters: %s", dd.params)
     if (
-        member.__name__ in ["__init__", "__cls__"]
+        name in ["__init__", "__cls__"]
         and inspect.isclass(module)
         and inspect.getdoc(module)
     ):
         logger.debug(
             "Using description of class '%s' for %s",
             module.__name__,
-            member.__name__,
+            name,
         )
         node["category"] = "PythonMemberFunction"
         dd = DetailedDescription(inspect.getdoc(module), name=module.__name__)
@@ -153,9 +158,9 @@ def inspect_member(member, module=None, parent=None):
                 for p, v in dd.params.items():
                     sig.parameters[p] = DummyParam()
     # fill custom ApplicationArguments first
-    fields = populateFields(sig.parameters, dd, member=member.__name__)
+    fields = populateFields(sig.parameters, dd, member=name)
     ind = -1
-    load_name = member.__qualname__
+    load_name = qname
     if hasattr(member, "__module__") and member.__module__:
         load_name = f"{member.__module__}.{load_name}"
     elif hasattr(member, "__package__"):
@@ -166,6 +171,9 @@ def inspect_member(member, module=None, parent=None):
         load_name = load_name.replace("PyCapsule", module.__name__)
     if load_name.find("object.__init__"):
         load_name = load_name.replace("object.__init__", node["name"])
+    fields["base_name"]["value"] = member.__qualname__.split(".", 1)[0]
+    fields["base_name"]["defaultValue"] = fields["base_name"]["value"]
+
     for k, field in fields.items():
         ind += 1
         if k == "self" and ind == 0:
@@ -189,6 +197,7 @@ def inspect_member(member, module=None, parent=None):
     #     node.fields["self"]["type"] = load_name.rsplit(".", 1)[0]
     node["fields"]["func_name"]["value"] = load_name
     node["fields"]["func_name"]["defaultValue"] = load_name
+    logger.debug(">>>> populated node: %s", node)
     if hasattr(sig, "ret"):
         logger.debug("Return type: %s", sig.ret)
     return node
@@ -206,14 +215,15 @@ def get_members(mod: types.ModuleType, module_members=[], parent=None, member=No
         return {}
     module_name = parent if parent else mod.__name__
     logger.debug(f">>>>>>>>> Analysing members for module: {module_name}")
-    content = inspect.getmembers(
-        mod,
-        lambda x: inspect.isfunction(x)
-        or inspect.ismethod(x)
-        or inspect.isclass(x)
-        or inspect.isbuiltin(x)
-        or inspect.ismethoddescriptor(x),
-    )
+    content = inspect.getmembers(mod)
+    # content = inspect.getmembers(
+    #     mod,
+    #     lambda x: inspect.isfunction(x)
+    #     or inspect.ismethod(x)
+    #     or inspect.isclass(x)
+    #     or inspect.isbuiltin(x)
+    #     or inspect.ismethoddescriptor(x),
+    # )
     count = 0
     # logger.debug("Members of %s: %s", name, [c for c, m in content])
     members = {}
@@ -237,7 +247,8 @@ def get_members(mod: types.ModuleType, module_members=[], parent=None, member=No
                 logger.debug("Class members: %s", nodes.keys())
 
             else:
-                nodes = {m.__name__: inspect_member(m, module=mod, parent=parent)}
+                # nodes = {m.__name__: inspect_member(m, module=mod, parent=parent)}
+                nodes = {c: inspect_member(m, module=mod, parent=parent)}
 
             for name, node in nodes.items():
                 if name in module_members:

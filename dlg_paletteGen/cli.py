@@ -105,9 +105,7 @@ def get_args(args=None):
     )
     if not args:
         if len(sys.argv) == 1:
-            print(
-                "\x1b[31;20mInsufficient number of " + "arguments provided!!!\n\x1b[0m"
-            )
+            print("\x1b[31;20mInsufficient number of " + "arguments provided!!!\n\x1b[0m")
             parser.print_help(sys.stderr)
             sys.exit(1)
         args = parser.parse_args()
@@ -306,7 +304,8 @@ def main():  # pragma: no cover
             output_xml_filename, tag, allow_missing_eagle_start, language
         )
         palette = prepare_and_write_palette(nodes, outputfile)
-        return
     # cleanup the output directory
     output_directory.cleanup()
-    return palette
+    _ = palette
+    # return palette
+    # return

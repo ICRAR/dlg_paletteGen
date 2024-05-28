@@ -7,14 +7,8 @@ import re
 import xml.etree.ElementTree as ET
 from typing import Union
 
-from .settings import (
-    VALUE_TYPES,
-    Language,
-    cleanString,
-    guess_type_from_default,
-    logger,
-    typeFix,
-)
+from .settings import VALUE_TYPES, Language, logger
+from .support_functions import cleanString, guess_type_from_default, typeFix
 
 
 class DummySig:

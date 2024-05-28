@@ -2,14 +2,17 @@
 Support functions
 """
 
+import ast
 import datetime
 import importlib
 import inspect
 import json
 import os
+import re
 import subprocess
 import sys
 import tempfile
+import typing
 import xml.etree.ElementTree as ET
 from pkgutil import iter_modules
 from typing import Any, Union
@@ -26,8 +29,120 @@ from .settings import (
     VALUE_TYPES,
     Language,
     logger,
-    typeFix,
 )
+
+
+def cleanString(input_text: str) -> str:
+    """
+    Remove ANSI escape strings from input"
+
+    :param input_text: string to clean
+
+    :returns: str, cleaned string
+    """
+    # ansi_escape = re.compile(r'[@-Z\\-_]|\[[0-?]*[ -/]*[@-~]')
+    ansi_escape = re.compile(r"\[[0-?]*[ -/]*[@-~]")
+    return ansi_escape.sub("", input_text)
+
+
+def convert_type_str(input_type: str = "") -> str:
+    """
+    Convert the string provided into a supported type string
+
+    :param value_type: str, type string to be converted
+
+    :returns: str, supported type string
+    """
+    if input_type in SVALUE_TYPES.values():
+        return input_type
+    value_type = (
+        SVALUE_TYPES[input_type] if input_type in SVALUE_TYPES else f"{input_type}"
+    )
+    return value_type
+
+
+def guess_type_from_default(default_value: typing.Any = "", raw=False):
+    """
+    Try to guess the parameter type from a default_value provided.
+
+    The value can be of any type by itself, including a JSON string
+    containing a complex data structure.
+
+    :param default_value: any, the default_value
+    :param raw: bool, return raw type object, rather than string
+
+    :returns: str, the type of the value as a supported string
+    """
+    vt = None  # type: Union[str, Any]
+    try:
+        # we'll try to interpret what the type of the default_value is
+        # using ast
+        l: dict = {}
+        try:
+            eval(
+                compile(
+                    ast.parse(f"t = {default_value}"),
+                    filename="",
+                    mode="exec",
+                ),
+                l,
+            )
+            vtype = type(l["t"])
+            if not isinstance(vtype, type):
+                vt = l["t"]
+            else:
+                vt = vtype
+        except (NameError, SyntaxError):
+            vt = "String"
+    except:  # noqa: E722
+        return "Object"
+    if not raw:
+        return VALUE_TYPES[vt] if vt in VALUE_TYPES else "Object"
+
+    return vt if vt in VALUE_TYPES else typing.Any
+
+
+def typeFix(value_type: Union[Any, None] = "", default_value: Any = None) -> str:
+    """
+    Trying to fix or guess the type of a parameter. If a value_type is
+    provided, this will be used to determine the type.
+
+    :param value_type: any, convert type to one of our strings
+    :param default_value: any, this will be used to determine the
+                          type if value_type is not specified.
+
+    :returns: str, the converted type as a supported string
+    """
+    path_ind = 0
+    if not value_type and default_value:
+        try:  # first check for standard types
+            value_type = type(default_value).__name__
+        except TypeError:
+            guess_type = str(guess_type_from_default(default_value))
+        path_ind = 1
+    elif isinstance(value_type, str) and value_type in SVALUE_TYPES.values():
+        guess_type = str(value_type)  # make lint happy and cast to string
+        path_ind = 2
+    elif isinstance(value_type, str) and value_type in SVALUE_TYPES:
+        guess_type = SVALUE_TYPES[value_type]
+        path_ind = 3
+    elif value_type in VALUE_TYPES:
+        guess_type = VALUE_TYPES[value_type]
+        path_ind = 4
+    elif not isinstance(value_type, str):
+        mod = value_type.__module__ if hasattr(value_type, "__module__") else ""
+        guess_type = f"{mod}.{value_type.__name__}"  # type: ignore[union-attr]
+        path_ind = 5
+    elif import_using_name(value_type, traverse=True):
+        guess_type = str(value_type)
+        path_ind = 6
+    else:
+        guess_type = "UNIDENTIFIED"
+        path_ind = 7
+    logger.debug(
+        "Parameter type guessed from %s: %s, %d", value_type, guess_type, path_ind
+    )
+    return guess_type
 
 
 def check_text_element(xml_element: ET.Element, sub_element: str):
@@ -335,6 +450,9 @@ def import_using_name(mod_name: str, traverse: bool = False):
         return None
     try:  # direct import first
         mod = importlib.import_module(mod_name)
+    except ValueError:
+        logger.error("Unable to import module: %s", mod_name)
+        mod = None
     except ModuleNotFoundError:
         mod_down = None
         if len(parts) >= 1:
@@ -384,9 +502,7 @@ def import_using_name(mod_name: str, traverse: bool = False):
                             mod = importlib.import_module(".".join(parts[:-1]))
                             break
                         except Exception as e:
-                            raise ValueError(
-                                "Problem importing module %s, %s" % (mod, e)
-                            )
+                            raise ValueError("Problem importing module %s, %s" % (mod, e))
                 logger.debug("Loaded module: %s", mod_name)
             else:
                 logger.debug("Recursive import failed! %s", parts[0] in sys.modules)
@@ -490,7 +606,11 @@ def populateFields(parameters: dict, dd, member=None) -> dict:
     fields = {}
     descr_miss = []
 
-    for p, v in parameters.items():
+    new_param = inspect.Parameter(
+        "base_name", inspect._ParameterKind.POSITIONAL_OR_KEYWORD
+    )
+    items = list(parameters.items()) + [(new_param.name, new_param)]
+    for p, v in items:
         field = initializeField(p)
 
         param_desc = get_value_type_from_default(v.default)
@@ -501,7 +621,7 @@ def populateFields(parameters: dict, dd, member=None) -> dict:
             elif p != "self":
                 descr_miss.append(p)
             elif p == "self":
-                param_desc["desc"] = f"{dd.name} Object"
+                param_desc["desc"] = f"Reference to {dd.name} object"
 
         # populate the field itself
         field[p]["value"] = field[p]["defaultValue"] = param_desc["value"]
@@ -522,8 +642,9 @@ def populateFields(parameters: dict, dd, member=None) -> dict:
                 field[p]["type"] = typeFix(f"{v.annotation.__name__}")
             else:
                 field[p]["type"] = v.annotation.__repr__()
+            logger.debug("Parameter type from annotation: %s", field[p]["type"])
         # else we use the type from default value
-        elif param_desc["type"]:
+        elif param_desc["type"] and param_desc["type"] != "None":
             field[p]["type"] = param_desc["type"]
         elif dd and p in dd.params and dd.params[p]["type"]:
             # type from docstring
@@ -544,17 +665,16 @@ def populateFields(parameters: dict, dd, member=None) -> dict:
         field[p]["positional"] = (
             True if v.kind == inspect.Parameter.POSITIONAL_ONLY else False
         )
-        if param_desc["type"] == "UNSPECIFIED" and param_desc["desc"].find(",") > 0:
-            dtype = param_desc["desc"].split(",", maxsplit=1)[0]
-            if dtype in SVALUE_TYPES:
-                param_desc["type"] = SVALUE_TYPES[dtype]
-        if param_desc["type"] and field[p]["type"] in [None, "UNSPECIFIED"]:
-            field[p]["type"] = param_desc["type"]
+        logger.debug("Final type of parameter %s: %s", p, field[p]["type"])
+        # if param_desc["type"] == "UNIDENTIFIED" and param_desc["desc"].find(",") > 0:
+        #     dtype = param_desc["desc"].split(",", maxsplit=1)[0]
+        #     if dtype in SVALUE_TYPES:
+        #         param_desc["type"] = SVALUE_TYPES[dtype]
+        # if param_desc["type"] and field[p]["type"] in [None, "UNIDENTIFIED", "None"]:
+        #     field[p]["type"] = param_desc["type"]
         if isinstance(field[p]["value"], numpy.ndarray):
             try:
-                field[p]["value"] = field[p]["defaultValue"] = field[p][
-                    "value"
-                ].tolist()
+                field[p]["value"] = field[p]["defaultValue"] = field[p]["value"].tolist()
             except NotImplementedError:
                 field[p]["value"] = []
         fields.update(field)
@@ -567,6 +687,10 @@ def populateFields(parameters: dict, dd, member=None) -> dict:
             descr_miss,
         )
 
+    fields["base_name"]["parameterType"] = "ComponentParameter"
+    fields["base_name"]["type"] = "String"
+    fields["base_name"]["readonly"] = True
+    fields["base_name"]["description"] = "The base class for this member function"
     return fields
 
 
@@ -623,9 +747,7 @@ def populateDefaultFields(Node):  # pylint: disable=invalid-name
     et[n]["value"] = 2
     et[n]["defaultValue"] = 2
     et[n]["type"] = "Integer"
-    et[n][
-        "description"
-    ] = "Estimate of execution time (in seconds) for this application."
+    et[n]["description"] = "Estimate of execution time (in seconds) for this application."
     et[n]["parameterType"] = "ConstraintParameter"
     Node["fields"].update(et)
 
