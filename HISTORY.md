@@ -2,6 +2,17 @@ Changelog
 =========
 
 
+(unreleased)
+------------
+- Removed isort ignore. [Andreas Wicenec]
+- More generic handling of module members. [Andreas Wicenec]
+
+
+0.3.7 (2024-05-28)
+------------------
+- Release: version 0.3.7 🚀 [Andreas Wicenec]
+
+
 0.3.6 (2024-04-18)
 ------------------
 - Release: version 0.3.6 🚀 [Andreas Wicenec]
