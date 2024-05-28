@@ -2,8 +2,9 @@ Changelog
 =========
 
 
-(unreleased)
-------------
+0.3.8 (2024-05-28)
+------------------
+- Release: version 0.3.8 🚀 [Andreas Wicenec]
 - Suppress error messages for typing module. [Andreas Wicenec]
 - Release: version 0.3.7 🚀 [Andreas Wicenec]
 - Removed isort ignore. [Andreas Wicenec]
