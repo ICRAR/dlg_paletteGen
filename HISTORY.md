@@ -2,6 +2,12 @@ Changelog
 =========
 
 
+(unreleased)
+------------
+- Formatting fixed. [Andreas Wicenec]
+- Release: version 0.3.8 🚀 [Andreas Wicenec]
+
+
 0.3.8 (2024-05-28)
 ------------------
 - Release: version 0.3.8 🚀 [Andreas Wicenec]
