@@ -397,18 +397,28 @@ def get_submodules(module):
         )
         return iter([])
     submods = []
+    module_vars = {}  # store module level variables
     if hasattr(module, "__all__"):
         for mod in module.__all__:
+            type_mod = getattr(module, mod)
+            if isinstance(
+                type_mod, (str, int, float, bytes, bytearray, bool, dict, list, tuple)
+            ):
+                # we are not importing module level variables
+                module_vars[mod] = getattr(module, mod)
+                continue
             submod = f"{module.__name__}.{mod}"
             logger.debug("Trying to import %s", submod)
             traverse = True if submod not in submods else False
             m = import_using_name(f"{module.__name__}.{mod}", traverse=traverse)
             if (
-                inspect.ismodule(m)
+                not m.__name__ == module.__name__  # prevent loading module itslef
+                and inspect.ismodule(m)
                 or inspect.isfunction(m)
                 or inspect.ismethod(m)
                 or inspect.isbuiltin(m)
             ):
+                logger.debug(">>> submodule type: %s", type(m))
                 submods.append(f"{submod}")
         logger.debug("Found submodules of %s in __all__: %s", module.__name__, submods)
     elif hasattr(module, "__path__"):
@@ -429,6 +439,8 @@ def get_submodules(module):
             ):
                 logger.debug("Trying to import submodule: %s", m[1].__name__)
                 submods.append(getattr(module, m[0]).__name__)
+    if module_vars:
+        logger.debug("Module level variables found: %s", module_vars)
     return iter(submods)
 
 

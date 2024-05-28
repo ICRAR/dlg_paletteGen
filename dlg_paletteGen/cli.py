@@ -179,7 +179,7 @@ def nodes_from_module(module_path: str, recursive: bool = True) -> tuple:
     logger.debug(
         "Modules found: %s",
         # modules
-        {m: list(v.keys()) for m, v in modules.items()},
+        {m: list(v.keys()) for m, v in modules.items() if v},
     )
     nodes = []
     for _, members in modules.items():

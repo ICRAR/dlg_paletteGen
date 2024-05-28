@@ -84,9 +84,7 @@ def inspect_member(member, module=None, parent=None):
             if hasattr(member, "__name__")
             else f"{module.__name__}.Unknown"
         )
-        qname = (
-            getattr(member, "__qualname__") if hasattr(member, "__qualname__") else ""
-        )
+        qname = getattr(member, "__qualname__") if hasattr(member, "__qualname__") else ""
     if not name or not qname:
         if hasattr(member, "__module__") and type(member).__module__ != "typing":
             logger.error(
