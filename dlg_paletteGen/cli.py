@@ -18,8 +18,6 @@ import pkg_resources
 
 from .module_base import module_hook
 from .settings import DOXYGEN_SETTINGS, Language, logger
-
-# isort: ignore
 from .source_base import process_compounddefs
 from .support_functions import (
     get_submodules,
