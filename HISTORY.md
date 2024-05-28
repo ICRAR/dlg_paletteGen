@@ -4,6 +4,8 @@ Changelog
 
 (unreleased)
 ------------
+- Suppress error messages for typing module. [Andreas Wicenec]
+- Release: version 0.3.7 🚀 [Andreas Wicenec]
 - Removed isort ignore. [Andreas Wicenec]
 - More generic handling of module members. [Andreas Wicenec]
 
