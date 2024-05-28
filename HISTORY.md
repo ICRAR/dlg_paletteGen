@@ -2,8 +2,9 @@ Changelog
 =========
 
 
-(unreleased)
-------------
+0.3.6 (2024-04-18)
+------------------
+- Release: version 0.3.6 🚀 [Andreas Wicenec]
 - Fixed value of complex types. [Andreas Wicenec]
 
 
