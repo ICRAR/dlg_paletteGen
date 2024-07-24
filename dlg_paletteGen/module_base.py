@@ -51,7 +51,7 @@ def get_class_members(cls, parent=None):
             or m.__qualname__.startswith("PyCapsule")
             or m.__qualname__ == "object.__init__"
         ):
-            node = inspect_member(m, module=cls, parent=parent)
+            node = construct_member_node(m, module=cls, parent=parent)
             if not node:
                 logger.debug("Inspection of '%s' failed.", m.__qualname__)
                 continue
@@ -65,11 +65,10 @@ def get_class_members(cls, parent=None):
     return class_members
 
 
-def inspect_member(member, module=None, parent=None):
+def _get_name_and_qname(member, module=None) -> tuple:
     """
-    Inspect a member function or method.
+    Get a name and a qualified name for various cases.
     """
-    node = constructNode()
     if inspect.isclass(module):
         name = qname = member.__qualname__
         if name.startswith("PyCapsule"):
@@ -84,25 +83,18 @@ def inspect_member(member, module=None, parent=None):
             if hasattr(member, "__name__")
             else f"{module.__name__}.Unknown"
         )
-        qname = getattr(member, "__qualname__") if hasattr(member, "__qualname__") else ""
-    if not name or not qname:
-        if hasattr(member, "__module__") and type(member).__module__ != "typing":
-            logger.error(
-                "Unable to get name or qualname for member: %s",
-                member.__class__.__module__,
-            )
-        return {"fields": []}
-    # shorten node name, else EAGLE components are cluttered.
-    # name = (
-    #     f"{name.split('.')[0]}.{'.'.join(name.split('.')[-2:])}"
-    #     if name.count(".") > 2
-    #     else name
-    # )
-    node["name"] = name
-    logger.debug("Inspecting %s: %s", type(member).__name__, name)
+        qname = (
+            getattr(member, "__qualname__") if hasattr(member, "__qualname__") else ""
+        )
+    return (name, qname)
+
+
+def _get_docs(member, name: str, module, node) -> tuple:
+    """
+    Helper function to extract the main documentation and the parameter docs if available.
+    """
 
     dd = None
-
     doc = inspect.getdoc(member)
     if (
         doc
@@ -162,6 +154,26 @@ def inspect_member(member, module=None, parent=None):
             if not getattr(sig, "parameters") and dd and len(dd.params) > 0:
                 for p, v in dd.params.items():
                     sig.parameters[p] = DummyParam()
+    return (sig, dd)
+
+
+def construct_member_node(member: dict, module=None, parent=None) -> dict:
+    """
+    Inspect a member function or method and construct a node for the palette.
+    """
+    node = constructNode()
+    name, qname = _get_name_and_qname(member, module)
+    if not name or not qname:
+        if hasattr(member, "__module__") and type(member).__module__ != "typing":
+            logger.error(
+                "Unable to get name or qualname for member: %s",
+                member.__class__.__module__,
+            )
+        return {"fields": []}
+    node["name"] = name
+    logger.debug("Inspecting %s: %s", type(member).__name__, name)
+
+    sig, dd = _get_docs(member, name, module, node)
     # fill custom ApplicationArguments first
     fields = populateFields(sig.parameters, dd, member=name)
     ind = -1
@@ -176,7 +188,8 @@ def inspect_member(member, module=None, parent=None):
         load_name = load_name.replace("PyCapsule", module.__name__)
     if load_name.find("object.__init__"):
         load_name = load_name.replace("object.__init__", node["name"])
-    fields["base_name"]["value"] = member.__qualname__.split(".", 1)[0]
+    # fields["base_name"]["value"] = member.__qualname__.split(".", 1)[0]
+    fields["base_name"]["value"] = ".".join(load_name.split(".")[:-1])
     fields["base_name"]["defaultValue"] = fields["base_name"]["value"]
 
     for k, field in fields.items():
@@ -189,17 +202,15 @@ def inspect_member(member, module=None, parent=None):
                 fields["self"]["usage"] = "InputOutput"
             else:
                 fields["self"]["usage"] = "InputPort"
-            fields["self"]["type"] = ".".join(load_name.split(".")[:-1])
+            fields["self"]["type"] = "Object:" + ".".join(load_name.split(".")[:-1])
             if fields["self"]["type"] == "numpy.ndarray":
                 # just to make sure the type hints match the object type
                 fields["self"]["type"] = "numpy.array"
 
         node["fields"].update({k: field})
 
-        # now populate with default fields.
+    # now populate with default fields.
     node = populateDefaultFields(node)
-    # if "self" in node.fields:
-    #     node.fields["self"]["type"] = load_name.rsplit(".", 1)[0]
     node["fields"]["func_name"]["value"] = load_name
     node["fields"]["func_name"]["defaultValue"] = load_name
     logger.debug(">>>> populated node: %s", node)
@@ -221,16 +232,7 @@ def get_members(mod: types.ModuleType, module_members=[], parent=None, member=No
     module_name = parent if parent else mod.__name__
     logger.debug(f">>>>>>>>> Analysing members for module: {module_name}")
     content = inspect.getmembers(mod)
-    # content = inspect.getmembers(
-    #     mod,
-    #     lambda x: inspect.isfunction(x)
-    #     or inspect.ismethod(x)
-    #     or inspect.isclass(x)
-    #     or inspect.isbuiltin(x)
-    #     or inspect.ismethoddescriptor(x),
-    # )
     count = 0
-    # logger.debug("Members of %s: %s", name, [c for c, m in content])
     members = {}
     for c, m in content:
         if not member or (member and c == member):
@@ -252,8 +254,7 @@ def get_members(mod: types.ModuleType, module_members=[], parent=None, member=No
                 logger.debug("Class members: %s", nodes.keys())
 
             else:
-                # nodes = {m.__name__: inspect_member(m, module=mod, parent=parent)}
-                nodes = {c: inspect_member(m, module=mod, parent=parent)}
+                nodes = {c: construct_member_node(m, module=mod, parent=parent)}
 
             for name, node in nodes.items():
                 if name in module_members:
@@ -294,7 +295,6 @@ def module_hook(mod_name: str, modules: dict = {}, recursive: bool = True) -> tu
     module_members = []
     for m in modules.values():
         module_members.extend([k.split(".")[-1] for k in m.keys()])
-    # member_names = [n.split(".")[-1] for n in module_members.keys()]
     if mod_name not in sys.builtin_module_names:
         try:
             traverse = True if len(modules) == 0 else False
@@ -310,16 +310,13 @@ def module_hook(mod_name: str, modules: dict = {}, recursive: bool = True) -> tu
             )
             module_members.extend([k.split(".") for k in members.keys()])
             modules.update({mod_name: members})
-            # mod_count += 1
             sub_modules = []
             if not member and recursive and mod and mod not in sub_modules:
-                sub_modules = get_submodules(mod)
-                # if len(sub_modules) > 0:
+                sub_modules, module_vars = get_submodules(mod)
                 logger.debug("Iterating over sub_modules of %s", mod_name)
                 for sub_mod in sub_modules:
                     logger.info("Treating sub-module: %s of %s", sub_mod, mod_name)
                     modules, _ = module_hook(sub_mod, modules=modules)
-            # member_count = sum([len(m) for m in modules.values()])
         except ImportError:
             logger.error("Module %s can't be loaded!", mod_name)
             return ({}, None)

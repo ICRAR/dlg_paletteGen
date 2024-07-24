@@ -404,8 +404,17 @@ def get_submodules(module):
             if isinstance(
                 type_mod, (str, int, float, bytes, bytearray, bool, dict, list, tuple)
             ):
-                # we are not importing module level variables
-                module_vars[mod] = getattr(module, mod)
+                # just store module level variables for now
+                value = getattr(module, mod)
+                field = initializeField(
+                    name=mod,
+                    value=value,
+                    defaultValue=value,
+                    vtype=typeFix(type(value)),
+                    parameterType="ApplicationArgument",
+                    readonly=True,
+                )
+                module_vars[mod] = field
                 continue
             submod = f"{module.__name__}.{mod}"
             logger.debug("Trying to import %s", submod)
@@ -439,9 +448,7 @@ def get_submodules(module):
             ):
                 logger.debug("Trying to import submodule: %s", m[1].__name__)
                 submods.append(getattr(module, m[0]).__name__)
-    if module_vars:
-        logger.debug("Module level variables found: %s", module_vars)
-    return iter(submods)
+    return iter(submods), iter(module_vars)
 
 
 def import_using_name(mod_name: str, traverse: bool = False):
@@ -514,7 +521,9 @@ def import_using_name(mod_name: str, traverse: bool = False):
                             mod = importlib.import_module(".".join(parts[:-1]))
                             break
                         except Exception as e:
-                            raise ValueError("Problem importing module %s, %s" % (mod, e))
+                            raise ValueError(
+                                "Problem importing module %s, %s" % (mod, e)
+                            )
                 logger.debug("Loaded module: %s", mod_name)
             else:
                 logger.debug("Recursive import failed! %s", parts[0] in sys.modules)
@@ -672,21 +681,20 @@ def populateFields(parameters: dict, dd, member=None) -> dict:
             field[p]["usage"] = "InputPort"
             field[p]["value"] = None
         field[p]["description"] = param_desc["desc"]
-        field[p]["parameterType"] = "ApplicationArgument"
+        if p in ["self", "class"]:
+            field[p]["parameterType"] = "ComponentParameter"
+        else:
+            field[p]["parameterType"] = "ApplicationArgument"
         field[p]["options"] = None
         field[p]["positional"] = (
             True if v.kind == inspect.Parameter.POSITIONAL_ONLY else False
         )
         logger.debug("Final type of parameter %s: %s", p, field[p]["type"])
-        # if param_desc["type"] == "UNIDENTIFIED" and param_desc["desc"].find(",") > 0:
-        #     dtype = param_desc["desc"].split(",", maxsplit=1)[0]
-        #     if dtype in SVALUE_TYPES:
-        #         param_desc["type"] = SVALUE_TYPES[dtype]
-        # if param_desc["type"] and field[p]["type"] in [None, "UNIDENTIFIED", "None"]:
-        #     field[p]["type"] = param_desc["type"]
         if isinstance(field[p]["value"], numpy.ndarray):
             try:
-                field[p]["value"] = field[p]["defaultValue"] = field[p]["value"].tolist()
+                field[p]["value"] = field[p]["defaultValue"] = field[p][
+                    "value"
+                ].tolist()
             except NotImplementedError:
                 field[p]["value"] = []
         fields.update(field)
@@ -759,7 +767,9 @@ def populateDefaultFields(Node):  # pylint: disable=invalid-name
     et[n]["value"] = 2
     et[n]["defaultValue"] = 2
     et[n]["type"] = "Integer"
-    et[n]["description"] = "Estimate of execution time (in seconds) for this application."
+    et[n][
+        "description"
+    ] = "Estimate of execution time (in seconds) for this application."
     et[n]["parameterType"] = "ConstraintParameter"
     Node["fields"].update(et)
 

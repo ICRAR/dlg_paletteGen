@@ -103,7 +103,9 @@ def get_args(args=None):
     )
     if not args:
         if len(sys.argv) == 1:
-            print("\x1b[31;20mInsufficient number of " + "arguments provided!!!\n\x1b[0m")
+            print(
+                "\x1b[31;20mInsufficient number of " + "arguments provided!!!\n\x1b[0m"
+            )
             parser.print_help(sys.stderr)
             sys.exit(1)
         args = parser.parse_args()
@@ -214,7 +216,7 @@ def palettes_from_module(
     sub_modules = [module_path]
     if split:
         mod = import_using_name(module_path, traverse=True)
-        sub_modules.extend(list(get_submodules(mod)))
+        sub_modules.extend(list(get_submodules(mod)[0]))
         logger.debug(
             "Splitting module %s into sub-module palettes: %s",
             module_path,

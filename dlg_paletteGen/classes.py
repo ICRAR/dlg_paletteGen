@@ -38,14 +38,18 @@ class DummySig:
                     call_line = doc_split[0]
                 elif len(doc_split) > 1:
                     call_line, self.docstring = doc_split[:2]
-                # call_line += ")"
-                params = re.findall(r"\(.*\n*.*\)", call_line)[0]
-                params = re.sub(r"\n {2,}", " ", params)
-                params = re.findall(
-                    r"(?:([\w_\.]+)(?:[\: ]*([\w_\:\.\[\]]*)(?: *= *([\w\.\'\-]*))*\,*))",
-                    params,
-                )
-                ret = re.findall(r"-> ([\w_\:\.\[\]]+)", call_line)
+                try:
+                    params = re.findall(r"\(.*\n*.*\)", call_line)[0]
+                    params = re.sub(r"\n {2,}", " ", params)
+                    params = re.findall(
+                        r"(?:([\w_\.]+)(?:[\: ]*([\w_\:\.\[\]]*)(?: *= *([\w\.\'\-]*))*\,*))",
+                        params,
+                    )
+                    ret = re.findall(r"-> ([\w_\:\.\[\]]+)", call_line)
+                except IndexError:
+                    logger.debug("First line is likely not a call line: %s", call_line)
+                    desc = DetailedDescription(self.docstring)
+                    params = desc.params
             except:  # noqa: E722
                 logger.debug(
                     ">>>> param matching failed: %s",
@@ -109,7 +113,9 @@ class DetailedDescription:
         self.format = ""
         self._identify_format()
         self.main_descr, self.params = self.process_descr()
-        self.brief_descr = self.main_descr.split(".")[0] + "." if self.main_descr else ""
+        self.brief_descr = (
+            self.main_descr.split(".")[0] + "." if self.main_descr else ""
+        )
 
     def _process_rEST(self, detailed_description) -> tuple:
         """
@@ -233,7 +239,7 @@ class DetailedDescription:
             rest = ""
         has_params = description != rest
         # extract parameter documentation (up to Returns line)
-        pds = re.split(r"\nReturns\n-------\n|\nRaises\n------\n", rest)
+        pds = re.split(r"\nReturns:*\n--------*\n|\nRaises:*\n-------*\n", rest)
         spds = re.split(r"([\w_]+) *: ", pds[0])[1:]  # split param lines
         if has_params and len(spds) == 0:
             spds = re.split(r"([\w_]+)\n    ", pds[0])[1:]  # split param lines
@@ -334,7 +340,9 @@ class DetailedDescription:
         dList = dStr.split("\n")
         try:
             start_ind = [
-                idx for idx, s in enumerate(dList) if re.findall(r"-{1,20} parameter", s)
+                idx
+                for idx, s in enumerate(dList)
+                if re.findall(r"-{1,20} parameter", s)
             ][0] + 1
         except IndexError:
             start_ind = 0
