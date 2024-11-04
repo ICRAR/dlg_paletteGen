@@ -1,3 +1,12 @@
+# pylint: disable=invalid-name
+# pylint: disable=bare-except
+# pylint: disable=eval-used
+# pylint: disable=global-statement
+# pylint: disable=too-many-arguments
+# pylint: disable=too-many-branches
+# pylint: disable=too-many-statements
+# pylint: disable=protected-access
+# pylint: disable=dangerous-default-value
 """
 Support functions
 """
@@ -133,7 +142,7 @@ def typeFix(value_type: Union[Any, None] = "", default_value: Any = None) -> str
         mod = value_type.__module__ if hasattr(value_type, "__module__") else ""
         guess_type = f"{mod}.{value_type.__name__}"  # type: ignore[union-attr]
         path_ind = 5
-    elif import_using_name(value_type, traverse=True):
+    elif import_using_name(value_type, traverse=True, err_log=False):
         guess_type = str(value_type)
         path_ind = 6
     else:
@@ -170,7 +179,7 @@ def modify_doxygen_options(doxygen_filename: str, options: dict):
         contents = dfile.readlines()
 
     with open(doxygen_filename, "w", encoding="utf-8") as dfile:
-        for index, line in enumerate(contents):
+        for line in contents:
             if line[0] == "#":
                 continue
             if len(line) <= 1:
@@ -204,6 +213,23 @@ def get_next_key():
     return NEXT_KEY + 1
 
 
+def get_mod_name(mod) -> str:
+    """
+    Helper function to get a name from a module in
+    all cases.
+    """
+    if not mod:
+        return ""
+    if hasattr(mod, "__name__"):
+        return mod.__name__
+    if hasattr(mod, "__class__"):
+        return getattr(mod, "__class__").__name__
+    for n, m in globals().items():
+        if m == mod:
+            return n
+    return ""
+
+
 def process_doxygen(language: Language = Language.PYTHON):
     """
     Run doxygen on the provided directory/file.
@@ -211,9 +237,9 @@ def process_doxygen(language: Language = Language.PYTHON):
     :param language: Language, can be [2] for Python, 1 for C or 0 for Unknown
     """
     # create a temp file to contain the Doxyfile
-    doxygen_file = tempfile.NamedTemporaryFile()
-    doxygen_filename = doxygen_file.name
-    doxygen_file.close()
+    # create a temp file to contain the Doxyfile
+    with tempfile.NamedTemporaryFile() as doxygen_file:
+        doxygen_filename = doxygen_file.name
 
     # create a default Doxyfile
     subprocess.call(
@@ -262,7 +288,6 @@ def process_xml() -> str:
         )
 
     # debug - copy output xml to local dir
-    # TODO: do this only if DEBUG is enabled
     os.system("cp " + output_xml_filename + " output.xml")
     logger.info("Wrote doxygen XML to output.xml")
     return output_xml_filename
@@ -326,8 +351,7 @@ def get_field_by_name(name: str, node, value_key: str = "") -> dict:
         field = [f for f in node["fields"] if f["name"] == name][0]
         if value_key and value_key in field:
             return field[value_key]
-        else:
-            return field
+        return field
     except (IndexError, TypeError):
         return {}
 
@@ -389,18 +413,26 @@ def get_submodules(module):
 
     :returns: iterator[tuple]
     """
-    if not inspect.ismodule(module):
-        logger.warning(
-            "Provided object %s is not a module: %s",
-            module,
-            type(module),
-        )
-        return iter([])
+    # if not inspect.ismodule(module):
+    #     logger.warning(
+    #         "Provided object %s is not a module: %s, %s",
+    #         module,
+    #         type(module),
+    #         inspect.isclass(module),
+    #     )
+    #     return iter([]), iter([])
     submods = []
     module_vars = {}  # store module level variables
+    module_name = get_mod_name(module)
     if hasattr(module, "__all__"):
         for mod in module.__all__:
-            type_mod = getattr(module, mod)
+            try:
+                type_mod = getattr(module, mod)
+            except AttributeError:
+                logger.warning(
+                    "Attribute %s defined in %s.__all__, but not found.", mod, module
+                )
+                continue
             if isinstance(
                 type_mod, (str, int, float, bytes, bytearray, bool, dict, list, tuple)
             ):
@@ -416,24 +448,25 @@ def get_submodules(module):
                 )
                 module_vars[mod] = field
                 continue
-            submod = f"{module.__name__}.{mod}"
+            submod = f"{module_name}.{mod}"
             logger.debug("Trying to import %s", submod)
-            traverse = True if submod not in submods else False
-            m = import_using_name(f"{module.__name__}.{mod}", traverse=traverse)
+            traverse = submod not in submods
+            m = import_using_name(f"{module_name}.{mod}", traverse=traverse)
             if (
-                not m.__name__ == module.__name__  # prevent loading module itslef
-                and inspect.ismodule(m)
-                or inspect.isfunction(m)
-                or inspect.ismethod(m)
-                or inspect.isbuiltin(m)
+                not get_mod_name(m)
+                == get_mod_name(module)  # prevent loading module itself
+                # and inspect.ismodule(m)
+                # or inspect.isfunction(m)
+                # or inspect.ismethod(m)
+                # or inspect.isbuiltin(m)
             ):
                 logger.debug(">>> submodule type: %s", type(m))
                 submods.append(f"{submod}")
-        logger.debug("Found submodules of %s in __all__: %s", module.__name__, submods)
+        logger.debug("Found submodules of %s in __all__: %s", module_name, submods)
     elif hasattr(module, "__path__"):
         sub_modules = iter_modules(module.__path__)
         submods = [
-            f"{module.__name__}.{x[1]}"
+            f"{module_name}.{x[1]}"
             for x in sub_modules
             if (x[1][0] != "_" and x[1][:4] != "test")
         ]  # get the names; ignore test modules
@@ -442,16 +475,16 @@ def get_submodules(module):
         for m in inspect.getmembers(module, lambda x: inspect.ismodule(x)):
             if (
                 inspect.ismodule(m[1])
-                and m[1].__name__ not in sys.builtin_module_names
+                and get_mod_name(m[1]) not in sys.builtin_module_names
                 # and hasattr(m[1], "__file__")
-                and m[1].__name__.find(module.__name__) > -1
+                and get_mod_name(m[1]).find(module_name) > -1
             ):
-                logger.debug("Trying to import submodule: %s", m[1].__name__)
-                submods.append(getattr(module, m[0]).__name__)
+                logger.debug("Trying to import submodule: %s", get_mod_name(m[1]))
+                submods.append(get_mod_name(getattr(module, m[0])))
     return iter(submods), iter(module_vars)
 
 
-def import_using_name(mod_name: str, traverse: bool = False):
+def import_using_name(mod_name: str, traverse: bool = False, err_log=True):
     """
     Import a module using its name and try hard to go up the hierarchy if
     direct import is not possible. This only imports actual modules,
@@ -461,8 +494,11 @@ def import_using_name(mod_name: str, traverse: bool = False):
 
     :param mod_name: The name of the module to be imported.
     :param traverse: Follow the tree even if module already loaded.
+    :param err_log: Log import error
     """
     logger.debug("Importing %s", mod_name)
+    if not re.match("^[_A-Z,a-z]", mod_name):
+        return None
     parts = mod_name.split(".")
     exists = ".".join(parts[:-1]) in sys.modules if not traverse else False
     if parts[-1].startswith("_"):
@@ -483,9 +519,13 @@ def import_using_name(mod_name: str, traverse: bool = False):
                 try:
                     mod = importlib.import_module(parts[0])
                 except ImportError as e:
-                    logger.error(
-                        "Error when loading module %s: %s" % (parts[0], str(e)),
-                    )
+                    if err_log:
+                        logger.error(
+                            "Error when loading module %s: %s %s",
+                            parts[0],
+                            str(e),
+                            mod_name,
+                        )
                     return None
                 for m in parts[1:]:
                     try:
@@ -501,17 +541,15 @@ def import_using_name(mod_name: str, traverse: bool = False):
                                 mod,
                             )
                             mod_prev = mod
-                        if inspect.ismodule(mod_down):
-                            mod = mod_down
-                        elif (  # in other cases return the provious module.
+                        if (  # in other cases return the provious module.
                             inspect.isclass(mod_down)
                             or inspect.isfunction(mod_down)
                             or inspect.isbuiltin(mod_down)
                             or inspect.ismethod(mod_down)
                         ):
                             mod = mod_prev
-                        else:  # just fallback to initial module
-                            mod
+                        else:
+                            mod = mod_down
                     except AttributeError:
                         try:
                             logger.debug(
@@ -523,7 +561,7 @@ def import_using_name(mod_name: str, traverse: bool = False):
                         except Exception as e:
                             raise ValueError(
                                 "Problem importing module %s, %s" % (mod, e)
-                            )
+                            ) from e
                 logger.debug("Loaded module: %s", mod_name)
             else:
                 logger.debug("Recursive import failed! %s", parts[0] in sys.modules)
@@ -539,7 +577,7 @@ def initializeField(
     vtype: Union[str, None] = None,
     parameterType: str = "ComponentParameter",
     usage: str = "NoPort",
-    options: list = [],
+    options: list = [],  # noeq: E501
     readonly: bool = False,
     precious: bool = False,
     positional: bool = False,
@@ -619,7 +657,7 @@ def get_value_type_from_default(default):
     return param_desc
 
 
-def populateFields(parameters: dict, dd, member=None) -> dict:
+def populateFields(parameters: dict, dd) -> dict:
     """
     Populate a field from signature parameters and mixin
     documentation if available.
@@ -669,7 +707,6 @@ def populateFields(parameters: dict, dd, member=None) -> dict:
             field[p]["type"] = param_desc["type"]
         elif dd and p in dd.params and dd.params[p]["type"]:
             # type from docstring
-            # TODO: should probably check a bit more
             field[p]["type"] = typeFix(dd.params[p]["type"])
         else:
             field[p]["type"] = SVALUE_TYPES["NoneType"]
@@ -686,9 +723,7 @@ def populateFields(parameters: dict, dd, member=None) -> dict:
         else:
             field[p]["parameterType"] = "ApplicationArgument"
         field[p]["options"] = None
-        field[p]["positional"] = (
-            True if v.kind == inspect.Parameter.POSITIONAL_ONLY else False
-        )
+        field[p]["positional"] = v.kind == inspect.Parameter.POSITIONAL_ONLY
         logger.debug("Final type of parameter %s: %s", p, field[p]["type"])
         if isinstance(field[p]["value"], numpy.ndarray):
             try:
@@ -698,14 +733,6 @@ def populateFields(parameters: dict, dd, member=None) -> dict:
             except NotImplementedError:
                 field[p]["value"] = []
         fields.update(field)
-
-    logger.debug("Parameters %s", fields)
-    if descr_miss:
-        logger.warning(
-            "%s: Parameters %s missing matching description!",
-            member,
-            descr_miss,
-        )
 
     fields["base_name"]["parameterType"] = "ComponentParameter"
     fields["base_name"]["type"] = "String"

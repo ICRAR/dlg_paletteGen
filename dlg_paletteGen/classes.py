@@ -18,7 +18,7 @@ class DummySig:
 
     def __init__(self, module):
         self.module = module
-        self.name = module.__name__
+        self.name = module.__name__ if inspect.ismodule(module) else module
         self.docstring = inspect.getdoc(module)
         self.parameters, self.ret = self.get_pb11_sig()
 
@@ -42,7 +42,7 @@ class DummySig:
                     params = re.findall(r"\(.*\n*.*\)", call_line)[0]
                     params = re.sub(r"\n {2,}", " ", params)
                     params = re.findall(
-                        r"(?:([\w_\.]+)(?:[\: ]*([\w_\:\.\[\]]*)(?: *= *([\w\.\'\-]*))*\,*))",
+                        r"(?:([\w_\.]+)(?:[\: ]*([\w_\:\.\[\]]*)(?: *= *([\w\.\'\-]*))*\,*))",  # noqa: E501
                         params,
                     )
                     ret = re.findall(r"-> ([\w_\:\.\[\]]+)", call_line)
@@ -64,15 +64,25 @@ class DummySig:
                     parameters["self"].annotation = f"{self.module.__objclass__}"
                 elif hasattr(self.module, "__module__"):
                     parameters["self"].annotation = f"{self.module.__module__}"
-            for k, t, v in params:
-                parameters[k] = DummyParam()
-                # replace with actual supported type rather than string
-                if t and isinstance(t, str) and typeFix(t) in VALUE_TYPES.values():
-                    t = [k for k, v in VALUE_TYPES.items() if v == typeFix(t)][0]
-                elif not t and v:  # try to guess from default value
-                    t = guess_type_from_default(v, raw=True)
-                parameters[k].annotation = t
-                parameters[k].default = v
+            if isinstance(params, dict):
+                for k, v in params.items():
+                    parameters[k] = DummyParam()
+                    t = v["type"]
+                    if t and isinstance(t, str) and typeFix(t) in VALUE_TYPES.values():
+                        t = [k for k, v in VALUE_TYPES.items() if v == typeFix(t)][0]
+                    desc = v["desc"]
+                    parameters[k].annotation = t
+                    parameters[k].default = None
+            elif isinstance(params, list):
+                for k, t, v in params:
+                    parameters[k] = DummyParam()
+                    # replace with actual supported type rather than string
+                    if t and isinstance(t, str) and typeFix(t) in VALUE_TYPES.values():
+                        t = [k for k, v in VALUE_TYPES.items() if v == typeFix(t)][0]
+                    elif not t and v:  # try to guess from default value
+                        t = guess_type_from_default(v, raw=True)
+                    parameters[k].annotation = t
+                    parameters[k].default = v
         elif self.docstring and len(self.docstring) == 0:
             logger.warning("Module %s docstring is empty.", self.docstring)
         elif self.docstring and len(self.docstring) > 0:
@@ -80,7 +90,7 @@ class DummySig:
         return parameters, ret
 
 
-class DummyParam:
+class DummyParam:  # no-eq: R0903
     """
     Dummy Parameter class
     """
@@ -100,16 +110,16 @@ class DetailedDescription:
     KNOWN_FORMATS = {
         "rEST": r"\n(:param|:returns|Returns:) .*",
         "Google": r"\nArgs:",
-        "Numpy": r"\n *Parameters:*\n *----------",
+        "Numpy": r"\n *Parameters *:? *\n *----------",
         "casa": r"\n-{2,20}? parameter",
     }
 
-    def __init__(self, descr: str, name=None):
+    def __init__(self, descr: Union[str | None], name=None):
         """
         :param descr: Text of the detaileddescription node
         """
         self.name = name
-        self.description = descr
+        self.description = descr if descr else ""
         self.format = ""
         self._identify_format()
         self.main_descr, self.params = self.process_descr()
@@ -226,12 +236,13 @@ class DetailedDescription:
             return ("", {})
         ds = dd.strip("\n")
         ds = re.sub(
-            re.findall(r"(\n *)Parameters:*\n *----------*\n", dd)[0],
+            # re.findall(r"(\n *)Parameters *:? *\n*----------*\n", dd)[0],
+            re.findall(self.KNOWN_FORMATS["Numpy"], dd)[0],
             "\n",
             dd,
         )
         ds = ds.lstrip()
-        dss = re.split(r"\nParameters:*\n----------*\n", ds)
+        dss = re.split(r"\nParameters *:? *\n*----------*\n", ds)
         if len(dss) == 2:
             (description, rest) = dss
         else:
@@ -239,7 +250,7 @@ class DetailedDescription:
             rest = ""
         has_params = description != rest
         # extract parameter documentation (up to Returns line)
-        pds = re.split(r"\nReturns:*\n--------*\n|\nRaises:*\n-------*\n", rest)
+        pds = re.split(r"\nReturns*:*\n--------*\n|\nRaises*:*\n-------*\n", rest)
         spds = re.split(r"([\w_]+) *: ", pds[0])[1:]  # split param lines
         if has_params and len(spds) == 0:
             spds = re.split(r"([\w_]+)\n    ", pds[0])[1:]  # split param lines

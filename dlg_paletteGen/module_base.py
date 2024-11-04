@@ -1,4 +1,9 @@
 # pylint: disable=invalid-name
+# pylint: disable=bare-except
+# pylint: disable=dangerous-default-value
+# pylint: disable=too-many-branches
+# pylint: disable=too-many-nested-blocks
+# pylint: disable=eval-used
 """
 dlg_paletteGen base functionality for the treatment of installed modules.
 """
@@ -8,11 +13,13 @@ import inspect
 import re
 import sys
 import types
+import typing
 from typing import _SpecialForm
 
 from .classes import DetailedDescription, DummyParam, DummySig, logger
 from .support_functions import (
     constructNode,
+    get_mod_name,
     get_submodules,
     import_using_name,
     populateDefaultFields,
@@ -20,7 +27,7 @@ from .support_functions import (
 )
 
 
-def get_class_members(cls, parent=None):
+def get_class_members(cls, parent=None, name=None):
     """
     Inspect members of a class
     """
@@ -33,63 +40,97 @@ def get_class_members(cls, parent=None):
             or inspect.ismethoddescriptor(x),
         )
     except KeyError:
-        logger.error("Problem getting members of %s", cls)
+        logger.debug("Problem getting members of %s", cls)
         return {}
+
+    content = [(n, m, False) for n, m in content]
+    # deal with possibility that callables could be defined as annotations!!
+    # Very bad style, but used in astropy.coordinates.SkyCoord
+    if isinstance(cls, type):
+        if sys.version_info.major == 3 and sys.version_info.minor > 9:
+            ann = inspect.get_annotations(
+                cls,
+                globals=globals(),
+                locals=sys.modules[cls.__module__].__dict__,
+                eval_str=True,
+            )
+        else:
+            ann = cls.__dict__.get("__annotations__", None)
+    else:
+        ann = getattr(cls, "__annotations__", None)
+
+    if ann:
+        # Add Callable annotations to the module content
+        for aname, annotation in ann.items():
+            if isinstance(annotation, typing._CallableGenericAlias):
+                if isinstance(annotation.__args__[0], types.UnionType):
+                    for union_member in typing.get_args(annotation.__args__[0]):
+                        if hasattr(union_member, aname):
+                            content.append((aname, getattr(union_member, aname), True))
+                else:
+                    content.append((aname, f"{cls.__name__}.{aname}", True))
     content = [
-        (n, m)
-        for n, m in content
+        (n, m, ann_fl)
+        for n, m, ann_fl in content
         if re.match(r"^[a-zA-Z]", n) or n in ["__init__", "__cls__"]
     ]
     logger.debug("Member functions of class %s: %s", cls, content)
     class_members = {}
-    for _, m in content:
+    for n, m, ann_fl in content:
         if isinstance(m, functools.cached_property):
             logger.error("Found cached_property object!")
             continue
+        mod_name = m.__qualname__ if not isinstance(m, str) else m
         if (
-            m.__qualname__.startswith(cls.__name__)
-            or m.__qualname__.startswith("PyCapsule")
-            or m.__qualname__ == "object.__init__"
+            not n.startswith("_")
+            or mod_name.startswith(cls.__name__)
+            or ann_fl
+            or mod_name.startswith("PyCapsule")
+            or mod_name == "object.__init__"
         ):
-            node = construct_member_node(m, module=cls, parent=parent)
+            node = construct_member_node(m, module=cls, parent=parent, name=n)
             if not node:
-                logger.debug("Inspection of '%s' failed.", m.__qualname__)
+                logger.debug("Inspection of '%s' failed.", mod_name)
                 continue
             class_members.update({node["name"]: node})
         else:
             logger.debug(
                 "class name %s not start of qualified name: %s",
                 cls.__name__,
-                m.__qualname__,
+                mod_name,
             )
     return class_members
 
 
-def _get_name_and_qname(member, module=None) -> tuple:
+def _get_name(name: str, member, module=None, parent=None) -> str:
     """
     Get a name and a qualified name for various cases.
     """
+    member_name = get_mod_name(member)
+    module_name = get_mod_name(module)
     if inspect.isclass(module):
-        name = qname = member.__qualname__
-        if name.startswith("PyCapsule"):
-            name = name.replace("PyCapsule", f"{module.__module__}.{module.__name__}")
-        elif name == "object.__init__":
-            name = f"{module.__name__}.__init__"
+        mname = f"{parent}.{name}"
+        mname = qname = mname if isinstance(member, str) else member.__qualname__
+        if mname.startswith("PyCapsule"):
+            mname = mname.replace("PyCapsule", f"{module.__module__}.{module.__name__}")
+        elif mname == "object.__init__":
+            mname = f"{module.__name__}.__init__"
     elif inspect.isclass(member):
-        name = qname = getattr(member, "__class__").__name__
+        mname = qname = getattr(member, "__class__").__name__
     else:
-        name = (
-            f"{member.__name__}"
-            if hasattr(member, "__name__")
-            else f"{module.__name__}.Unknown"
+        mname = (
+            f"{member_name}" if hasattr(member, "__name__") else f"{module_name}.name"
         )
         qname = (
             getattr(member, "__qualname__") if hasattr(member, "__qualname__") else ""
         )
-    return (name, qname)
+    logger.debug(">>>>> mname: %s, %s.%s", mname, parent, module_name)
+    if not name and mname:
+        name = mname
+    return name
 
 
-def _get_docs(member, name: str, module, node) -> tuple:
+def _get_docs(member, module, node) -> tuple:
     """
     Helper function to extract the main documentation and the parameter docs if available.
     """
@@ -103,28 +144,30 @@ def _get_docs(member, name: str, module, node) -> tuple:
             "Initialize self.  See help(type(self)) for accurate signature."
         )
     ):
-        logger.debug(f"Process documentation of {type(member).__name__} {name}")
-        dd = DetailedDescription(doc, name=name)
+        logger.debug(
+            "Process documentation of %s %s", type(member).__name__, node["name"]
+        )
+        dd = DetailedDescription(doc, name=node["name"])
         node["description"] = f"{dd.description.strip()}"
         if len(dd.params) > 0:
             logger.debug("Identified parameters: %s", dd.params)
     if (
-        name in ["__init__", "__cls__"]
+        node["name"].split(".")[-1] in ["__init__", "__cls__"]
         and inspect.isclass(module)
         and inspect.getdoc(module)
     ):
         logger.debug(
             "Using description of class '%s' for %s",
             module.__name__,
-            name,
+            node["name"],
         )
         node["category"] = "PythonMemberFunction"
         dd = DetailedDescription(inspect.getdoc(module), name=module.__name__)
         node["description"] += f"\n{dd.description.strip()}"
     elif hasattr(member, "__name__"):
-        logger.debug("Member '%s' has no description!", name)
+        logger.debug("Member '%s' has no description!", node["name"])
     else:
-        logger.debug("Entity '%s' has neither descr. nor __name__", name)
+        logger.debug("Entity '%s' has neither descr. nor __name__", node["name"])
 
     if type(member).__name__ in [
         "pybind11_type",
@@ -134,58 +177,81 @@ def _get_docs(member, name: str, module, node) -> tuple:
         try:
             # this will fail for e.g. pybind11 modules
             sig = inspect.signature(member)  # type: ignore
-        except ValueError:
-            logger.debug("Unable to get signature of %s: ", name)
-            sig = DummySig(member)
-            node["description"] = sig.docstring
+            return (sig, dd)
+        except (ValueError, TypeError):
+            logger.debug("Unable to get signature of %s: ", node["name"])
+            dsig = DummySig(member)  # type: ignore
+            node["description"] = dsig.docstring
+            return (dsig, dd)
     else:
         try:
             # this will fail for some weird modules
-            sig = inspect.signature(member)  # type: ignore
-        except ValueError:
-            logger.warning(
+            return (inspect.signature(member), dd)  # type: ignore
+        except (ValueError, TypeError):
+            logger.debug(
                 "Unable to get signature of %s: %s",
-                name,
+                node["name"],
                 type(member).__name__,
             )
-            sig = DummySig(member)
-            if sig.docstring:
-                node["description"] = sig.docstring
+            dsig = DummySig(member)  # type: ignore
+            if dsig.docstring:
+                node["description"] = dsig.docstring
             if not getattr(sig, "parameters") and dd and len(dd.params) > 0:
-                for p, v in dd.params.items():
-                    sig.parameters[p] = DummyParam()
-    return (sig, dd)
+                for p in dd.params.kyes():
+                    dsig.parameters[p] = DummyParam()
+            return (dsig, dd)
 
 
-def construct_member_node(member: dict, module=None, parent=None) -> dict:
+def construct_func_name(member_name: str, module_name: str, parent_name: str) -> str:
+    """
+    Construct the function name of a member of a module or a class.
+
+    Parameters:
+    -----------
+    member_name: str, the name of the member of the module or the class
+    module_name: str, the name of the module or the class
+    parent_name: str, the name of the parent
+
+    Returns:
+    --------
+    str, the function_name of the member
+    """
+    if member_name and module_name:
+        func_name = f"{member_name}.{module_name}"
+    else:
+        func_name = "test"
+    return func_name
+
+
+def construct_member_node(member, module=None, parent=None, name=None) -> dict:
     """
     Inspect a member function or method and construct a node for the palette.
     """
     node = constructNode()
-    name, qname = _get_name_and_qname(member, module)
-    if not name or not qname:
-        if hasattr(member, "__module__") and type(member).__module__ != "typing":
-            logger.error(
-                "Unable to get name or qualname for member: %s",
-                member.__class__.__module__,
-            )
-        return {"fields": []}
-    node["name"] = name
-    logger.debug("Inspecting %s: %s", type(member).__name__, name)
+    node["name"] = _get_name(name, member, module, parent)
+    logger.debug(
+        "Inspecting %s: %s, %s, %s, %s",
+        type(member).__name__,
+        node["name"],
+        member,
+        module.__name__,
+        parent,
+    )
 
-    sig, dd = _get_docs(member, name, module, node)
+    sig, dd = _get_docs(member, module, node)
     # fill custom ApplicationArguments first
-    fields = populateFields(sig.parameters, dd, member=name)
+    fields = populateFields(sig.parameters, dd)
     ind = -1
-    load_name = qname
+    # load_name = qname
+    load_name = name
     if hasattr(member, "__module__") and member.__module__:
-        load_name = f"{member.__module__}.{load_name}"
+        load_name = f"{member.__module__}.{module.__name__}.{load_name}"
     elif hasattr(member, "__package__"):
         load_name = f"{member.__package__}.{load_name}"
     elif parent:
         load_name = f"{parent}.{load_name}"
     if load_name.find("PyCapsule"):
-        load_name = load_name.replace("PyCapsule", module.__name__)
+        load_name = load_name.replace("PyCapsule", get_mod_name(module))
     if load_name.find("object.__init__"):
         load_name = load_name.replace("object.__init__", node["name"])
     # fields["base_name"]["value"] = member.__qualname__.split(".", 1)[0]
@@ -213,13 +279,13 @@ def construct_member_node(member: dict, module=None, parent=None) -> dict:
     node = populateDefaultFields(node)
     node["fields"]["func_name"]["value"] = load_name
     node["fields"]["func_name"]["defaultValue"] = load_name
-    logger.debug(">>>> populated node: %s", node)
     if hasattr(sig, "ret"):
         logger.debug("Return type: %s", sig.ret)
+    logger.debug("Constructed node for member %s: %s", node["name"], node)
     return node
 
 
-def get_members(mod: types.ModuleType, module_members=[], parent=None, member=None):
+def get_members(mod: types.ModuleType, module_members=[], parent=None):
     """
     Get members of a module
 
@@ -229,55 +295,58 @@ def get_members(mod: types.ModuleType, module_members=[], parent=None, member=No
     """
     if not mod:
         return {}
-    module_name = parent if parent else mod.__name__
-    logger.debug(f">>>>>>>>> Analysing members for module: {module_name}")
-    content = inspect.getmembers(mod)
-    count = 0
+    module_name = parent if parent else get_mod_name(mod)
+    module_name = str(module_name)
+    logger.debug(">>>>>>>>> Analysing members for module: %s", module_name)
+    try:
+        content = inspect.getmembers(mod)
+    except:  # noqa: E722
+        content = []
+    logger.debug("Found %d members", len(content))
     members = {}
-    for c, m in content:
-        if not member or (member and c == member):
-            if c[0] == "_" and c not in ["__init__", "__call__"]:
-                # TODO: Deal with __init__
-                # NOTE: PyBind11 classes can have multiple constructors
+    i = 0
+    for name, _ in content:
+        logger.debug("Analysing member: %s", name)
+        # if not member or (member and name == member):
+        if name[0] == "_" and name not in ["__init__", "__call__"]:
+            # NOTE: PyBind11 classes can have multiple constructors
+            continue
+        m = getattr(mod, name)
+        if not callable(m) or isinstance(m, _SpecialForm):
+            # logger.warning("Member %s is not callable", m)
+            # not sure what to do with these. Usually they
+            # are class parameters.
+            continue
+        if inspect.isclass(m):
+            if m.__module__.find(module_name) < 0:
                 continue
-            m = getattr(mod, c)
-            if not callable(m) or isinstance(m, _SpecialForm):
-                # logger.warning("Member %s is not callable", m)
-                # # TODO: not sure what to do with these. Usually they
-                # # are class parameters.
-                continue
-            if inspect.isclass(m):
-                if m.__module__.find(module_name) < 0:
-                    continue
-                logger.debug("Processing class '%s'", c)
-                nodes = get_class_members(m, parent=parent)
-                logger.debug("Class members: %s", nodes.keys())
+            logger.debug("Processing class '%s'", name)
+            nodes = get_class_members(m, parent=parent, name=name)
+            logger.debug("Class members: %s", nodes.keys())
+        else:
+            nodes = {
+                name: construct_member_node(m, module=mod, parent=parent, name=name)
+            }
 
+        for name, node in nodes.items():
+            if name in module_members:
+                logger.debug("!!!!! found duplicate: %s", name)
             else:
-                nodes = {c: construct_member_node(m, module=mod, parent=parent)}
+                module_members.append(name)
+                members.update({name: node})
 
-            for name, node in nodes.items():
-                if name in module_members:
-                    logger.info("!!!!! found duplicate: %s", name)
-                else:
-                    module_members.append(name)
-                    logger.debug(
-                        ">>> member update with: %s",
-                        name,
-                    )
-                    members.update({name: node})
-
-                    if hasattr(m, "__members__"):
-                        # this takes care of enum types, but needs some
-                        # serious thinking for DALiuGE. Note that enums
-                        # from PyBind11 have a generic type, but still
-                        # the __members__ dict.
-                        logger.info("\nMembers:")
-                        logger.info(m.__members__)
-                        # pass
-            if member:  # we've found what we wanted
-                break
-    logger.info("Analysed %d members in module %s", count, module_name)
+                if hasattr(m, "__members__"):
+                    # this takes care of enum types, but needs some
+                    # serious thinking for DALiuGE. Note that enums
+                    # from PyBind11 have a generic type, but still
+                    # the __members__ dict.
+                    logger.info("\nMembers:")
+                    logger.info(m.__members__)
+                    # pass
+        # elif member:  # we've found what we wanted
+        #     # break
+        i += 1
+    logger.debug("Extracted %d members in module %s", len(members), module_name)
     return members
 
 
@@ -295,27 +364,34 @@ def module_hook(mod_name: str, modules: dict = {}, recursive: bool = True) -> tu
     module_members = []
     for m in modules.values():
         module_members.extend([k.split(".")[-1] for k in m.keys()])
-    if mod_name not in sys.builtin_module_names:
+    try:
+        mod = eval(mod_name)
+        members = get_members(mod)
+        modules.update({mod_name: members})
+        logger.info("Found %d members in %s", len(members), mod_name)
+    except NameError:
         try:
-            traverse = True if len(modules) == 0 else False
-            mod = import_using_name(mod_name, traverse=traverse)
-            if mod and mod_name != mod.__name__:
+            logger.debug("Trying alternative load of %s", mod_name)
+            # Need to check this again:
+            # traverse = True if len(modules) == 0 else False
+            mod = import_using_name(mod_name, traverse=True)
+            m_name = get_mod_name(mod)
+            if mod and mod_name != m_name:
                 member = mod_name.split(".")[-1]
-                mod_name = mod.__name__
+                mod_name = m_name
             members = get_members(
                 mod,
                 parent=mod_name,
                 module_members=module_members,
-                member=member,
             )
             module_members.extend([k.split(".") for k in members.keys()])
             modules.update({mod_name: members})
             sub_modules = []
             if not member and recursive and mod and mod not in sub_modules:
-                sub_modules, module_vars = get_submodules(mod)
+                sub_modules, _ = get_submodules(mod)
                 logger.debug("Iterating over sub_modules of %s", mod_name)
                 for sub_mod in sub_modules:
-                    logger.info("Treating sub-module: %s of %s", sub_mod, mod_name)
+                    logger.debug("Treating sub-module: %s of %s", sub_mod, mod_name)
                     modules, _ = module_hook(sub_mod, modules=modules)
         except ImportError:
             logger.error("Module %s can't be loaded!", mod_name)

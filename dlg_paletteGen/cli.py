@@ -13,6 +13,7 @@ import logging
 import os
 import sys
 import tempfile
+from typing import Any
 
 import pkg_resources
 
@@ -115,6 +116,8 @@ def get_args(args=None):
     elif args.verbose:
         logger.setLevel(logging.DEBUG)
     logger.debug("DEBUG logging switched on")
+    if args.module:
+        args.ofile = args.idir = "."
     if args.module and not args.split and args.ofile == ".":
         args.ofile = f"{args.module.replace('.','_')}.palette"
     if args.recursive:
@@ -166,26 +169,25 @@ def check_environment_variables() -> bool:
     return True
 
 
-def nodes_from_module(module_path: str, recursive: bool = True) -> tuple:
+def nodes_from_module(module_path, recursive=True) -> tuple[list, Any]:
     """
     Extract nodes from specified module.
 
-    :param module_path: dot delimited module path
+    :param modules: modules dict as extracted by module_hook
     :param recursive: flag indicating wether to recurse down the hierarchy
 
     :returns: list of nodes (for now)
     """
     modules, module_doc = module_hook(module_path, recursive=recursive)
-    # member_count = sum([len(m) for m in modules])
-    logger.debug(">>>>> Number of modules processed: %d", len(modules))
+    logger.debug(">>>>> Number of modules/members processed: %d", len(modules))
     logger.debug(
-        "Modules found: %s",
+        "Modules/members found: %s",
         # modules
         {m: list(v.keys()) for m, v in modules.items() if v},
     )
     nodes = []
-    for _, members in modules.items():
-        for _, node in members.items():
+    for members in modules.values():
+        for node in members.values():
             # TODO: remove once EAGLE can deal with dict fields pylint: disable=fixme
             if isinstance(node["fields"], list):
                 continue
@@ -213,32 +215,32 @@ def palettes_from_module(
 
     returns: None
     """
+    module_doc = ""
+    files = {}
     sub_modules = [module_path]
     if split:
         mod = import_using_name(module_path, traverse=True)
-        sub_modules.extend(list(get_submodules(mod)[0]))
-        logger.debug(
+        sub_modules = [module_path] + list(get_submodules(mod)[0])
+        # sub_modules, _ = [module_path, module_hook(module_path)]
+        logger.info(
             "Splitting module %s into sub-module palettes: %s",
             module_path,
             sub_modules,
         )
-        top_recursive = False
+        top_recursive = recursive
     else:
-        top_recursive = True
         sub_modules = [module_path]
-    files = {}
+        top_recursive = False
     for m in sub_modules:
-        logger.info("Extracting nodes from module: %s", m)
-        if m == module_path:
-            nodes, module_doc = nodes_from_module(m, recursive=top_recursive)
-        else:
-            nodes, module_doc = nodes_from_module(m, recursive=recursive)
+        logger.debug("Extracting nodes from module: %s", m)
+        # module, module_doc = module_hook(m, recursive=True)
+        nodes, module_doc = nodes_from_module(m, recursive=top_recursive)
         if len(nodes) == 0:
             continue
         filename = outfile if not split else f"{outfile}{m.replace('.','_')}.palette"
         files[filename] = len(nodes)
-        palette = prepare_and_write_palette(nodes, filename, module_doc=module_doc)
-        logger.info(
+        _ = prepare_and_write_palette(nodes, filename, module_doc=module_doc)
+        logger.debug(
             "%s palette file written with %s components\n%s",
             filename,
             len(nodes),
@@ -248,7 +250,7 @@ def palettes_from_module(
         "\n\n>>>>>>> Extraction summary <<<<<<<<\n%s\n",
         "\n".join([f"Wrote {k} with {v} components" for k, v in files.items()]),
     )
-    return palette
+    # return palette
 
 
 def main():  # pragma: no cover
