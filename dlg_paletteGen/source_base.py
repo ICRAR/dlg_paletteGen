@@ -12,7 +12,7 @@ from typing import Any, Union
 
 from dlg_paletteGen.classes import Child, Language, logger
 
-from .support_functions import check_text_element, get_next_key
+from .support_functions import check_text_element, get_next_id
 
 KNOWN_PARAM_DATA_TYPES = [
     "String",
@@ -486,7 +486,7 @@ def create_palette_node_from_params(params) -> tuple:
         {"tag": tag, "construct": construct},
         {
             "category": category,
-            "key": get_next_key(),
+            "id": get_next_id(),
             "text": text,
             "description": comp_description,
             "fields": fields,
@@ -967,7 +967,7 @@ def create_construct_node(node_type: str, node: dict) -> dict:
         "commitHash": VERSION,
         "paletteDownloadUrl": "",
         "dataHash": "",
-        "key": get_next_key(),
+        "key": get_next_id(),
         "text": node_type + "/" + node["text"],
     }
     construct_node.update(construct_params)

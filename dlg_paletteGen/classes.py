@@ -110,7 +110,7 @@ class DetailedDescription:
     KNOWN_FORMATS = {
         "rEST": r"\n(:param|:returns|Returns:) .*",
         "Google": r"\nArgs:",
-        "Numpy": r"\n *Parameters *:? *\n *----------",
+        "Numpy": r"\n *Parameters *:* *\n *----------",
         "casa": r"\n-{2,20}? parameter",
     }
 
@@ -123,9 +123,7 @@ class DetailedDescription:
         self.format = ""
         self._identify_format()
         self.main_descr, self.params = self.process_descr()
-        self.brief_descr = (
-            self.main_descr.split(".")[0] + "." if self.main_descr else ""
-        )
+        self.brief_descr = self.main_descr.split(".")[0] + "." if self.main_descr else ""
 
     def _process_rEST(self, detailed_description) -> tuple:
         """
@@ -235,26 +233,17 @@ class DetailedDescription:
         if not dd:
             return ("", {})
         ds = dd.strip("\n")
-        ds = re.sub(
-            # re.findall(r"(\n *)Parameters *:? *\n*----------*\n", dd)[0],
-            re.findall(self.KNOWN_FORMATS["Numpy"], dd)[0],
-            "\n",
-            dd,
-        )
-        ds = ds.lstrip()
-        dss = re.split(r"\nParameters *:? *\n*----------*\n", ds)
-        if len(dss) == 2:
-            (description, rest) = dss
-        else:
-            description = dss[0]
-            rest = ""
-        has_params = description != rest
-        # extract parameter documentation (up to Returns line)
-        pds = re.split(r"\nReturns*:*\n--------*\n|\nRaises*:*\n-------*\n", rest)
-        spds = re.split(r"([\w_]+) *: ", pds[0])[1:]  # split param lines
-        if has_params and len(spds) == 0:
-            spds = re.split(r"([\w_]+)\n    ", pds[0])[1:]  # split param lines
-        pdict = dict(zip(spds[::2], spds[1::2]))  # create initial param dict
+        split = re.split(r"\n([\w ]+):*\n---*\n", ds.lstrip())
+        split = ["Description"] + split
+        dsplit = dict(zip(split[::2], split[1::2]))
+
+        description = dsplit["Description"]
+        parameters = dsplit["Parameters"] if "Parameters" in dsplit else ""
+        returns = dsplit["Returns"] if "Returns" in dsplit else None
+
+        # split param lines
+        spds = re.split(r"([\w_]+) *: ", parameters)[1:]
+        pdict = dict(zip(spds[::2], spds[1::2]))
         pdict = {
             k: {
                 "desc": v.replace("\n", " "),
@@ -265,8 +254,7 @@ class DetailedDescription:
         }
         logger.debug("numpy_style param dict %r", pdict)
         # extract return documentation
-        rest = pds[1] if len(pds) > 1 else ""
-        return description, pdict
+        return description, pdict, returns
 
     def _process_Google(self, dd: str):
         """
@@ -351,9 +339,7 @@ class DetailedDescription:
         dList = dStr.split("\n")
         try:
             start_ind = [
-                idx
-                for idx, s in enumerate(dList)
-                if re.findall(r"-{1,20} parameter", s)
+                idx for idx, s in enumerate(dList) if re.findall(r"-{1,20} parameter", s)
             ][0] + 1
         except IndexError:
             start_ind = 0

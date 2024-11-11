@@ -31,6 +31,7 @@ from blockdag import build_block_dag
 
 from .settings import (
     BLOCKDAG_DATA_FIELDS,
+    CVALUE_TYPES,
     DOXYGEN_SETTINGS,
     DOXYGEN_SETTINGS_C,
     DOXYGEN_SETTINGS_PYTHON,
@@ -102,7 +103,7 @@ def guess_type_from_default(default_value: typing.Any = "", raw=False):
             else:
                 vt = vtype
         except (NameError, SyntaxError):
-            vt = "String"
+            vt = str
     except:  # noqa: E722
         return "Object"
     if not raw:
@@ -142,12 +143,18 @@ def typeFix(value_type: Union[Any, None] = "", default_value: Any = None) -> str
         mod = value_type.__module__ if hasattr(value_type, "__module__") else ""
         guess_type = f"{mod}.{value_type.__name__}"  # type: ignore[union-attr]
         path_ind = 5
+    elif isinstance(value_type, str) and value_type in CVALUE_TYPES:
+        guess_type = CVALUE_TYPES[value_type]
+        path_ind = 6
+    elif isinstance(value_type, str) and value_type in CVALUE_TYPES.values():
+        guess_type = str(value_type)  # make lint happy and cast to string
+        path_ind = 7
     elif import_using_name(value_type, traverse=True, err_log=False):
         guess_type = str(value_type)
-        path_ind = 6
+        path_ind = 8
     else:
         guess_type = "UNIDENTIFIED"
-        path_ind = 7
+        path_ind = 9
     logger.debug(
         "Parameter type guessed from %s: %s, %d", value_type, guess_type, path_ind
     )
@@ -199,18 +206,11 @@ def modify_doxygen_options(doxygen_filename: str, options: dict):
                 dfile.write(line)
 
 
-NEXT_KEY = -1
-
-
-def get_next_key():
+def get_next_id() -> str:
     """
-    TODO: This needs to disappear!!
+    Use tempfile.mktmp now
     """
-    global NEXT_KEY
-
-    NEXT_KEY -= 1
-
-    return NEXT_KEY + 1
+    return tempfile.mktemp(prefix="", dir="")
 
 
 def get_mod_name(mod) -> str:
@@ -413,14 +413,6 @@ def get_submodules(module):
 
     :returns: iterator[tuple]
     """
-    # if not inspect.ismodule(module):
-    #     logger.warning(
-    #         "Provided object %s is not a module: %s, %s",
-    #         module,
-    #         type(module),
-    #         inspect.isclass(module),
-    #     )
-    #     return iter([]), iter([])
     submods = []
     module_vars = {}  # store module level variables
     module_name = get_mod_name(module)
@@ -460,7 +452,7 @@ def get_submodules(module):
                 # or inspect.ismethod(m)
                 # or inspect.isbuiltin(m)
             ):
-                logger.debug(">>> submodule type: %s", type(m))
+                logger.debug(">>> submodule %s of type: %s", submod, type(m))
                 submods.append(f"{submod}")
         logger.debug("Found submodules of %s in __all__: %s", module_name, submods)
     elif hasattr(module, "__path__"):
@@ -532,7 +524,6 @@ def import_using_name(mod_name: str, traverse: bool = False, err_log=True):
                         logger.debug("Getting attribute %s", m)
                         # Make sure this is a module
                         if hasattr(mod, m):
-                            mod_prev = mod_down if mod_down else mod
                             mod_down = getattr(mod, m)
                         else:
                             logger.debug(
@@ -540,16 +531,7 @@ def import_using_name(mod_name: str, traverse: bool = False, err_log=True):
                                 m,
                                 mod,
                             )
-                            mod_prev = mod
-                        if (  # in other cases return the provious module.
-                            inspect.isclass(mod_down)
-                            or inspect.isfunction(mod_down)
-                            or inspect.isbuiltin(mod_down)
-                            or inspect.ismethod(mod_down)
-                        ):
-                            mod = mod_prev
-                        else:
-                            mod = mod_down
+                        mod = mod_down
                     except AttributeError:
                         try:
                             logger.debug(
@@ -618,7 +600,7 @@ def get_value_type_from_default(default):
     )
     if default is inspect._empty or ptype == "builtins.NoneType":
         value = None
-        ptype = SVALUE_TYPES["NoneType"]
+        ptype = CVALUE_TYPES["NoneType"]
     else:  # there is a default value
         try:
             ptype = type(default)
@@ -652,6 +634,8 @@ def get_value_type_from_default(default):
             ptype in ["Json"]
         ):  # we want to carry these as strings
             value = value.__name__()
+    if repr(default) == "nan" and numpy.isnan(default):
+        value = None
     param_desc["value"] = value
     param_desc["type"] = typeFix(ptype)
     return param_desc
@@ -703,15 +687,22 @@ def populateFields(parameters: dict, dd) -> dict:
                 field[p]["type"] = v.annotation.__repr__()
             logger.debug("Parameter type from annotation: %s", field[p]["type"])
         # else we use the type from default value
+        elif field[p]["name"] == "args":
+            field[p]["type"] = "list"
+        elif field[p]["name"] == "kwargs":
+            field[p]["type"] = "dict"
         elif param_desc["type"] and param_desc["type"] != "None":
             field[p]["type"] = param_desc["type"]
         elif dd and p in dd.params and dd.params[p]["type"]:
             # type from docstring
             field[p]["type"] = typeFix(dd.params[p]["type"])
         else:
-            field[p]["type"] = SVALUE_TYPES["NoneType"]
+            field[p]["type"] = CVALUE_TYPES["NoneType"]
 
-        if field[p]["type"] not in SVALUE_TYPES.values():
+        if (
+            field[p]["type"] not in SVALUE_TYPES.values()
+            and field[p]["name"] != "base_name"
+        ):
             # complex types can't be specified on a simple form field
             # thus we assume they are provided through a port.
             # Like this we can support any type.
@@ -727,11 +718,11 @@ def populateFields(parameters: dict, dd) -> dict:
         logger.debug("Final type of parameter %s: %s", p, field[p]["type"])
         if isinstance(field[p]["value"], numpy.ndarray):
             try:
-                field[p]["value"] = field[p]["defaultValue"] = field[p][
-                    "value"
-                ].tolist()
+                field[p]["value"] = field[p]["defaultValue"] = field[p]["value"].tolist()
             except NotImplementedError:
                 field[p]["value"] = []
+        if repr(field[p]["value"]) == "nan" and numpy.isnan(field[p]["value"]):
+            field[p]["value"] = None
         fields.update(field)
 
     fields["base_name"]["parameterType"] = "ComponentParameter"
@@ -743,7 +734,6 @@ def populateFields(parameters: dict, dd) -> dict:
 
 def constructNode(
     category: str = "PythonApp",
-    key: int = -1,
     name: str = "example_function",
     description: str = "",
     repositoryUrl: str = "dlg_paletteGen.generated",
@@ -758,7 +748,7 @@ def constructNode(
     """
     Node = {}
     Node["category"] = category
-    Node["key"] = key  # type:ignore
+    Node["id"] = get_next_id()
     Node["name"] = name
     Node["description"] = description
     Node["repositoryUrl"] = repositoryUrl
@@ -794,9 +784,7 @@ def populateDefaultFields(Node):  # pylint: disable=invalid-name
     et[n]["value"] = 2
     et[n]["defaultValue"] = 2
     et[n]["type"] = "Integer"
-    et[n][
-        "description"
-    ] = "Estimate of execution time (in seconds) for this application."
+    et[n]["description"] = "Estimate of execution time (in seconds) for this application."
     et[n]["parameterType"] = "ConstraintParameter"
     Node["fields"].update(et)
 

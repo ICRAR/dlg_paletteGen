@@ -27,7 +27,7 @@ from .support_functions import (
 )
 
 
-def get_class_members(cls, parent=None, name=None):
+def get_class_members(cls, parent=None):
     """
     Inspect members of a class
     """
@@ -74,7 +74,7 @@ def get_class_members(cls, parent=None, name=None):
         for n, m, ann_fl in content
         if re.match(r"^[a-zA-Z]", n) or n in ["__init__", "__cls__"]
     ]
-    logger.debug("Member functions of class %s: %s", cls, content)
+    logger.debug("Member functions of class %s: %s", cls, [n for (n, _, _) in content])
     class_members = {}
     for n, m, ann_fl in content:
         if isinstance(m, functools.cached_property):
@@ -109,25 +109,20 @@ def _get_name(name: str, member, module=None, parent=None) -> str:
     member_name = get_mod_name(member)
     module_name = get_mod_name(module)
     if inspect.isclass(module):
-        mname = f"{parent}.{name}"
-        mname = qname = mname if isinstance(member, str) else member.__qualname__
+        mname = f"{module_name}.{member_name}"
+        # mname = qname = mname if isinstance(member, str) else member.__qualname__
         if mname.startswith("PyCapsule"):
             mname = mname.replace("PyCapsule", f"{module.__module__}.{module.__name__}")
         elif mname == "object.__init__":
             mname = f"{module.__name__}.__init__"
     elif inspect.isclass(member):
-        mname = qname = getattr(member, "__class__").__name__
+        mname = getattr(member, "__class__").__name__
     else:
-        mname = (
-            f"{member_name}" if hasattr(member, "__name__") else f"{module_name}.name"
-        )
-        qname = (
-            getattr(member, "__qualname__") if hasattr(member, "__qualname__") else ""
-        )
+        mname = f"{member_name}" if hasattr(member, "__name__") else f"{module_name}.name"
     logger.debug(">>>>> mname: %s, %s.%s", mname, parent, module_name)
-    if not name and mname:
-        name = mname
-    return name
+    if name and not mname:
+        mname = name
+    return mname
 
 
 def _get_docs(member, module, node) -> tuple:
@@ -164,9 +159,7 @@ def _get_docs(member, module, node) -> tuple:
         node["category"] = "PythonMemberFunction"
         dd = DetailedDescription(inspect.getdoc(module), name=module.__name__)
         node["description"] += f"\n{dd.description.strip()}"
-    elif hasattr(member, "__name__"):
-        logger.debug("Member '%s' has no description!", node["name"])
-    else:
+    if not dd:
         logger.debug("Entity '%s' has neither descr. nor __name__", node["name"])
 
     if type(member).__name__ in [
@@ -196,13 +189,13 @@ def _get_docs(member, module, node) -> tuple:
             dsig = DummySig(member)  # type: ignore
             if dsig.docstring:
                 node["description"] = dsig.docstring
-            if not getattr(sig, "parameters") and dd and len(dd.params) > 0:
+            if not getattr(dsig, "parameters") and dd and len(dd.params) > 0:
                 for p in dd.params.kyes():
                     dsig.parameters[p] = DummyParam()
             return (dsig, dd)
 
 
-def construct_func_name(member_name: str, module_name: str, parent_name: str) -> str:
+def construct_func_name(member_name: str, module_name: str) -> str:
     """
     Construct the function name of a member of a module or a class.
 
@@ -233,8 +226,8 @@ def construct_member_node(member, module=None, parent=None, name=None) -> dict:
         "Inspecting %s: %s, %s, %s, %s",
         type(member).__name__,
         node["name"],
-        member,
-        module.__name__,
+        name,
+        module,
         parent,
     )
 
@@ -242,10 +235,9 @@ def construct_member_node(member, module=None, parent=None, name=None) -> dict:
     # fill custom ApplicationArguments first
     fields = populateFields(sig.parameters, dd)
     ind = -1
-    # load_name = qname
-    load_name = name
+    load_name = node["name"]
     if hasattr(member, "__module__") and member.__module__:
-        load_name = f"{member.__module__}.{module.__name__}.{load_name}"
+        load_name = f"{member.__module__}.{node['name']}"
     elif hasattr(member, "__package__"):
         load_name = f"{member.__package__}.{load_name}"
     elif parent:
@@ -277,8 +269,8 @@ def construct_member_node(member, module=None, parent=None, name=None) -> dict:
 
     # now populate with default fields.
     node = populateDefaultFields(node)
-    node["fields"]["func_name"]["value"] = load_name
     node["fields"]["func_name"]["defaultValue"] = load_name
+    node["fields"]["func_name"]["value"] = node["fields"]["func_name"]["defaultValue"]
     if hasattr(sig, "ret"):
         logger.debug("Return type: %s", sig.ret)
     logger.debug("Constructed node for member %s: %s", node["name"], node)
@@ -302,10 +294,13 @@ def get_members(mod: types.ModuleType, module_members=[], parent=None):
         content = inspect.getmembers(mod)
     except:  # noqa: E722
         content = []
-    logger.debug("Found %d members", len(content))
+    logger.debug("Found %d members in %s", len(content), mod)
     members = {}
     i = 0
     for name, _ in content:
+        if name in module_members:
+            logger.debug("Skipping already existing member: %s", name)
+            continue
         logger.debug("Analysing member: %s", name)
         # if not member or (member and name == member):
         if name[0] == "_" and name not in ["__init__", "__call__"]:
@@ -321,12 +316,10 @@ def get_members(mod: types.ModuleType, module_members=[], parent=None):
             if m.__module__.find(module_name) < 0:
                 continue
             logger.debug("Processing class '%s'", name)
-            nodes = get_class_members(m, parent=parent, name=name)
+            nodes = get_class_members(m, parent=parent)
             logger.debug("Class members: %s", nodes.keys())
         else:
-            nodes = {
-                name: construct_member_node(m, module=mod, parent=parent, name=name)
-            }
+            nodes = {name: construct_member_node(m, module=mod, parent=parent, name=name)}
 
         for name, node in nodes.items():
             if name in module_members:
@@ -365,8 +358,9 @@ def module_hook(mod_name: str, modules: dict = {}, recursive: bool = True) -> tu
     for m in modules.values():
         module_members.extend([k.split(".")[-1] for k in m.keys()])
     try:
+        logger.debug("Trying to use eval to load module %s", mod_name)
         mod = eval(mod_name)
-        members = get_members(mod)
+        members = get_members(mod, module_members=module_members)
         modules.update({mod_name: members})
         logger.info("Found %d members in %s", len(members), mod_name)
     except NameError:

@@ -55,24 +55,22 @@ VALUE_TYPES = {
     int: "Integer",
     float: "Float",
     bool: "Boolean",
-    list: "Json",
+    list: "list",
     dict: "dict",
     tuple: "Json",
-    numpy.ndarray: "numpy.array",
-    type: "Object",
-    any: "Object",
 }
 
 SVALUE_TYPES = {k.__name__: v for k, v in VALUE_TYPES.items() if hasattr(k, "__name__")}
-SVALUE_TYPES.update(
-    {
-        "numpy.ndarray": "numpy.array",
-        "Object.Object": "Object",
-        "typing.Any": "Any",
-        "NoneType": "None",
-        "builtins.NoneType": "None",
-    }
-)
+
+CVALUE_TYPES = {
+    "array_like": "numpy.array",
+    numpy.ndarray.__name__: "numpy.array",
+    numpy._globals._NoValueType.__name__: "Object",  # type: ignore
+    "type": "Object",
+    "any": "Object",
+    "NoneType": "None",
+    "builtins.NoneType": "None",
+}
 
 BLOCKDAG_DATA_FIELDS = [
     "inputPorts",

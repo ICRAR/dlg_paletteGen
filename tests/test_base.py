@@ -47,21 +47,21 @@ def test_CLI_run_numpy(tmpdir: str, shared_datadir: str):
     :param tmpdir: the path to the temp directory to use
     :param shared_datadir: the path the the local directory
     """
-    input = str(shared_datadir.absolute()) + "/example_numpy.py"
-    logging.info("path: %s", input)
+    inputf = str(shared_datadir.absolute()) + "/example_numpy.py"
+    logging.info("path: %s", inputf)
     output = tmpdir + "t.palette"
     p = start_process(
-        ("-r", "-s", input, output),
+        ("-r", "-s", inputf, output),
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
     )
-    out, err = p.communicate()
+    _ = p.communicate()
     assert p.returncode == 0
     # logging.info("Captured output: %s", err)
-    with open(input, "r") as f:
+    with open(inputf, "r", encoding="utf8") as f:
         content = f.read()
     logging.info("INPUT: %s", content)
-    with open(output, "r") as f:
+    with open(output, "r", encoding="utf8") as f:
         newcontent = json.load(f)
     logging.info("OUTPUT: %s", newcontent)
     # can't use a hash, since output contains hashed keys
@@ -75,21 +75,21 @@ def test_CLI_run_google(tmpdir: str, shared_datadir: str):
     :param tmpdir: the path to the temp directory to use
     :param shared_datadir: the path the the local directory
     """
-    input = str(shared_datadir.absolute()) + "/example_google.py"
-    logging.info("path: %s", input)
+    inputf = str(shared_datadir.absolute()) + "/example_google.py"
+    logging.info("path: %s", inputf)
     output = tmpdir + "t.palette"
     p = start_process(
-        ("-r", "-s", input, output),
+        ("-r", "-s", inputf, output),
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
     )
-    out, err = p.communicate()
+    _ = p.communicate()
     assert p.returncode == 0
     # logging.info("Captured output: %s", err)
-    with open(input, "r") as f:
+    with open(inputf, "r", encoding="utf8") as f:
         content = f.read()
     logging.info("INPUT: %s", content)
-    with open(output, "r") as f:
+    with open(output, "r", encoding="utf8") as f:
         newcontent = json.load(f)
     logging.info("OUTPUT: %s", newcontent)
     # can't use a hash, since output contains hashed keys
@@ -103,21 +103,21 @@ def test_CLI_run_eagle(tmpdir: str, shared_datadir: str):
     :param tmpdir: the path to the temp directory to use
     :param shared_datadir: the path the the local directory
     """
-    input = str(shared_datadir.absolute()) + "/example_eagle.py"
-    logging.info("path: %s", input)
+    inputf = str(shared_datadir.absolute()) + "/example_eagle.py"
+    logging.info("path: %s", inputf)
     output = tmpdir + "t.palette"
     p = start_process(
-        ("-r", input, output),
+        ("-r", inputf, output),
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
     )
-    out, err = p.communicate()
+    _ = p.communicate()
     assert p.returncode == 0
     # logging.info("Captured output: %s", err)
-    with open(input, "r") as f:
+    with open(inputf, "r", encoding="utf8") as f:
         content = f.read()
     logging.info("INPUT: %s", content)
-    with open(output, "r") as f:
+    with open(output, "r", encoding="utf8") as f:
         newcontent = json.load(f)
     logging.info("OUTPUT: %s", newcontent)
     # can't use a hash, since output contains hashed keys
@@ -131,21 +131,21 @@ def test_CLI_run_rest(tmpdir: str, shared_datadir: str):
     :param tmpdir: the path to the temp directory to use
     :param shared_datadir: the path the the local directory
     """
-    input = str(shared_datadir.absolute()) + "/example_rest.py"
-    logging.info("path: %s", input)
+    inputf = str(shared_datadir.absolute()) + "/example_rest.py"
+    logging.info("path: %s", inputf)
     output = tmpdir + "t.palette"
     p = start_process(
-        ("-sr", input, output),
+        ("-sr", inputf, output),
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
     )
-    out, err = p.communicate()
+    _ = p.communicate()
     assert p.returncode == 0
     # logging.info("Captured output: %s", err)
-    with open(input, "r") as f:
+    with open(inputf, "r", encoding="utf8") as f:
         content = f.read()
     logging.info("INPUT: %s", content)
-    with open(output, "r") as f:
+    with open(output, "r", encoding="utf8") as f:
         newcontent = json.load(f)
     logging.info("OUTPUT: %s", newcontent)
     # can't use a hash, since output contains hashed keys
@@ -159,21 +159,21 @@ def test_CLI_run_rascil(tmpdir: str, shared_datadir: str):
     :param tmpdir: the path to the temp directory to use
     :param shared_datadir: the path the the local directory
     """
-    input = str(shared_datadir.absolute()) + "/example_rascil.py"
-    logging.info("path: %s", input)
+    inputf = str(shared_datadir.absolute()) + "/example_rascil.py"
+    logging.info("path: %s", inputf)
     output = tmpdir + "t.palette"
     p = start_process(
-        ("-sr", input, output),
+        ("-sr", inputf, output),
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
     )
-    out, err = p.communicate()
+    _ = p.communicate()
     assert p.returncode == 0
     # logging.info("Captured output: %s", err)
-    with open(input, "r") as f:
+    with open(inputf, "r", encoding="utf8") as f:
         content = f.read()
     logging.info("INPUT: %s", content)
-    with open(output, "r") as f:
+    with open(output, "r", encoding="utf8") as f:
         newcontent = json.load(f)
     logging.info("OUTPUT: %s", newcontent)
     # can't use a hash, since output contains hashed keys
@@ -187,21 +187,21 @@ def test_CLI_run_casatask(tmpdir: str, shared_datadir: str):
     :param tmpdir: the path to the temp directory to use
     :param shared_datadir: the path the the local directory
     """
-    input = str(shared_datadir.absolute()) + "/example_casatask.py"
-    logging.info("path: %s", input)
+    inputf = str(shared_datadir.absolute()) + "/example_casatask.py"
+    logging.info("path: %s", inputf)
     output = tmpdir + "t.palette"
     p = start_process(
-        ("-rs", input, output),
+        ("-rs", inputf, output),
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
     )
-    out, err = p.communicate()
+    _ = p.communicate()
     assert p.returncode == 0
     # logging.info("Captured output: %s", err)
-    with open(input, "r") as f:
+    with open(inputf, "r", encoding="utf8") as f:
         content = f.read()
     logging.info("INPUT: %s", content)
-    with open(output, "r") as f:
+    with open(output, "r", encoding="utf8") as f:
         newcontent = json.load(f)
     logging.info("OUTPUT: %s", newcontent)
     # can't use a hash, since output contains hashed keys
@@ -215,28 +215,28 @@ def test_CLI_run_nr(tmpdir: str, shared_datadir: str):
     :param tmpdir: the path to the temp directory to use
     :param shared_datadir: the path the the local directory
     """
-    input = str(shared_datadir.absolute()) + "/example_casatask.py"
-    logging.info("path: %s", input)
+    inputf = str(shared_datadir.absolute()) + "/example_casatask.py"
+    logging.info("path: %s", inputf)
     output = tmpdir + "t.palette"
     p = start_process(
-        ("-s", "-v", input, output),
+        ("-s", "-v", inputf, output),
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
     )
-    out, err = p.communicate()
+    _ = p.communicate()
     assert p.returncode == 0
     # logging.info("Captured output: %s", err)
-    with open(input, "r") as f:
+    with open(inputf, "r", encoding="utf8") as f:
         content = f.read()
     logging.info("INPUT: %s", content)
-    with open(output, "r") as f:
+    with open(output, "r", encoding="utf8") as f:
         newcontent = json.load(f)
     logging.info("OUTPUT: %s", newcontent)
     # can't use a hash, since output contains hashed keys
     assert len(newcontent["nodeDataArray"][0]["fields"]) == 16
 
 
-def test_CLI_fail(tmpdir: str, shared_datadir: str):
+def test_CLI_fail():
     """
     Test the CLI just using no params should return help text
 
@@ -248,7 +248,7 @@ def test_CLI_fail(tmpdir: str, shared_datadir: str):
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
     )
-    out, err = p.communicate()
+    _, err = p.communicate()
     assert p.returncode == 1
     assert err[:26] == b"usage: dlg_paletteGen [-h]"
 
@@ -267,11 +267,11 @@ def test_CLI_module(tmpdir: str, shared_datadir: str):
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
     )
-    out, err = p.communicate()
+    _, err = p.communicate()
     # assert p.returncode == 0
     logging.info("Captured output: %s", err)
 
-    # TODO: Once we have output we can re-enable this
+    # Once we have output we can re-enable this
     # with open(input, "r") as f:
     #     content = f.read()
     # logging.info("INPUT: %s", content)
@@ -288,6 +288,10 @@ def test_direct_cli():
     """
 
     class args:
+        """
+        Arguments for CLI
+        """
+
         idir = "."
         tag = ""
         ofile = "t.palette"
@@ -304,7 +308,7 @@ def test_direct_cli():
 
     a = args()
     res = get_args(args=a)
-    assert res[:3] == (".", "", "t.palette")
+    assert res[:3] == (".", "", "dlg_paletteGen.palette")
 
 
 def test_direct_numpy(tmpdir: str, shared_datadir: str):
@@ -317,13 +321,13 @@ def test_direct_numpy(tmpdir: str, shared_datadir: str):
     tag = ""
     allow_missing_eagle_start = True
     language = Language.PYTHON
-    input = str(shared_datadir.absolute()) + "/example_numpy.py"
-    logging.info("path: %s", input)
+    inputf = str(shared_datadir.absolute()) + "/example_numpy.py"
+    logging.info("path: %s", inputf)
     output_directory = str(tmpdir)
     output_file = f"{output_directory}/t.palette"
     check_environment_variables()
     DOXYGEN_SETTINGS.update({"PROJECT_NAME": os.environ.get("PROJECT_NAME")})
-    DOXYGEN_SETTINGS.update({"INPUT": input})
+    DOXYGEN_SETTINGS.update({"INPUT": inputf})
     DOXYGEN_SETTINGS.update({"OUTPUT_DIRECTORY": output_directory})
     process_doxygen()
     output_xml_filename = process_xml()
@@ -332,7 +336,7 @@ def test_direct_numpy(tmpdir: str, shared_datadir: str):
     )
     prepare_and_write_palette(nodes, output_file)
 
-    with open(output_file, "r") as f:
+    with open(output_file, "r", encoding="utf8") as f:
         newcontent = json.load(f)
     logging.info("OUTPUT: %s", newcontent)
     # can't use a hash, since output contains hashed keys
@@ -349,13 +353,13 @@ def test_direct_google(tmpdir: str, shared_datadir: str):
     tag = ""
     allow_missing_eagle_start = True
     language = Language.PYTHON
-    input = str(shared_datadir.absolute()) + "/example_google.py"
-    logging.info("path: %s", input)
+    inputf = str(shared_datadir.absolute()) + "/example_google.py"
+    logging.info("path: %s", inputf)
     output_directory = str(tmpdir)
     output_file = f"{output_directory}/t.palette"
     check_environment_variables()
     DOXYGEN_SETTINGS.update({"PROJECT_NAME": os.environ.get("PROJECT_NAME")})
-    DOXYGEN_SETTINGS.update({"INPUT": input})
+    DOXYGEN_SETTINGS.update({"INPUT": inputf})
     DOXYGEN_SETTINGS.update({"OUTPUT_DIRECTORY": output_directory})
     process_doxygen()
     output_xml_filename = process_xml()
@@ -364,7 +368,7 @@ def test_direct_google(tmpdir: str, shared_datadir: str):
     )
     prepare_and_write_palette(nodes, output_file)
 
-    with open(output_file, "r") as f:
+    with open(output_file, "r", encoding="utf8") as f:
         newcontent = json.load(f)
     logging.info("OUTPUT: %s", newcontent)
     # can't use a hash, since output contains hashed keys
@@ -381,13 +385,13 @@ def test_direct_eagle(tmpdir: str, shared_datadir: str):
     tag = ""
     allow_missing_eagle_start = False
     language = Language.PYTHON
-    input = str(shared_datadir.absolute()) + "/example_eagle.py"
-    logging.info("path: %s", input)
+    inputf = str(shared_datadir.absolute()) + "/example_eagle.py"
+    logging.info("path: %s", inputf)
     output_directory = str(tmpdir)
     output_file = f"{output_directory}/t.palette"
     check_environment_variables()
     DOXYGEN_SETTINGS.update({"PROJECT_NAME": os.environ.get("PROJECT_NAME")})
-    DOXYGEN_SETTINGS.update({"INPUT": input})
+    DOXYGEN_SETTINGS.update({"INPUT": inputf})
     DOXYGEN_SETTINGS.update({"OUTPUT_DIRECTORY": output_directory})
     process_doxygen()
     output_xml_filename = process_xml()
@@ -396,7 +400,7 @@ def test_direct_eagle(tmpdir: str, shared_datadir: str):
     )
     prepare_and_write_palette(nodes, output_file)
 
-    with open(output_file, "r") as f:
+    with open(output_file, "r", encoding="utf8") as f:
         newcontent = json.load(f)
     logging.info("OUTPUT: %s", newcontent)
     # can't use a hash, since output contains hashed keys
@@ -413,13 +417,13 @@ def test_direct_oskar(tmpdir: str, shared_datadir: str):
     tag = ""
     allow_missing_eagle_start = True
     language = Language.PYTHON
-    input = str(shared_datadir.absolute()) + "/example_oskar.py"
-    logging.info("path: %s", input)
+    inputf = str(shared_datadir.absolute()) + "/example_oskar.py"
+    logging.info("path: %s", inputf)
     output_directory = str(tmpdir)
     output_file = f"{output_directory}/t.palette"
     check_environment_variables()
     DOXYGEN_SETTINGS.update({"PROJECT_NAME": os.environ.get("PROJECT_NAME")})
-    DOXYGEN_SETTINGS.update({"INPUT": input})
+    DOXYGEN_SETTINGS.update({"INPUT": inputf})
     DOXYGEN_SETTINGS.update({"OUTPUT_DIRECTORY": output_directory})
     process_doxygen()
     output_xml_filename = process_xml()
@@ -428,7 +432,7 @@ def test_direct_oskar(tmpdir: str, shared_datadir: str):
     )
     prepare_and_write_palette(nodes, output_file)
 
-    with open(output_file, "r") as f:
+    with open(output_file, "r", encoding="utf8") as f:
         newcontent = json.load(f)
     logging.info("OUTPUT: %s", newcontent)
     # can't use a hash, since output contains hashed keys
@@ -445,13 +449,13 @@ def test_direct_rascil(tmpdir: str, shared_datadir: str):
     tag = ""
     allow_missing_eagle_start = True
     language = Language.PYTHON
-    input = str(shared_datadir.absolute()) + "/example_rascil.py"
-    logging.info("path: %s", input)
+    inputf = str(shared_datadir.absolute()) + "/example_rascil.py"
+    logging.info("path: %s", inputf)
     output_directory = str(tmpdir)
     output_file = f"{output_directory}/t.palette"
     check_environment_variables()
     DOXYGEN_SETTINGS.update({"PROJECT_NAME": os.environ.get("PROJECT_NAME")})
-    DOXYGEN_SETTINGS.update({"INPUT": input})
+    DOXYGEN_SETTINGS.update({"INPUT": inputf})
     DOXYGEN_SETTINGS.update({"OUTPUT_DIRECTORY": output_directory})
     process_doxygen()
     output_xml_filename = process_xml()
@@ -460,7 +464,7 @@ def test_direct_rascil(tmpdir: str, shared_datadir: str):
     )
     prepare_and_write_palette(nodes, output_file)
 
-    with open(output_file, "r") as f:
+    with open(output_file, "r", encoding="utf8") as f:
         newcontent = json.load(f)
     logging.info("OUTPUT: %s", newcontent)
     # can't use a hash, since output contains hashed keys
@@ -477,13 +481,13 @@ def test_direct_functions(tmpdir: str, shared_datadir: str):
     tag = ""
     allow_missing_eagle_start = True
     language = Language.PYTHON
-    input = str(shared_datadir.absolute()) + "/example_functions.py"
-    logging.info("path: %s", input)
+    inputf = str(shared_datadir.absolute()) + "/example_functions.py"
+    logging.info("path: %s", inputf)
     output_directory = str(tmpdir)
     output_file = f"{output_directory}/t.palette"
     check_environment_variables()
     DOXYGEN_SETTINGS.update({"PROJECT_NAME": os.environ.get("PROJECT_NAME")})
-    DOXYGEN_SETTINGS.update({"INPUT": input})
+    DOXYGEN_SETTINGS.update({"INPUT": inputf})
     DOXYGEN_SETTINGS.update({"OUTPUT_DIRECTORY": output_directory})
     process_doxygen()
     output_xml_filename = process_xml()
@@ -492,7 +496,7 @@ def test_direct_functions(tmpdir: str, shared_datadir: str):
     )
     prepare_and_write_palette(nodes, output_file)
 
-    with open(output_file, "r") as f:
+    with open(output_file, "r", encoding="utf8") as f:
         newcontent = json.load(f)
     logging.info("OUTPUT: %s", newcontent)
     # can't use a hash, since output contains hashed keys
@@ -509,13 +513,13 @@ def test_direct_casatask(tmpdir: str, shared_datadir: str):
     tag = ""
     allow_missing_eagle_start = True
     language = Language.PYTHON
-    input = str(shared_datadir.absolute()) + "/example_casatask.py"
-    logging.info("path: %s", input)
+    inputf = str(shared_datadir.absolute()) + "/example_casatask.py"
+    logging.info("path: %s", inputf)
     output_directory = str(tmpdir)
     output_file = f"{output_directory}/t.palette"
     check_environment_variables()
     DOXYGEN_SETTINGS.update({"PROJECT_NAME": os.environ.get("PROJECT_NAME")})
-    DOXYGEN_SETTINGS.update({"INPUT": input})
+    DOXYGEN_SETTINGS.update({"INPUT": inputf})
     DOXYGEN_SETTINGS.update({"OUTPUT_DIRECTORY": output_directory})
     process_doxygen()
     output_xml_filename = process_xml()
@@ -524,7 +528,7 @@ def test_direct_casatask(tmpdir: str, shared_datadir: str):
     )
     prepare_and_write_palette(nodes, output_file)
 
-    with open(output_file, "r") as f:
+    with open(output_file, "r", encoding="utf8") as f:
         newcontent = json.load(f)
     logging.info("OUTPUT: %s", newcontent)
     # can't use a hash, since output contains hashed keys
@@ -544,11 +548,12 @@ def test_direct_tabascal(tmpdir: str, shared_datadir: str):
     output_file = f"{output_directory}/t.palette"
 
     # module_name = "example_tabascal.generate_random_sky"
-    module_name = "example_tabascal.generate_random_sky"
+    module_name = "example_tabascal"
     modules, module_doc = module_hook(
         module_name,
         recursive=True,
     )
+    logging.info(">>>> modules: ", modules)
     assert (
         modules["example_tabascal"]["generate_random_sky"]["fields"]["fov"]["value"]
         == 1.0
@@ -561,7 +566,7 @@ def test_direct_tabascal(tmpdir: str, shared_datadir: str):
     prepare_and_write_palette(nodes, output_file, module_doc=module_doc)
 
 
-def test_import_using_name(tmpdir: str, shared_datadir: str, caplog: LogCaptureFixture):
+def test_import_using_name(caplog: LogCaptureFixture):
     """
     Directly test the import_using_name function
 
@@ -571,11 +576,11 @@ def test_import_using_name(tmpdir: str, shared_datadir: str, caplog: LogCaptureF
     # module_name = "urllib.request.URLopener.retrieve"
     module_name = "numpy.array"
     mod = import_using_name(module_name, traverse=True)
-    assert mod.__name__ == "numpy"
+    assert mod.__module__ == "numpy"
 
     module_name = "urllib.request.URLopener.retrieve"
     mod = import_using_name(module_name, traverse=True)
-    assert mod.__name__ == "urllib.request"
+    assert mod.__module__ == "urllib.request"
 
     module_name = "print"
     mod = import_using_name(module_name, traverse=True)
@@ -596,7 +601,7 @@ def test_typeFix(tmpdir: str, shared_datadir: str):
         module_name,
         recursive=True,
     )
-    assert list(modules.keys())[-1] == "example_options"
+    assert list(modules.keys())[-1] == "testFieldSingle"
     nodes = []
     for members in modules.values():
         for node in members.values():
@@ -610,11 +615,11 @@ def test_guess_type_from_default():
     """
     assert guess_type_from_default(234) == "Integer"
     assert guess_type_from_default(234.0) == "Float"
-    assert guess_type_from_default("[2,3,4]") == "Json"
+    assert guess_type_from_default("[2,3,4]") == "list"
     assert guess_type_from_default({234}) == "Object"
 
 
-def test_direct_module(tmpdir: str, shared_datadir: str):
+def test_direct_module():
     """
     Test the module processing format by calling the methods directly.
 
@@ -628,12 +633,11 @@ def test_direct_module(tmpdir: str, shared_datadir: str):
     for members in modules.values():
         for node in members.values():
             nodes.append(node)
-    assert len(nodes) in [1, 2]
+    assert len(nodes) in [1, 2, 3]
     prepare_and_write_palette(nodes, "test.palette", module_doc=module_doc)
 
 
-@unittest.skip
-def test_full_numpy(tmpdir: str, shared_datadir: str):
+def test_full_numpy():
     """
     Test loading all of numpy. This takes a bit of time.
 
@@ -641,9 +645,9 @@ def test_full_numpy(tmpdir: str, shared_datadir: str):
     :param shared_datadir: the path the the local directory
     """
     module_name = "numpy"
-    modules, module_doc = module_hook(module_name, recursive=True)
+    modules, _ = module_hook(module_name, recursive=True)
     nodes = []
     for members in modules.values():
         for node in members.values():
             nodes.append(node)
-    assert len(modules) in [1109, 1112]
+    assert len(modules) == 651

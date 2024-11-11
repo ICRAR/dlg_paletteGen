@@ -1,3 +1,4 @@
+# pylint: disable=consider-using-with
 """This is the palette generator of the DALiuGE system.
 
 It processes a file or a directory of source files and
@@ -104,9 +105,7 @@ def get_args(args=None):
     )
     if not args:
         if len(sys.argv) == 1:
-            print(
-                "\x1b[31;20mInsufficient number of " + "arguments provided!!!\n\x1b[0m"
-            )
+            print("\x1b[31;20mInsufficient number of " + "arguments provided!!!\n\x1b[0m")
             parser.print_help(sys.stderr)
             sys.exit(1)
         args = parser.parse_args()
@@ -231,9 +230,9 @@ def palettes_from_module(
     else:
         sub_modules = [module_path]
         top_recursive = False
-    for m in sub_modules:
+    for i, m in enumerate(sub_modules):
         logger.debug("Extracting nodes from module: %s", m)
-        # module, module_doc = module_hook(m, recursive=True)
+        top_recursive = False if i == 0 else True
         nodes, module_doc = nodes_from_module(m, recursive=top_recursive)
         if len(nodes) == 0:
             continue
@@ -250,7 +249,6 @@ def palettes_from_module(
         "\n\n>>>>>>> Extraction summary <<<<<<<<\n%s\n",
         "\n".join([f"Wrote {k} with {v} components" for k, v in files.items()]),
     )
-    # return palette
 
 
 def main():  # pragma: no cover
@@ -286,7 +284,7 @@ def main():  # pragma: no cover
 
     if len(module_path) > 0:
         outputfile = "" if outputfile == "." else outputfile
-        palette = palettes_from_module(
+        palettes_from_module(
             module_path, outfile=outputfile, recursive=recursive, split=split
         )
     else:
@@ -305,9 +303,6 @@ def main():  # pragma: no cover
         nodes = process_compounddefs(
             output_xml_filename, tag, allow_missing_eagle_start, language
         )
-        palette = prepare_and_write_palette(nodes, outputfile)
+        _ = prepare_and_write_palette(nodes, outputfile)
     # cleanup the output directory
     output_directory.cleanup()
-    _ = palette
-    # return palette
-    # return
