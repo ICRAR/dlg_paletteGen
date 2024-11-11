@@ -4,6 +4,10 @@ Changelog
 
 (unreleased)
 ------------
+- Fixed some import hierarchy issues. [Andreas Wicenec]
+- Playning around with recursion issues. [Andreas Wicenec]
+- Fixed Numpy doc Returns line treatment. [Andreas Wicenec]
+- Release: version 0.3.8 🚀 [Andreas Wicenec]
 - Formatting fixed. [Andreas Wicenec]
 - Release: version 0.3.8 🚀 [Andreas Wicenec]
 
