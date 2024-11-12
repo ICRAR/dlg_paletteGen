@@ -283,7 +283,7 @@ class DetailedDescription:
             description = sdd[0]
 
         # extract parameter documentation (up to Returns line)
-        pds = re.split(r"\n *Returns: *\n", rest)[0]
+        pds = re.split(r"\n *Returns:* *\n", rest)[0]
         indent = len(re.findall(r"^ *", pds)[0])
         pds = re.sub(r"\n" + r" " * indent, "\n", "\n" + pds)  # remove indentation
         # split param lines
