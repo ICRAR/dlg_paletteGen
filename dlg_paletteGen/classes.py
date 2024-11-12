@@ -127,29 +127,32 @@ class DetailedDescription:
         self.brief_descr = (
             self.main_descr.split(".")[0] + "." if self.main_descr else ""
         )
+        self.returns = None
 
-    def _process_rEST(self, detailed_description) -> tuple:
+    def _process_rEST(self, dd="") -> tuple:
         """
         Parse parameter descirptions found in a detailed_description tag. This
         assumes rEST style documentation.
 
-        :param detailed_description: str, the content of the description XML
-                                     node
+        :param dd: str, detailed description; the content of the description
+                   node
 
         :returns: tuple, description and parameter dictionary
         """
         logger.debug("Processing rEST style doc_strings")
+        if not dd:
+            dd = self.description
         result = {}
 
-        indent = re.findall(r"(\n *):param", detailed_description)
+        indent = re.findall(r"(\n *):param", dd)
         if indent:
             ds = re.sub(
-                re.findall(r"(\n *):param", detailed_description)[0],
+                re.findall(r"(\n *):param", dd)[0],
                 "\n",
-                detailed_description,
+                dd,
             )
         else:
-            ds = detailed_description
+            ds = dd
         ds = ds.lstrip()
 
         if ds.find("Returns:") >= 0:
@@ -234,30 +237,36 @@ class DetailedDescription:
         """
         logger.debug("Processing Numpy style doc_strings")
         if not dd:
-            return ("", {})
+            dd = self.description
         ds = dd.strip("\n")
         split = re.split(r"\n([\w ]+):*\n---*\n", ds.lstrip())
         split = ["Description"] + split
         dsplit = dict(zip(split[::2], split[1::2]))
 
-        description = dsplit["Description"]
+        self.main_descr = dsplit["Description"]
         parameters = dsplit["Parameters"] if "Parameters" in dsplit else ""
-        returns = dsplit["Returns"] if "Returns" in dsplit else None
+        self.returns = dsplit["Returns"] if "Returns" in dsplit else None
 
         # split param lines
         spds = re.split(r"([\w_]+) *: ", parameters)[1:]
-        pdict = dict(zip(spds[::2], spds[1::2]))
-        pdict = {
-            k: {
-                "desc": v.replace("\n", " "),
-                # this cryptic line tries to extract the type
-                "type": typeFix(re.split(r"[,\n\s]", v.strip())[0]),
-            }
-            for k, v in pdict.items()
-        }
-        logger.debug("numpy_style param dict %r", pdict)
+        spdd = dict(zip(spds[::2], spds[1::2]))
+        try:
+            self.params = {}
+            for item in spdd.items():
+                key = item[0]
+                vtype = re.findall(r" *`*([\a-zA-Z,\._]+)`+_*[\n,]", item[1])
+                desc = re.sub(r" *`*[\a-zA-Z,\._]+`+_*[\n,]", "", item[1].strip())
+                self.params[key] = {
+                    "type": vtype[0] if len(vtype) > 0 else "",
+                    "desc": desc,
+                }
+
+        except IndexError:
+            logger.debug(">>> spds matching failed %s:", spds)
+            raise
+        logger.debug("numpy_style param dict %r", self.params)
         # extract return documentation
-        return description, pdict, returns
+        return self.description, self.params, self.returns
 
     def _process_Google(self, dd: str):
         """
@@ -266,21 +275,19 @@ class DetailedDescription:
         oskar.Telescope.set_noise_freq
 
         :param dd: str, the content of the detailed description tag
+                   this overwrites the self.description
 
         :returns: tuple, description and parameter dictionary
         """
         logger.debug("Processing Google style doc_strings")
-        # indent = len(re.findall(r"[ ]", re.findall(r"\n[ ]*Args:", dd)[0]))
-        # dd = dd.replace(" " * indent, "")
-        # remove indent from lines
-        # extract main documentation (up to Parameters line)
-        description = dd
+        if dd:
+            self.description = dd
         rest = ""
-        sdd = re.split("\n *Args: *\n", dd)
+        sdd = re.split("\n *Args: *\n", self.description)
         if len(sdd) == 2:
-            (description, rest) = sdd
+            (self.main_descr, rest) = sdd
         elif len(sdd) == 1:
-            description = sdd[0]
+            self.main_descr = sdd[0]
 
         # extract parameter documentation (up to Returns line)
         pds = re.split(r"\n *Returns:* *\n", rest)[0]
@@ -288,21 +295,23 @@ class DetailedDescription:
         pds = re.sub(r"\n" + r" " * indent, "\n", "\n" + pds)  # remove indentation
         # split param lines
         spds = re.split(r"\n(.+):\n", pds)[1:]
-        spds = zip(spds[::2], spds[1::2])
+        spdd = zip(spds[::2], spds[1::2])
         try:
-            pdict = {}
-            for item in spds:
+            self.params = {}
+            for item in spdd:
                 key = re.sub(r" *\(.+\)", "", item[0])
-                vtype = re.findall(r" *\(([\a-zA-Z,\._]+)[_]\)", item[0])
-                vtype = vtype[0] if vtype else ""
+                vtype = re.findall(r" *\((`*[\a-zA-Z,\._]+`*)_*\)", item[0])
                 desc = re.sub(r"\n {2,}", " ", item[1].strip())
-                pdict[key] = {"type": vtype, "desc": desc}
+                self.params[key] = {
+                    "type": vtype[0] if len(vtype) > 0 else "",
+                    "desc": desc,
+                }
 
         except IndexError:
             logger.debug(">>> spds matching failed %s %s:", pds, spds)
             raise
         rest = pds[1] if len(pds) > 1 else ""
-        return description, pdict
+        return self.description, self.params
 
     def _process_casa(self, dd: str):
         """
@@ -319,7 +328,10 @@ class DetailedDescription:
         TODO: self arg should show brief description of component
         TODO: multi-line argument doc-strings are scrambled
         """
-        dStr = cleanString(dd)
+        logger.debug("Processing CASA style doc_strings")
+        if dd:
+            self.description = dd
+        dStr = cleanString(self.description)
         dList = dStr.split("\n")
         try:
             start_ind = [
@@ -355,12 +367,12 @@ class DetailedDescription:
                     if len(p.strip()) > 0
                 ]
                 paramDocs[i] = paramDocs[i] + " " + " ".join(pl)
-        params = dict(zip(paramNames, paramDocs))
-        comp_description = "\n".join(
+        self.params = dict(zip(paramNames, paramDocs))
+        self.description = "\n".join(
             dList[: start_ind - 1]
         )  # return main description as well
-        logger.debug(">>> CASA: finished processing of descr: %s", params)
-        return (comp_description, params)
+        logger.debug(">>> CASA: finished processing of descr: %s", self.params)
+        return (self.description, self.params)
 
     def _identify_format(self):
         """
@@ -391,12 +403,10 @@ class DetailedDescription:
         Helper function to provide plugin style parsers for various
         formats.
         """
-        # self._gen_code_block()
         do = f"_process_{self.format}"
         if hasattr(self, do) and callable(func := getattr(self, do)):
             logger.debug("Calling %s parser function", do)
             pd = func(self.description)
-            # self.description = pd[0].replace("\n\n", "\n")
             self.description = pd[0]
             self._gen_code_block()
             return self.description, pd[1]

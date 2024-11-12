@@ -224,6 +224,7 @@ def parse_value(component_name: str, field_name: str, value: str) -> tuple:
     :returns tuple of parsed values
     """
     parts = []
+    value = value.replace("\n", "")
     reader = csv.reader([value], delimiter="/", quotechar='"')
     for row in reader:
         parts = row
@@ -431,7 +432,11 @@ def create_palette_node_from_params(params) -> tuple:
             # check that type is a known value
             if not FieldType.has_key(field_type):
                 logger.warning(
-                    text + " '" + internal_name + "' field_type is Unknown: " + field_type
+                    text
+                    + " '"
+                    + internal_name
+                    + "' field_type is Unknown: "
+                    + field_type
                 )
 
             # check that usage is a known value
@@ -1014,7 +1019,9 @@ def params_to_nodes(params: dict, tag: str) -> list:
 
             # if a construct is found, add to nodes
             if data["construct"] != "":
-                logger.info("Adding component: " + data["construct"] + "/" + node["text"])
+                logger.info(
+                    "Adding component: " + data["construct"] + "/" + node["text"]
+                )
                 construct_node = create_construct_node(data["construct"], node)
                 construct_node["repositoryUrl"] = git_repo
                 construct_node["commitHash"] = version

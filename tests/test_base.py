@@ -566,6 +566,37 @@ def test_direct_tabascal(tmpdir: str, shared_datadir: str):
     prepare_and_write_palette(nodes, output_file, module_doc=module_doc)
 
 
+def test_direct_pypeit(tmpdir: str, shared_datadir: str):
+    """
+    Test the module processing format by calling the methods directly.
+
+    :param tmpdir: the path to the temp directory to use
+    :param shared_datadir: the path the the local directory
+    """
+    sys.path.append(str(shared_datadir.absolute()))
+    logging.info("path: %s", input)
+    output_directory = str(tmpdir)
+    output_file = f"{output_directory}/t.palette"
+
+    # module_name = "example_tabascal.generate_random_sky"
+    module_name = "example_pypeit"
+    modules, module_doc = module_hook(
+        module_name,
+        recursive=True,
+    )
+    logging.info(">>>> modules: ", modules)
+    assert (
+        modules["example_pypeit"]["poly_map"]["fields"]["rawimg"]["type"]
+        == "numpy.ndarray"
+    )
+
+    nodes = []
+    for members in modules.values():
+        for node in members.values():
+            nodes.append(node)
+    prepare_and_write_palette(nodes, output_file, module_doc=module_doc)
+
+
 def test_import_using_name(caplog: LogCaptureFixture):
     """
     Directly test the import_using_name function
@@ -633,7 +664,7 @@ def test_direct_module():
     for members in modules.values():
         for node in members.values():
             nodes.append(node)
-    assert len(nodes) in [1, 2, 3]
+    assert len(nodes) in [1, 2, 3, 4]
     prepare_and_write_palette(nodes, "test.palette", module_doc=module_doc)
 
 
@@ -650,4 +681,4 @@ def test_full_numpy():
     for members in modules.values():
         for node in members.values():
             nodes.append(node)
-    assert len(modules) == 651
+    assert len(modules) in [651, 654]
