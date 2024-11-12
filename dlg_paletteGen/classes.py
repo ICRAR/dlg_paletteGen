@@ -19,6 +19,7 @@ class DummySig:
     def __init__(self, module):
         self.module = module
         self.name = module.__name__ if inspect.ismodule(module) else module
+        self.__qualname__ = self.__name__ = self.name
         self.docstring = inspect.getdoc(module)
         self.parameters, self.ret = self.get_pb11_sig()
 
@@ -109,7 +110,7 @@ class DetailedDescription:
 
     KNOWN_FORMATS = {
         "rEST": r"\n(:param|:returns|Returns:) .*",
-        "Google": r"\nArgs:",
+        "Google": r"\n *Args: *\n",
         "Numpy": r"\n *Parameters *:* *\n *----------",
         "casa": r"\n-{2,20}? parameter",
     }
@@ -123,7 +124,9 @@ class DetailedDescription:
         self.format = ""
         self._identify_format()
         self.main_descr, self.params = self.process_descr()
-        self.brief_descr = self.main_descr.split(".")[0] + "." if self.main_descr else ""
+        self.brief_descr = (
+            self.main_descr.split(".")[0] + "." if self.main_descr else ""
+        )
 
     def _process_rEST(self, detailed_description) -> tuple:
         """
@@ -267,52 +270,33 @@ class DetailedDescription:
         :returns: tuple, description and parameter dictionary
         """
         logger.debug("Processing Google style doc_strings")
-        indent = len(re.findall(r"[ ]", re.findall(r"\n[ ]*Args:", dd)[0]))
-        dd = dd.replace(" " * indent, "")
+        # indent = len(re.findall(r"[ ]", re.findall(r"\n[ ]*Args:", dd)[0]))
+        # dd = dd.replace(" " * indent, "")
         # remove indent from lines
         # extract main documentation (up to Parameters line)
         description = dd
         rest = ""
-        sdd = dd.split("\nArgs:\n", 1)
-        if len(sdd) > 1:
+        sdd = re.split("\n *Args: *\n", dd)
+        if len(sdd) == 2:
             (description, rest) = sdd
         elif len(sdd) == 1:
             description = sdd[0]
 
-        # logger.debug("Splitting: %s %s", description, rest)
         # extract parameter documentation (up to Returns line)
-        pds = rest.split("\nReturns:\n")[0]
+        pds = re.split(r"\n *Returns: *\n", rest)[0]
         indent = len(re.findall(r"^ *", pds)[0])
         pds = re.sub(r"\n" + r" " * indent, "\n", "\n" + pds)  # remove indentation
         # split param lines
-        spds = re.findall(r"\n([\w_.]+)\s*:[\n ]*([\w \-_\,\.']+)", pds)
-        if not spds:
-            logger.debug(">>> pds matching: spds no match 1")
-            spds = re.findall(
-                r"\n([\w_.]+)\s*\(([\w\-_ .\,]+)\]*\):[\n ]*([\w \-_\,\'.]+)",
-                pds,
-            )
-        if not spds:
-            logger.debug(">>> pds matching: spds no match 2")
-            spds = re.findall(
-                r"\n([\w_]+)\s\((?:Optional\[)*([\w_\.\-]*)[\, ]"
-                + r"*([\w\-_ ]+)\]*\):[\n ]*([\w \-_\,\.\/\^']+)",
-                pds,
-            )
+        spds = re.split(r"\n(.+):\n", pds)[1:]
+        spds = zip(spds[::2], spds[1::2])
         try:
             pdict = {}
             for item in spds:
-                if len(item) == 4:
-                    pdict[item[0]] = {
-                        "type": f"{item[1]},{item[2]}",
-                        "desc": item[3],
-                    }
-                elif len(item) == 3:
-                    pdict[item[0]] = {"type": item[1], "desc": item[2]}
-                elif len(item) == 2 and len(pds.split("\n")[0].split(":")) == 2:
-                    pdict[item[0]] = {"desc": item[1], "type": "Object"}
-                elif len(item) == 2 and len(pds.split("\n")[0].split(":")) == 1:
-                    pdict[item[0]] = {"type": item[1], "desc": ""}
+                key = re.sub(r" *\(.+\)", "", item[0])
+                vtype = re.findall(r" *\(([\a-zA-Z,\._]+)[_]\)", item[0])
+                vtype = vtype[0] if vtype else ""
+                desc = re.sub(r"\n {2,}", " ", item[1].strip())
+                pdict[key] = {"type": vtype, "desc": desc}
 
         except IndexError:
             logger.debug(">>> spds matching failed %s %s:", pds, spds)
@@ -339,7 +323,9 @@ class DetailedDescription:
         dList = dStr.split("\n")
         try:
             start_ind = [
-                idx for idx, s in enumerate(dList) if re.findall(r"-{1,20} parameter", s)
+                idx
+                for idx, s in enumerate(dList)
+                if re.findall(r"-{1,20} parameter", s)
             ][0] + 1
         except IndexError:
             start_ind = 0
