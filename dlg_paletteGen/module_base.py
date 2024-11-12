@@ -80,6 +80,9 @@ def get_class_members(cls, parent=None):
         if isinstance(m, functools.cached_property):
             logger.error("Found cached_property object!")
             continue
+        logger.debug(">>> module type: %s", type(m))
+        if not hasattr(m, "__qualname__"):
+            continue
         mod_name = m.__qualname__ if not isinstance(m, str) else m
         if (
             not n.startswith("_")
