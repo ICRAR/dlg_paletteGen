@@ -466,7 +466,6 @@ def get_submodules(module):
     else:
         for m in inspect.getmembers(module, lambda x: inspect.ismodule(x)):
             if (
-
                 inspect.ismodule(m[1])
                 and get_mod_name(m[1]) not in sys.builtin_module_names
                 # and hasattr(m[1], "__file__")

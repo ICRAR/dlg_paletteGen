@@ -5,7 +5,7 @@ The main classes used by this module.
 import inspect
 import re
 import xml.etree.ElementTree as ET
-from typing import Union, Optional
+from typing import Optional, Union
 
 from .settings import VALUE_TYPES, Language, logger
 from .support_functions import cleanString, guess_type_from_default, typeFix
