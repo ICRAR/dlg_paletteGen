@@ -218,7 +218,7 @@ def get_mod_name(mod) -> str:
     Helper function to get a name from a module in
     all cases.
     """
-    if not mod:
+    if mod is None:
         return ""
     if hasattr(mod, "__name__"):
         return mod.__name__
@@ -466,6 +466,7 @@ def get_submodules(module):
     else:
         for m in inspect.getmembers(module, lambda x: inspect.ismodule(x)):
             if (
+
                 inspect.ismodule(m[1])
                 and get_mod_name(m[1]) not in sys.builtin_module_names
                 # and hasattr(m[1], "__file__")
