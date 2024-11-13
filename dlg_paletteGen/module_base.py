@@ -369,7 +369,6 @@ def module_hook(mod_name: str, modules: dict = {}, recursive: bool = True) -> tu
             # Need to check this again:
             # traverse = True if len(modules) == 0 else False
             mod = import_using_name(mod_name, traverse=True)
-            print(f"{mod=}")
             m_name = get_mod_name(mod)
             if mod is not None and mod_name != m_name:
                 member = mod_name.split(".")[-1]

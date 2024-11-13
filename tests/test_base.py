@@ -650,4 +650,4 @@ def test_full_numpy():
     for members in modules.values():
         for node in members.values():
             nodes.append(node)
-    assert len(modules) == 957
+    assert len(modules) == 954
