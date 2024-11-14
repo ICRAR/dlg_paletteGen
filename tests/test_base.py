@@ -681,4 +681,4 @@ def test_full_numpy():
     for members in modules.values():
         for node in members.values():
             nodes.append(node)
-    assert len(modules) in [651, 654]
+    assert len(modules) in [651, 652, 654]

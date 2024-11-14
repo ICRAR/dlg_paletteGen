@@ -14,7 +14,7 @@ import logging
 import os
 import sys
 import tempfile
-from typing import Any
+from typing import Any, Tuple
 
 import pkg_resources
 
@@ -168,7 +168,7 @@ def check_environment_variables() -> bool:
     return True
 
 
-def nodes_from_module(module_path, recursive=True) -> tuple[list, Any]:
+def nodes_from_module(module_path, recursive=True) -> Tuple[list, Any]:
     """
     Extract nodes from specified module.
 
