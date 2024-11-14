@@ -542,7 +542,7 @@ def import_using_name(mod_name: str, traverse: bool = False, err_log=True):
                             break
                         except Exception as e:
                             raise ValueError(
-                                "Problem importing module %s, %s" % (mod, e)
+                                f"Problem importing module {mod}, {e}"
                             ) from e
                 logger.debug("Loaded module: %s", mod_name)
             else:
@@ -718,7 +718,9 @@ def populateFields(parameters: dict, dd) -> dict:
         logger.debug("Final type of parameter %s: %s", p, field[p]["type"])
         if isinstance(field[p]["value"], numpy.ndarray):
             try:
-                field[p]["value"] = field[p]["defaultValue"] = field[p]["value"].tolist()
+                field[p]["value"] = field[p]["defaultValue"] = field[p][
+                    "value"
+                ].tolist()
             except NotImplementedError:
                 field[p]["value"] = []
         if repr(field[p]["value"]) == "nan" and numpy.isnan(field[p]["value"]):
@@ -784,7 +786,9 @@ def populateDefaultFields(Node):  # pylint: disable=invalid-name
     et[n]["value"] = 2
     et[n]["defaultValue"] = 2
     et[n]["type"] = "Integer"
-    et[n]["description"] = "Estimate of execution time (in seconds) for this application."
+    et[n][
+        "description"
+    ] = "Estimate of execution time (in seconds) for this application."
     et[n]["parameterType"] = "ConstraintParameter"
     Node["fields"].update(et)
 
