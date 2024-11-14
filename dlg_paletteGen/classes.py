@@ -2,6 +2,8 @@
 The main classes used by this module.
 """
 
+from __future__ import annotations
+
 import inspect
 import re
 import xml.etree.ElementTree as ET
@@ -124,9 +126,7 @@ class DetailedDescription:
         self.format = ""
         self._identify_format()
         self.main_descr, self.params = self.process_descr()
-        self.brief_descr = (
-            self.main_descr.split(".")[0] + "." if self.main_descr else ""
-        )
+        self.brief_descr = self.main_descr.split(".")[0] + "." if self.main_descr else ""
         self.returns = None
 
     def _process_rEST(self, dd="") -> tuple:
@@ -335,9 +335,7 @@ class DetailedDescription:
         dList = dStr.split("\n")
         try:
             start_ind = [
-                idx
-                for idx, s in enumerate(dList)
-                if re.findall(r"-{1,20} parameter", s)
+                idx for idx, s in enumerate(dList) if re.findall(r"-{1,20} parameter", s)
             ][0] + 1
         except IndexError:
             start_ind = 0
