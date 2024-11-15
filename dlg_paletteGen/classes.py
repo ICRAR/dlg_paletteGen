@@ -5,7 +5,7 @@ The main classes used by this module.
 import inspect
 import re
 import xml.etree.ElementTree as ET
-from typing import Union
+from typing import Optional, Union
 
 from .settings import VALUE_TYPES, Language, logger
 from .support_functions import cleanString, guess_type_from_default, typeFix
@@ -114,7 +114,7 @@ class DetailedDescription:
         "casa": r"\n-{2,20}? parameter",
     }
 
-    def __init__(self, descr: Union[str | None], name=None):
+    def __init__(self, descr: Optional[str] = None, name=None):
         """
         :param descr: Text of the detaileddescription node
         """

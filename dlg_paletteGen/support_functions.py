@@ -218,7 +218,7 @@ def get_mod_name(mod) -> str:
     Helper function to get a name from a module in
     all cases.
     """
-    if not mod:
+    if mod is None:
         return ""
     if hasattr(mod, "__name__"):
         return mod.__name__

@@ -285,7 +285,7 @@ def get_members(mod: types.ModuleType, module_members=[], parent=None):
     :param parent: the parent module
     :param member: filter the content of mod for this member
     """
-    if not mod:
+    if mod is None:
         return {}
     module_name = parent if parent else get_mod_name(mod)
     module_name = str(module_name)
@@ -370,7 +370,7 @@ def module_hook(mod_name: str, modules: dict = {}, recursive: bool = True) -> tu
             # traverse = True if len(modules) == 0 else False
             mod = import_using_name(mod_name, traverse=True)
             m_name = get_mod_name(mod)
-            if mod and mod_name != m_name:
+            if mod is not None and mod_name != m_name:
                 member = mod_name.split(".")[-1]
                 mod_name = m_name
             members = get_members(
