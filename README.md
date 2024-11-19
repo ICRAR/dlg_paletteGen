@@ -9,6 +9,18 @@ This is the palette generator of the [DALiuGE](https://daliuge.readthedocs.io) s
 It processes a file or a directory of source files or an installed python module and produces a DALiuGE compatible palette file containing the information required to use the identified functions, classes and methods to construct logical graphs in [EAGLE](https://eagle-dlg.readthedocs.io).
 For more information please refer to the [documentation](https://icrar.github.io/dlg_paletteGen/).
 
+## Prerequisites
+
+`dlg_paletteGen` requires the following software to be installed prior to use:
+- doxygen
+- xsltproc
+
+These may be installed using the following command: 
+
+```
+sudo apt-get install doxygen xsltproc
+```
+
 ## Install it from PyPI
 
 ```bash
