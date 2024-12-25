@@ -16,12 +16,12 @@ import sys
 import tempfile
 from typing import Any, Tuple
 
-import pkg_resources
-
 from .module_base import module_hook
 from .settings import DOXYGEN_SETTINGS, Language, logger
 from .source_base import process_compounddefs
 from .support_functions import (
+    NAME,
+    VERSION,
     get_submodules,
     import_using_name,
     prepare_and_write_palette,
@@ -29,14 +29,11 @@ from .support_functions import (
     process_xml,
 )
 
-NAME = "dlg_paletteGen"
-VERSION = pkg_resources.require(NAME)[0].version
-
 
 def get_args(args=None):
     # def get_args():
     """
-    Deal with the command line arguments
+    Deal with the command line arguments.
 
     :returns: (
                 args.idir:str,
@@ -202,7 +199,7 @@ def palettes_from_module(
     recursive: bool = True,
 ) -> None:
     """
-    Generates one or more palette files from the module specified.
+    Generate one or more palette files from the module specified.
 
     :param module_path: dot delimited module path
     :param outfile: name of palette file, if left blank the module name will be
@@ -253,8 +250,9 @@ def palettes_from_module(
 
 def main():  # pragma: no cover
     """
-    The main function executes on commands:
-    `python -m dlg_paletteGen` and `$ dlg_paletteGen `.
+    Execute the commands.
+
+    `python -m dlg_paletteGen` and `$ dlg_paletteGen`.
     """
     # read environment variables
     if not check_environment_variables():
