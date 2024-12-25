@@ -116,7 +116,7 @@ class MainClass1(object):
 
     def func_with_types(
         self,
-        arg1,
+        arg1: bool,
         arg2,
         arg3="1.0",
         arg4="True",

@@ -1,4 +1,6 @@
 # For production
 python-benedict
 numpy
+merklelib@git+https://github.com/pritchardn/merklelib
 blockdag
+docstring-parser

@@ -1,6 +1,4 @@
-"""
-The main classes used by this module.
-"""
+"""The main classes used by this module."""
 
 from __future__ import annotations
 
@@ -9,16 +7,17 @@ import re
 import xml.etree.ElementTree as ET
 from typing import Optional, Union
 
+from docstring_parser import parse
+
 from .settings import VALUE_TYPES, Language, logger
 from .support_functions import cleanString, guess_type_from_default, typeFix
 
 
 class DummySig:
-    """
-    Dummy signature class for PyBind11 functions
-    """
+    """Dummy signature class for PyBind11 functions."""
 
     def __init__(self, module):
+        """Initialize DummySig."""
         self.module = module
         self.name = module.__name__ if inspect.ismodule(module) else module
         self.__qualname__ = self.__name__ = self.name
@@ -26,9 +25,7 @@ class DummySig:
         self.parameters, self.ret = self.get_pb11_sig()
 
     def get_pb11_sig(self):
-        """
-        Process the docstring from the PyBind11 functions
-        """
+        """Process the docstring from the PyBind11 functions."""
         parameters = {}
         ret = None
         if self.docstring:
@@ -94,9 +91,7 @@ class DummySig:
 
 
 class DummyParam:  # no-eq: R0903
-    """
-    Dummy Parameter class
-    """
+    """Dummy Parameter class."""
 
     annotation = None
     kind = "POSITIONAL_OR_KEYWORD"
@@ -106,6 +101,7 @@ class DummyParam:  # no-eq: R0903
 class DetailedDescription:
     """
     Class performs parsing of detailed description elements.
+
     This class is used for both compound (e.g. class) level descriptions
     as well as function/method level.
     """
@@ -119,6 +115,8 @@ class DetailedDescription:
 
     def __init__(self, descr: Optional[str] = None, name=None):
         """
+        Initialize description object using a string.
+
         :param descr: Text of the detaileddescription node
         """
         self.name = name
@@ -127,12 +125,48 @@ class DetailedDescription:
         self._identify_format()
         self.main_descr, self.params = self.process_descr()
         self.brief_descr = self.main_descr.split(".")[0] + "." if self.main_descr else ""
-        self.returns = None
+        self.returns = ""
 
-    def _process_rEST(self, dd="") -> tuple:
+    def _process_rEST(self, dd="") -> Union[tuple | None]:
         """
-        Parse parameter descirptions found in a detailed_description tag. This
-        assumes rEST style documentation.
+        Process the rEST-style docstring.
+
+        :param dd: str, the content of the detailed description tag
+
+        :returns: tuple, description and parameter dictionary
+        """
+        logger.debug("Processing rEST style doc_strings")
+        if not dd:
+            dd = self.description
+        dp = parse(dd)
+        self.returns = str(dp.returns)
+        spds = dp.params
+
+        try:
+            self.params = {}
+            for item in spds:
+                vtype = item.type_name
+                if vtype:
+                    vtype = re.sub(r"^:", "", vtype)
+                    vtype = re.sub(r"[`^~]", "", vtype)
+                    vtype = re.sub(r"'", "", vtype)
+                    logger.debug(">>>> replaced: %s", vtype)
+                else:
+                    vtype = ""
+                self.params[item.arg_name] = {"type": vtype, "desc": item.description}
+
+        except IndexError:
+            logger.debug(">>> spds matching failed %s:", spds)
+            raise
+        logger.debug("rEST_style param dict %r", self.params)
+        # extract return documentation
+        return self.description, self.params, self.returns
+
+    def _process_rEST_old(self, dd="") -> tuple:
+        """
+        Parse parameter descirptions found in a detailed_description tag.
+
+        This assumes rEST style documentation.
 
         :param dd: str, detailed description; the content of the description
                    node
@@ -225,11 +259,12 @@ class DetailedDescription:
             else:
                 logger.warning("Type spec without matching description %s", param_name)
 
-        return ds.split(":param")[0].strip(), result
+            self.returns = ""  # placeholder
+        return ds.split(":param")[0].strip(), result, self.returns
 
     def _process_Numpy(self, dd: str) -> tuple:
         """
-        Process the Numpy-style docstring
+        Process the Numpy-style docstring.
 
         :param dd: str, the content of the detailed description tag
 
@@ -238,28 +273,21 @@ class DetailedDescription:
         logger.debug("Processing Numpy style doc_strings")
         if not dd:
             dd = self.description
-        ds = dd.strip("\n")
-        split = re.split(r"\n([\w ]+):*\n---*\n", ds.lstrip())
-        split = ["Description"] + split
-        dsplit = dict(zip(split[::2], split[1::2]))
+        dp = parse(dd)
+        self.returns = str(dp.returns)
+        spds = dp.params
 
-        self.main_descr = dsplit["Description"]
-        parameters = dsplit["Parameters"] if "Parameters" in dsplit else ""
-        self.returns = dsplit["Returns"] if "Returns" in dsplit else None
-
-        # split param lines
-        spds = re.split(r"([\w_]+) *: ", parameters)[1:]
-        spdd = dict(zip(spds[::2], spds[1::2]))
         try:
             self.params = {}
-            for item in spdd.items():
-                key = item[0]
-                vtype = re.findall(r" *`*([\a-zA-Z,\._]+)`+_*[\n,]", item[1])
-                desc = re.sub(r" *`*[\a-zA-Z,\._]+`+_*[\n,]", "", item[1].strip())
-                self.params[key] = {
-                    "type": vtype[0] if len(vtype) > 0 else "",
-                    "desc": desc,
-                }
+            for item in spds:
+                vtype = item.type_name
+                if vtype:
+                    vtype = re.sub(r"^:", "", vtype)
+                    vtype = re.sub(r"[`^~]", "", vtype)
+                    vtype = re.sub(r"[_$]", "", vtype)
+                else:
+                    vtype = ""
+                self.params[item.arg_name] = {"type": vtype, "desc": item.description}
 
         except IndexError:
             logger.debug(">>> spds matching failed %s:", spds)
@@ -270,7 +298,8 @@ class DetailedDescription:
 
     def _process_Google(self, dd: str):
         """
-        Process the Google-style docstring
+        Process the Google-style docstring.
+
         TODO: still some corner cases of OSKAR to be fixed:
         oskar.Telescope.set_noise_freq
 
@@ -311,11 +340,13 @@ class DetailedDescription:
             logger.debug(">>> spds matching failed %s %s:", pds, spds)
             raise
         rest = pds[1] if len(pds) > 1 else ""
-        return self.description, self.params
+        self.returns = ""  # placeholder
+        return self.description, self.params, self.returns
 
     def _process_casa(self, dd: str):
         """
-        Parse the special docstring for casatasks
+        Parse the special docstring for casatasks.
+
         Extract the parameters from the casatask doc string.
 
         :param task: The casatask to derive the parameters from.
@@ -370,12 +401,14 @@ class DetailedDescription:
             dList[: start_ind - 1]
         )  # return main description as well
         logger.debug(">>> CASA: finished processing of descr: %s", self.params)
-        return (self.description, self.params)
+        self.returns = ""  # placeholder
+        return (self.description, self.params, self.returns)
 
     def _identify_format(self):
         """
-        Identifying docstring format using the format templates
-        defined in KNOWN_FORMATS.
+        Identify docstring format.
+
+        Using the format templates defined in KNOWN_FORMATS.
         """
         logger.debug("Identifying doc_string style format")
         ds = self.description if self.description else ""
@@ -390,17 +423,12 @@ class DetailedDescription:
             logger.debug("Unknown param desc format!")
 
     def _gen_code_block(self):
-        """
-        Update indenation for pre-formatting the description
-        """
+        """Update indentation for pre-formatting the description."""
         if self.description:
             self.description = self.description.replace("\n", "\n    ")
 
     def process_descr(self):
-        """
-        Helper function to provide plugin style parsers for various
-        formats.
-        """
+        """Provide plugin style parsers for various formats."""
         do = f"_process_{self.format}"
         if hasattr(self, do) and callable(func := getattr(self, do)):
             logger.debug("Calling %s parser function", do)
@@ -414,10 +442,7 @@ class DetailedDescription:
 
 
 class GreatGrandChild:
-    """
-    The great-grandchild class performs most of the parsing to construct the
-    palette nodes from the doxygen XML.
-    """
+    """Perform parsing to construct the palette nodes from the doxygen XML."""
 
     def __init__(
         self,
@@ -427,14 +452,13 @@ class GreatGrandChild:
         parent_member: Union["Child", None] = None,
     ):
         """
-        Constructor of great-grandchild object.
+        Construct great-grandchild object.
 
         :param ggchild: dict, if existing great-grandchild
         :param func_name: str, the function name
         :param return_type: str, the return type of the component
         :param parent_member: dict, contains the descriptions found in parent
         """
-
         self.func_path = ""
         self.func_name = func_name
         self.func_title = func_name
@@ -454,12 +478,11 @@ class GreatGrandChild:
         self, ggchild: ET.Element, parent_member: Union["Child", None] = None
     ):
         """
-        Process GreatGrandChild
+        Process GreatGrandChild.
 
         :param ggchild: dict, the great grandchild element
         :param parent_member: dict, member dict from parent class
         """
-
         # logger.debug("Initialized ggchild member: %s", self.member)
         logger.debug("New GreatGrandChild element: %s", ggchild.tag)  # type: ignore
         if ggchild.tag == "name":  # type: ignore
@@ -630,7 +653,8 @@ class GreatGrandChild:
     ):
         """
         Set the description field of a of parameter <name> from parameters.
-        TODO: This should really be part of a class
+
+        TODO: This should really be part of a class.
 
         :param name: str, the parameter to set the description
         :param descrition: str, the description to add to the existing string
@@ -640,32 +664,22 @@ class GreatGrandChild:
         p_type = "" if not p_type else p_type
         if name in params:
             params[name] += description
-            # if p["key"] == name:
-            #     p["value"] = p["value"] + description
-            #     # insert the type
-            #     pp = p["value"].split("/", 2)
-            #     p["value"] = "/".join(pp[:1] + [p_type] + pp[2:])
-            #     p["type"] = p_type
-            #     break
 
 
 class Child:
-    """
-    Child class for hierarchy.
-    """
+    """Child class for hierarchy."""
 
     def __init__(
-        self,
-        child: ET.Element,
-        language: Language,
-        parent: Union["Child", None] = None,
+        self, child: ET.Element, language: Language, parent: Union["Child", None] = None
     ):
         """
-        Private function to process a child element.
+        Process a child element.
 
-        :param child: dict, the parsed child element from XML
-        :param language,
-        :param parent, Child, parent object or None
+        Parameters:
+        -----------
+        child: dict, the parsed child element from XML
+        language: Language, Python or C
+        parent: Child, parent object or None
         """
         members = []
         self.type = "generic"
@@ -731,7 +745,8 @@ class Child:
         parent: Union["Child", None] = None,
     ) -> Union[dict, None]:
         """
-        Private function to process a grandchild element
+        Process a grandchild element.
+
         Starts the construction of the member data structure
 
         :param gchild: dict, the parsed grandchild element from XML

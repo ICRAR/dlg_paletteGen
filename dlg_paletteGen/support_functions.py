@@ -7,14 +7,13 @@
 # pylint: disable=too-many-statements
 # pylint: disable=protected-access
 # pylint: disable=dangerous-default-value
-"""
-Support functions
-"""
+"""Support functions."""
 
 import ast
 import datetime
 import importlib
 import inspect
+import io
 import json
 import os
 import re
@@ -42,9 +41,56 @@ from .settings import (
 )
 
 
+def read(*paths, **kwargs):
+    """
+    Read the contents of a text file safely.
+
+    >>> read("dlg_paletteGen", "VERSION")
+    '0.1.0'
+    >>> read("README.md")
+    ...
+    """
+    content = ""
+    with io.open(
+        os.path.join(os.path.dirname(__file__), *paths),
+        encoding=kwargs.get("encoding", "utf8"),
+    ) as open_file:
+        content = open_file.read().strip()
+    return content
+
+
+def this_module() -> str:
+    """Inspect this module and return the name."""
+    stack = inspect.stack()
+    print(stack[0])
+    print(stack[1])
+    module = inspect.getmodule(stack[1][0])
+    if module is None:
+        raise ValueError("module not found")
+    if module.__name__ != "__main__":
+        return module.__name__
+    package = "" if module.__package__ is None else module.__package__
+    mfname = stack[0].filename
+    if mfname is None:
+        return package
+    fname = os.path.basename(mfname)
+    fname = fname.removesuffix(".py")
+    if fname in ("__init__", "__main__"):
+        return package
+    return f"{package}.{fname}"
+
+
+nn = this_module()
+NAME = "dlg_paletteGen"
+meta = importlib.metadata.metadata(NAME)
+VERSION = meta["Version"]
+
+# pkg_name = this_module()
+
+
 def cleanString(input_text: str) -> str:
     """
-    Remove ANSI escape strings from input"
+    Remove ANSI escape strings from input.
 
     :param input_text: string to clean
 
@@ -57,7 +103,7 @@ def cleanString(input_text: str) -> str:
 
 def convert_type_str(input_type: str = "") -> str:
     """
-    Convert the string provided into a supported type string
+    Convert the string provided into a supported type string.
 
     :param value_type: str, type string to be converted
 
@@ -73,7 +119,7 @@ def convert_type_str(input_type: str = "") -> str:
 
 def guess_type_from_default(default_value: typing.Any = "", raw=False):
     """
-    Try to guess the parameter type from a default_value provided.
+    Guess the parameter type from a default_value provided.
 
     The value can be of any type by itself, including a JSON string
     containing a complex data structure.
@@ -114,8 +160,9 @@ def guess_type_from_default(default_value: typing.Any = "", raw=False):
 
 def typeFix(value_type: Union[Any, None] = "", default_value: Any = None) -> str:
     """
-    Trying to fix or guess the type of a parameter. If a value_type is
-    provided, this will be used to determine the type.
+    Fix or guess the type of a parameter.
+
+    If a value_type is provided, this will be used to determine the type.
 
     :param value_type: any, convert type to one of our strings
     :param default_value: any, this will be used to determine the
@@ -163,8 +210,9 @@ def typeFix(value_type: Union[Any, None] = "", default_value: Any = None) -> str
 
 def check_text_element(xml_element: ET.Element, sub_element: str):
     """
-    Check a xml_element for the first occurance of sub_elements and return
-    the joined text content of them.
+    Check a xml_element for the first occurance of sub_elements.
+
+    Return the joined text content of them.
     """
     text = ""
     sub = xml_element.find(sub_element)
@@ -177,7 +225,7 @@ def check_text_element(xml_element: ET.Element, sub_element: str):
 
 def modify_doxygen_options(doxygen_filename: str, options: dict):
     """
-    Updates default doxygen config for this task
+    Update default doxygen config for this task.
 
     :param doxygen_filename: str, the file name of the config file
     :param options: dict, dictionary of the options to be modified
@@ -207,18 +255,15 @@ def modify_doxygen_options(doxygen_filename: str, options: dict):
 
 
 def get_next_id() -> str:
-    """
-    Use tempfile.mktmp now
-    """
+    """Use tempfile.mktmp now."""
     return tempfile.mktemp(prefix="", dir="")
 
 
 def get_mod_name(mod) -> str:
-    """
-    Helper function to get a name from a module in
-    all cases.
-    """
-    if mod is None:
+    """Get a name from a module in all cases."""
+    if isinstance(mod, numpy.ndarray):
+        logger.debug("Trying to get module name: %s", mod)
+    if not mod:
         return ""
     if hasattr(mod, "__name__"):
         return mod.__name__
@@ -302,7 +347,7 @@ def write_palette_json(
     block_dag: list,
 ):
     """
-    Construct palette header and Write nodes to the output file
+    Construct palette header and Write nodes to the output file.
 
     :param output_filename: str, the name of the output file
     :param module_doc: module level docstring
@@ -406,6 +451,7 @@ def prepare_and_write_palette(nodes: list, output_filename: str, module_doc: str
 def get_submodules(module):
     """
     Retrieve names of sub-modules using iter_modules.
+
     This will also return sub-packages. Third tuple
     item is a flag ispkg indicating that.
 
@@ -426,7 +472,19 @@ def get_submodules(module):
                 )
                 continue
             if isinstance(
-                type_mod, (str, int, float, bytes, bytearray, bool, dict, list, tuple)
+                type_mod,
+                (
+                    str,
+                    int,
+                    float,
+                    bytes,
+                    bytearray,
+                    bool,
+                    dict,
+                    list,
+                    tuple,
+                    numpy.ndarray,
+                ),
             ):
                 # just store module level variables for now
                 value = getattr(module, mod)
@@ -478,8 +536,10 @@ def get_submodules(module):
 
 def import_using_name(mod_name: str, traverse: bool = False, err_log=True):
     """
-    Import a module using its name and try hard to go up the hierarchy if
-    direct import is not possible. This only imports actual modules,
+    Import a module using its name.
+
+    Try hard to go up the hierarchy if direct import is not possible.
+    This only imports actual modules,
     not classes, functions, or types. In those cases it will return the
     lowest module in the hierarchy. As a final fallback it will return the
     highest level module.
@@ -564,9 +624,7 @@ def initializeField(
     precious: bool = False,
     positional: bool = False,
 ):
-    """
-    Construct a dummy field
-    """
+    """Construct a dummy field."""
     field = {}  # type: ignore
     fieldValue = {}
     fieldValue["name"] = name
@@ -585,9 +643,7 @@ def initializeField(
 
 
 def get_value_type_from_default(default):
-    """
-    Extract value and type from default value
-    """
+    """Extract value and type from default value."""
     param_desc = {
         "value": None,
         "desc": "",
@@ -642,10 +698,7 @@ def get_value_type_from_default(default):
 
 
 def populateFields(parameters: dict, dd) -> dict:
-    """
-    Populate a field from signature parameters and mixin
-    documentation if available.
-    """
+    """Populate a field from signature parameters and mixin documentation if available."""
     fields = {}
     descr_miss = []
 
@@ -684,7 +737,11 @@ def populateFields(parameters: dict, dd) -> dict:
             elif hasattr(v.annotation, "__name__"):
                 field[p]["type"] = typeFix(f"{v.annotation.__name__}")
             else:
-                field[p]["type"] = v.annotation.__repr__()
+                field[p]["type"] = typeFix(
+                    v.annotation
+                    if isinstance(v.annotation, str)
+                    else repr(v.annotation)
+                )
             logger.debug("Parameter type from annotation: %s", field[p]["type"])
         # else we use the type from default value
         elif field[p]["name"] == "args":
@@ -718,7 +775,9 @@ def populateFields(parameters: dict, dd) -> dict:
         logger.debug("Final type of parameter %s: %s", p, field[p]["type"])
         if isinstance(field[p]["value"], numpy.ndarray):
             try:
-                field[p]["value"] = field[p]["defaultValue"] = field[p]["value"].tolist()
+                field[p]["value"] = field[p]["defaultValue"] = field[p][
+                    "value"
+                ].tolist()
             except NotImplementedError:
                 field[p]["value"] = []
         if repr(field[p]["value"]) == "nan" and numpy.isnan(field[p]["value"]):
@@ -742,9 +801,10 @@ def constructNode(
     dataHash: str = "",
 ):
     """
-    Construct a palette node using default parameters if not
-    specified otherwise. For some reason sub-classing benedict
-    did not work here, thus we use a function instead.
+    Construct a palette node using default parameters if not specified otherwise.
+
+    For some reason sub-classing benedict did not work here, thus we use a
+    function instead.
     """
     Node = {}
     Node["category"] = category
@@ -761,8 +821,9 @@ def constructNode(
 
 def populateDefaultFields(Node):  # pylint: disable=invalid-name
     """
-    Populate a palette node with the default
-    field definitions. This is separate from the
+    Populate a palette node with the default field definitions.
+
+    This is separate from the
     construction of the node itself to allow the
     ApplicationArgs to be listed first.
 
@@ -784,7 +845,9 @@ def populateDefaultFields(Node):  # pylint: disable=invalid-name
     et[n]["value"] = 2
     et[n]["defaultValue"] = 2
     et[n]["type"] = "Integer"
-    et[n]["description"] = "Estimate of execution time (in seconds) for this application."
+    et[n][
+        "description"
+    ] = "Estimate of execution time (in seconds) for this application."
     et[n]["parameterType"] = "ConstraintParameter"
     Node["fields"].update(et)
 
@@ -842,20 +905,19 @@ def populateDefaultFields(Node):  # pylint: disable=invalid-name
 
 
 def constructPalette():
-    """
-    Constructing the structure of a palette.
-    """
+    """Construct the structure of a palette."""
     palette = {
         "modelData": {
             "filePath": "",
-            "fileType": "palette",
+            "fileType": "Palette",
             "shortDescription": "",
             "detailedDescription": "",
-            "repoService": "GitHub",
-            "repoBranch": "master",
-            "repo": "ICRAR/EAGLE_test_repo",
-            "eagleVersion": "",
-            "eagleCommitHash": "",
+            "repoService": "",
+            "repoBranch": "",
+            "repo": "",
+            "generatorName": NAME,
+            "generatorVersion": VERSION,
+            "generatorCommitHash": "",
             "schemaVersion": "AppRef",
             "readonly": True,
             "repositoryUrl": "",

@@ -1,6 +1,4 @@
-"""
-Various settings and global values.
-"""
+"""Set global values."""
 
 import logging
 import sys
@@ -10,9 +8,7 @@ import numpy
 
 
 class CustomFormatter(logging.Formatter):
-    """
-    Formatter for logging.
-    """
+    """Format the logging."""
 
     high = "\x1b[34;1m"
     grey = "\x1b[38;20m"
@@ -34,6 +30,7 @@ class CustomFormatter(logging.Formatter):
     }
 
     def format(self, record):
+        """Define the format."""
         log_fmt = self.FORMATS.get(record.levelno)
         formatter = logging.Formatter(log_fmt, "%Y-%m-%dT%H:%M:%S")
         return formatter.format(record)
@@ -82,6 +79,8 @@ BLOCKDAG_DATA_FIELDS = [
 
 
 class Language(Enum):
+    """Set Language defaults."""
+
     UNKNOWN = 0
     C = 1
     PYTHON = 2
