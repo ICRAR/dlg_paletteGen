@@ -124,11 +124,10 @@ class DetailedDescription:
         self.description = descr if descr else ""
         self.format = ""
         self._identify_format()
-        self.main_descr, self.params = self.process_descr()
+        self.main_descr, self.params, self.returns = self.process_descr()
         self.brief_descr = (
             self.main_descr.split(".")[0] + "." if self.main_descr else ""
         )
-        self.returns = ""
 
     def _process_rEST(self, dd="") -> Union[tuple | None]:
         """
@@ -142,7 +141,7 @@ class DetailedDescription:
         if not dd:
             dd = self.description
         dp = parse(dd)
-        self.returns = str(dp.returns)
+        self.returns = dp.returns
         spds = dp.params
 
         try:
@@ -177,7 +176,7 @@ class DetailedDescription:
         if not dd:
             dd = self.description
         dp = parse(dd)
-        self.returns = str(dp.returns)
+        self.returns = dp.returns
         spds = dp.params
 
         try:
@@ -214,36 +213,49 @@ class DetailedDescription:
         logger.debug("Processing Google style doc_strings")
         if dd:
             self.description = dd
-        rest = ""
-        sdd = re.split("\n *Args: *\n", self.description)
-        if len(sdd) == 2:
-            (self.main_descr, rest) = sdd
-        elif len(sdd) == 1:
-            self.main_descr = sdd[0]
+        dp = parse(dd)
+        self.returns = dp.returns
+        spds = dp.params
+        # rest = ""
+        # sdd = re.split("\n *Args: *\n", self.description)
+        # if len(sdd) == 2:
+        #     (self.main_descr, rest) = sdd
+        # elif len(sdd) == 1:
+        #     self.main_descr = sdd[0]
 
-        # extract parameter documentation (up to Returns line)
-        pds = re.split(r"\n *Returns:* *\n", rest)[0]
-        indent = len(re.findall(r"^ *", pds)[0])
-        pds = re.sub(r"\n" + r" " * indent, "\n", "\n" + pds)  # remove indentation
-        # split param lines
-        spds = re.split(r"\n(.+):\n", pds)[1:]
+        # # extract parameter documentation (up to Returns line)
+        # pds = re.split(r"\n *Returns:* *\n", rest)[0]
+        # indent = len(re.findall(r"^ *", pds)[0])
+        # pds = re.sub(r"\n" + r" " * indent, "\n", "\n" + pds)  # remove indentation
+        # # split param lines
+        # spds = re.split(r"\n(.+):\n", pds)[1:]
         spdd = zip(spds[::2], spds[1::2])
         try:
             self.params = {}
-            for item in spdd:
-                key = re.sub(r" *\(.+\)", "", item[0])
-                vtype = re.findall(r" *\((`*[\a-zA-Z,\._]+`*)_*\)", item[0])
-                desc = re.sub(r"\n {2,}", " ", item[1].strip())
-                self.params[key] = {
-                    "type": vtype[0] if len(vtype) > 0 else "",
-                    "desc": desc,
-                }
+            for item in spds:
+                vtype = item.type_name
+                if vtype:
+                    vtype = re.sub(r"^:", "", vtype)
+                    vtype = re.sub(r"[`^~]", "", vtype)
+                    vtype = re.sub(r"[_$]", "", vtype)
+                else:
+                    vtype = ""
+                self.params[item.arg_name] = {"type": vtype, "desc": item.description}
+
+            # for item in spdd:
+            #     key = re.sub(r" *\(.+\)", "", item[0])
+            #     vtype = re.findall(r" *\((`*[\a-zA-Z,\._]+`*)_*\)", item[0])
+            #     desc = re.sub(r"\n {2,}", " ", item[1].strip())
+            #     self.params[key] = {
+            #         "type": vtype[0] if len(vtype) > 0 else "",
+            #         "desc": desc,
+            #     }
 
         except IndexError:
-            logger.debug(">>> spds matching failed %s %s:", pds, spds)
+            logger.debug(">>> spds matching failed %s:", spds)
             raise
-        rest = pds[1] if len(pds) > 1 else ""
-        self.returns = ""  # placeholder
+        # rest = pds[1] if len(pds) > 1 else ""
+        # self.returns = ""  # placeholder
         return self.description, self.params, self.returns
 
     def _process_casa(self, dd: str):
@@ -340,10 +352,10 @@ class DetailedDescription:
             pd = func(self.description)
             self.description = pd[0]
             self._gen_code_block()
-            return self.description, pd[1]
+            return pd[0], pd[1], pd[2]
         logger.debug("Format not recognized or can't execute %s", do)
         logger.debug("Returning description unparsed!")
-        return (self._gen_code_block(), {})
+        return (self._gen_code_block(), {}, {})
 
 
 class GreatGrandChild:
