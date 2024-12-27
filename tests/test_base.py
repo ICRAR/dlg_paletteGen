@@ -692,7 +692,7 @@ def test_direct_module():
     for members in modules.values():
         for node in members.values():
             nodes.append(node)
-    assert len(nodes) in [1, 2, 3, 4, 6]
+    assert len(nodes) in [6, 7]
     prepare_and_write_palette(nodes, "test.palette", module_doc=module_doc)
 
 
