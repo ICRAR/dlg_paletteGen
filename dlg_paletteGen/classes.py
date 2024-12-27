@@ -1,3 +1,4 @@
+# pylint: disable=too-few-public-methods
 """The main classes used by this module."""
 
 from __future__ import annotations
@@ -124,7 +125,9 @@ class DetailedDescription:
         self.format = ""
         self._identify_format()
         self.main_descr, self.params = self.process_descr()
-        self.brief_descr = self.main_descr.split(".")[0] + "." if self.main_descr else ""
+        self.brief_descr = (
+            self.main_descr.split(".")[0] + "." if self.main_descr else ""
+        )
         self.returns = ""
 
     def _process_rEST(self, dd="") -> Union[tuple | None]:
@@ -161,106 +164,6 @@ class DetailedDescription:
         logger.debug("rEST_style param dict %r", self.params)
         # extract return documentation
         return self.description, self.params, self.returns
-
-    def _process_rEST_old(self, dd="") -> tuple:
-        """
-        Parse parameter descirptions found in a detailed_description tag.
-
-        This assumes rEST style documentation.
-
-        :param dd: str, detailed description; the content of the description
-                   node
-
-        :returns: tuple, description and parameter dictionary
-        """
-        logger.debug("Processing rEST style doc_strings")
-        if not dd:
-            dd = self.description
-        result = {}
-
-        indent = re.findall(r"(\n *):param", dd)
-        if indent:
-            ds = re.sub(
-                re.findall(r"(\n *):param", dd)[0],
-                "\n",
-                dd,
-            )
-        else:
-            ds = dd
-        ds = ds.lstrip()
-
-        if ds.find("Returns:") >= 0:
-            split_str = "Returns:"
-        elif ds.find(":returns:") >= 0:
-            split_str = ":returns:"
-        elif ds.find(":return:") >= 0:  # take care of mis-spelling
-            split_str = ":return:"
-        else:
-            split_str = ""
-        ds = ds.split(split_str)[0] if split_str else ds
-        param_lines = [p.replace("\n", "").strip() for p in ds.split(":param")[1:]]
-        type_lines = [p.replace("\n", "").strip() for p in ds.split(":type")[1:]]
-        # param_lines = [line.strip() for line in ds]
-
-        for p_line in param_lines:
-            # logger.debug("p_line: %s", p_line)
-
-            try:
-                index_of_second_colon = p_line.index(":", 0)
-            except ValueError:
-                # didnt find second colon, skip
-                # logger.debug("Skipping this one: %s", p_line)
-                continue
-
-            param_name = p_line[:index_of_second_colon].strip()
-            param_description = p_line[
-                index_of_second_colon + 2 :  # noqa: E203
-            ].strip()  # noqa: E203
-            t_ind = param_description.find(":type")
-            t_ind = t_ind if t_ind > -1 else None  # type: ignore
-            param_description = param_description[:t_ind]
-            # logger.debug("%s description: %s", param_name,
-            # param_description)
-
-            if len(type_lines) != 0:
-                result.update({param_name: {"desc": param_description, "type": None}})
-            else:
-                result.update(
-                    {
-                        param_name: {
-                            "desc": param_description,
-                            "type": typeFix(
-                                re.split(r"[,\s\n]", param_description.strip())[0]
-                            ),
-                        }
-                    }
-                )
-
-        for t_line in type_lines:
-            # logger.debug("t_line: %s", t_line)
-
-            try:
-                index_of_second_colon = t_line.index(":", 0)
-            except ValueError:
-                # didnt find second colon, skip
-                # logger.debug("Skipping this one: %s", t_line)
-                continue
-
-            param_name = t_line[:index_of_second_colon].strip()
-            param_type = t_line[index_of_second_colon + 2 :].strip()  # noqa: E203
-            p_ind = param_type.find(":param")
-            p_ind = p_ind if p_ind > -1 else None  # type: ignore
-            param_type = param_type[:p_ind]
-            param_type = typeFix(param_type)
-
-            # if param exists, update type
-            if param_name in result:
-                result[param_name]["type"] = param_type
-            else:
-                logger.warning("Type spec without matching description %s", param_name)
-
-            self.returns = ""  # placeholder
-        return ds.split(":param")[0].strip(), result, self.returns
 
     def _process_Numpy(self, dd: str) -> tuple:
         """
@@ -366,7 +269,9 @@ class DetailedDescription:
         dList = dStr.split("\n")
         try:
             start_ind = [
-                idx for idx, s in enumerate(dList) if re.findall(r"-{1,20} parameter", s)
+                idx
+                for idx, s in enumerate(dList)
+                if re.findall(r"-{1,20} parameter", s)
             ][0] + 1
         except IndexError:
             start_ind = 0
