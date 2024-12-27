@@ -102,7 +102,9 @@ def get_args(args=None):
     )
     if not args:
         if len(sys.argv) == 1:
-            print("\x1b[31;20mInsufficient number of " + "arguments provided!!!\n\x1b[0m")
+            print(
+                "\x1b[31;20mInsufficient number of " + "arguments provided!!!\n\x1b[0m"
+            )
             parser.print_help(sys.stderr)
             sys.exit(1)
         args = parser.parse_args()
@@ -223,14 +225,11 @@ def palettes_from_module(
             module_path,
             sub_modules,
         )
-        top_recursive = recursive
-    else:
-        sub_modules = [module_path]
-        top_recursive = False
     for i, m in enumerate(sub_modules):
         logger.debug("Extracting nodes from module: %s", m)
-        top_recursive = False if i == 0 else True
-        nodes, module_doc = nodes_from_module(m, recursive=top_recursive)
+        if split:
+            recursive = False if i == 0 else True
+        nodes, module_doc = nodes_from_module(m, recursive=recursive)
         if len(nodes) == 0:
             continue
         filename = outfile if not split else f"{outfile}{m.replace('.','_')}.palette"
