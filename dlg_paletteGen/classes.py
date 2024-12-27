@@ -216,20 +216,6 @@ class DetailedDescription:
         dp = parse(dd)
         self.returns = dp.returns
         spds = dp.params
-        # rest = ""
-        # sdd = re.split("\n *Args: *\n", self.description)
-        # if len(sdd) == 2:
-        #     (self.main_descr, rest) = sdd
-        # elif len(sdd) == 1:
-        #     self.main_descr = sdd[0]
-
-        # # extract parameter documentation (up to Returns line)
-        # pds = re.split(r"\n *Returns:* *\n", rest)[0]
-        # indent = len(re.findall(r"^ *", pds)[0])
-        # pds = re.sub(r"\n" + r" " * indent, "\n", "\n" + pds)  # remove indentation
-        # # split param lines
-        # spds = re.split(r"\n(.+):\n", pds)[1:]
-        spdd = zip(spds[::2], spds[1::2])
         try:
             self.params = {}
             for item in spds:
@@ -242,20 +228,9 @@ class DetailedDescription:
                     vtype = ""
                 self.params[item.arg_name] = {"type": vtype, "desc": item.description}
 
-            # for item in spdd:
-            #     key = re.sub(r" *\(.+\)", "", item[0])
-            #     vtype = re.findall(r" *\((`*[\a-zA-Z,\._]+`*)_*\)", item[0])
-            #     desc = re.sub(r"\n {2,}", " ", item[1].strip())
-            #     self.params[key] = {
-            #         "type": vtype[0] if len(vtype) > 0 else "",
-            #         "desc": desc,
-            #     }
-
         except IndexError:
             logger.debug(">>> spds matching failed %s:", spds)
             raise
-        # rest = pds[1] if len(pds) > 1 else ""
-        # self.returns = ""  # placeholder
         return self.description, self.params, self.returns
 
     def _process_casa(self, dd: str):
