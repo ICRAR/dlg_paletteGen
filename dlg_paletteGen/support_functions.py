@@ -62,8 +62,6 @@ def read(*paths, **kwargs):
 def this_module() -> str:
     """Inspect this module and return the name."""
     stack = inspect.stack()
-    print(stack[0])
-    print(stack[1])
     module = inspect.getmodule(stack[1][0])
     if module is None:
         raise ValueError("module not found")
