@@ -4,9 +4,7 @@
 # pylint: disable=too-many-branches
 # pylint: disable=too-many-nested-blocks
 # pylint: disable=eval-used
-"""
-dlg_paletteGen base functionality for the treatment of installed modules.
-"""
+"""Provide base functionality for the treatment of installed modules."""
 
 import functools
 import inspect
@@ -28,9 +26,7 @@ from .support_functions import (
 
 
 def get_class_members(cls, parent=None):
-    """
-    Inspect members of a class
-    """
+    """Inspect members of a class."""
     try:
         content = inspect.getmembers(
             cls,
@@ -106,9 +102,7 @@ def get_class_members(cls, parent=None):
 
 
 def _get_name(name: str, member, module=None, parent=None) -> str:
-    """
-    Get a name and a qualified name for various cases.
-    """
+    """Get a name and a qualified name for various cases."""
     member_name = get_mod_name(member)
     module_name = get_mod_name(module)
     if inspect.isclass(module):
@@ -129,10 +123,7 @@ def _get_name(name: str, member, module=None, parent=None) -> str:
 
 
 def _get_docs(member, module, node) -> tuple:
-    """
-    Helper function to extract the main documentation and the parameter docs if available.
-    """
-
+    """Extract the main documentation and the parameter docs if available."""
     dd = None
     doc = inspect.getdoc(member)
     if (
@@ -220,9 +211,7 @@ def construct_func_name(member_name: str, module_name: str) -> str:
 
 
 def construct_member_node(member, module=None, parent=None, name=None) -> dict:
-    """
-    Inspect a member function or method and construct a node for the palette.
-    """
+    """Inspect a member function or method and construct a node for the palette."""
     node = constructNode()
     node["name"] = _get_name(name, member, module, parent)
     logger.debug(
@@ -237,6 +226,14 @@ def construct_member_node(member, module=None, parent=None, name=None) -> dict:
     sig, dd = _get_docs(member, module, node)
     # fill custom ApplicationArguments first
     fields = populateFields(sig.parameters, dd)
+    # if dd and dd.returns and dd.returns.type_name:
+    if dd and dd.returns:
+        logger.info(
+            ">>>>> %s returns: %s of type %s",
+            node["name"],
+            dd.returns.return_name,
+            dd.returns.type_name,
+        )
     ind = -1
     load_name = node["name"]
     if hasattr(member, "__module__") and member.__module__:
@@ -282,7 +279,7 @@ def construct_member_node(member, module=None, parent=None, name=None) -> dict:
 
 def get_members(mod: types.ModuleType, module_members=[], parent=None):
     """
-    Get members of a module
+    Get members of a module.
 
     :param mod: the imported module
     :param parent: the parent module
@@ -293,10 +290,13 @@ def get_members(mod: types.ModuleType, module_members=[], parent=None):
     module_name = parent if parent else get_mod_name(mod)
     module_name = str(module_name)
     logger.debug(">>>>>>>>> Analysing members for module: %s", module_name)
-    try:
-        content = inspect.getmembers(mod)
-    except:  # noqa: E722
-        content = []
+    if inspect.isfunction(mod):
+        content = [[module_name, mod]]
+    else:
+        try:
+            content = inspect.getmembers(mod)
+        except:  # noqa: E722
+            content = []
     logger.debug("Found %d members in %s", len(content), mod)
     members = {}
     i = 0
@@ -309,7 +309,10 @@ def get_members(mod: types.ModuleType, module_members=[], parent=None):
         if name[0] == "_" and name not in ["__init__", "__call__"]:
             # NOTE: PyBind11 classes can have multiple constructors
             continue
-        m = getattr(mod, name)
+        if not inspect.isfunction(mod):
+            m = getattr(mod, name)
+        else:
+            m = mod
         if not callable(m) or isinstance(m, _SpecialForm):
             # logger.warning("Member %s is not callable", m)
             # not sure what to do with these. Usually they
@@ -348,7 +351,7 @@ def get_members(mod: types.ModuleType, module_members=[], parent=None):
 
 def module_hook(mod_name: str, modules: dict = {}, recursive: bool = True) -> tuple:
     """
-    Function dissecting an imported module.
+    Dissect an imported module.
 
     :param mod_name: str, the name of the module to be treated
     :param modules: dictionary of modules
@@ -386,11 +389,11 @@ def module_hook(mod_name: str, modules: dict = {}, recursive: bool = True) -> tu
             sub_modules = []
             if not member and recursive and mod and mod not in sub_modules:
                 sub_modules, _ = get_submodules(mod)
-                logger.debug("Iterating over sub_modules of %s", mod_name)
+                logger.info("Iterating over sub_modules of %s", mod_name)
                 for sub_mod in sub_modules:
                     logger.debug("Treating sub-module: %s of %s", sub_mod, mod_name)
                     modules, _ = module_hook(sub_mod, modules=modules)
-        except ImportError:
+        except (ImportError, NameError):
             logger.error("Module %s can't be loaded!", mod_name)
             return ({}, None)
     return modules, mod.__doc__

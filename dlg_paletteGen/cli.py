@@ -14,14 +14,14 @@ import logging
 import os
 import sys
 import tempfile
-from typing import Any
-
-import pkg_resources
+from typing import Any, Tuple
 
 from .module_base import module_hook
 from .settings import DOXYGEN_SETTINGS, Language, logger
 from .source_base import process_compounddefs
 from .support_functions import (
+    NAME,
+    VERSION,
     get_submodules,
     import_using_name,
     prepare_and_write_palette,
@@ -29,14 +29,11 @@ from .support_functions import (
     process_xml,
 )
 
-NAME = "dlg_paletteGen"
-VERSION = pkg_resources.require(NAME)[0].version
-
 
 def get_args(args=None):
     # def get_args():
     """
-    Deal with the command line arguments
+    Deal with the command line arguments.
 
     :returns: (
                 args.idir:str,
@@ -168,7 +165,7 @@ def check_environment_variables() -> bool:
     return True
 
 
-def nodes_from_module(module_path, recursive=True) -> tuple[list, Any]:
+def nodes_from_module(module_path, recursive=True) -> Tuple[list, Any]:
     """
     Extract nodes from specified module.
 
@@ -202,7 +199,7 @@ def palettes_from_module(
     recursive: bool = True,
 ) -> None:
     """
-    Generates one or more palette files from the module specified.
+    Generate one or more palette files from the module specified.
 
     :param module_path: dot delimited module path
     :param outfile: name of palette file, if left blank the module name will be
@@ -226,14 +223,11 @@ def palettes_from_module(
             module_path,
             sub_modules,
         )
-        top_recursive = recursive
-    else:
-        sub_modules = [module_path]
-        top_recursive = False
     for i, m in enumerate(sub_modules):
         logger.debug("Extracting nodes from module: %s", m)
-        top_recursive = False if i == 0 else True
-        nodes, module_doc = nodes_from_module(m, recursive=top_recursive)
+        if split:
+            recursive = False if i == 0 else True
+        nodes, module_doc = nodes_from_module(m, recursive=recursive)
         if len(nodes) == 0:
             continue
         filename = outfile if not split else f"{outfile}{m.replace('.','_')}.palette"
@@ -253,8 +247,9 @@ def palettes_from_module(
 
 def main():  # pragma: no cover
     """
-    The main function executes on commands:
-    `python -m dlg_paletteGen` and `$ dlg_paletteGen `.
+    Execute the commands.
+
+    `python -m dlg_paletteGen` and `$ dlg_paletteGen`.
     """
     # read environment variables
     if not check_environment_variables():

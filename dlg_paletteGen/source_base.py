@@ -1,7 +1,4 @@
-"""
-dlg_paletteGen base functionality for the treatment of source directories.
-
-"""
+"""dlg_paletteGen base functionality for the treatment of source directories."""
 
 import csv
 import os
@@ -42,12 +39,17 @@ KNOWN_DATA_CATEGORIES = [
 
 
 class PGenEnum(str, Enum):
+    """Set the enum."""
+
     @classmethod
     def has_key(cls, key):
+        """Return key."""
         return key in cls._member_names_
 
 
 class FieldType(PGenEnum):
+    """Set the FieldType."""
+
     ComponentParameter = "ComponentParameter"
     ConstructParameter = "ConstructParameter"
     ConstraintParameter = "ConstraintParameter"
@@ -55,6 +57,8 @@ class FieldType(PGenEnum):
 
 
 class FieldUsage(PGenEnum):
+    """Set the FieldUsage."""
+
     NoPort = "NoPort"
     InputPort = "InputPort"
     OutputPort = "OutputPort"
@@ -62,6 +66,8 @@ class FieldUsage(PGenEnum):
 
 
 class FieldAccess(PGenEnum):
+    """Set the FieldAccess."""
+
     readonly = "readonly"
     readwrite = "readwrite"
 
@@ -165,8 +171,7 @@ def create_field(
     description: str,
 ):
     """
-    TODO: field should be a dataclass
-    For now just create a dict using the values provided
+    For now just create a dict using the values provided.
 
     :param internal_name: str, the internal name of the parameter
     :param value: str, the value of the parameter
@@ -200,8 +205,7 @@ def create_field(
 
 def alert_if_missing(message: str, fields: list, internal_name: str):
     """
-    Produce a warning message using `text` if a field with `internal_name`
-    does not exist.
+    Produce a warning message using `text` if a field with `internal_name` does not exist.
 
     :param message: str, message text to be used
     :param fields: list of dicts of field definitions
@@ -214,8 +218,9 @@ def alert_if_missing(message: str, fields: list, internal_name: str):
 
 def parse_value(component_name: str, field_name: str, value: str) -> tuple:
     """
-    Parse the value from the EAGLE compatible string. These are csv strings
-    delimited by '/'
+    Parse the value from the EAGLE compatible string.
+
+    These are csv strings delimited by '/'
     TODO: This parser should be pluggable
 
     :param message: str, message text to be used for messages.
@@ -334,7 +339,7 @@ def parse_value(component_name: str, field_name: str, value: str) -> tuple:
 # they will be set by the EAGLE importer
 def create_palette_node_from_params(params) -> tuple:
     """
-    Construct the palette node entry from the parameter structure
+    Construct the palette node entry from the parameter structure.
 
     TODO: Should split this up into individual parts
 
@@ -432,11 +437,7 @@ def create_palette_node_from_params(params) -> tuple:
             # check that type is a known value
             if not FieldType.has_key(field_type):
                 logger.warning(
-                    text
-                    + " '"
-                    + internal_name
-                    + "' field_type is Unknown: "
-                    + field_type
+                    text + " '" + internal_name + "' field_type is Unknown: " + field_type
                 )
 
             # check that usage is a known value
@@ -593,7 +594,7 @@ def process_compounddefs(
 
 def process_compounddef_default(compounddef: ET.Element, language: Language) -> list:
     """
-    Process a compound definition
+    Process a compound definition.
 
     :param compounddef: list of children of compounddef
     :param language: Language, can be [2] for Python, 1 for C or 0 for Unknown
@@ -982,7 +983,7 @@ def create_construct_node(node_type: str, node: dict) -> dict:
 
 def params_to_nodes(params: dict, tag: str) -> list:
     """
-    Generate a list of nodes from the params found
+    Generate a list of nodes from the params found.
 
     :param params: list, the parameters to be converted
 
@@ -1019,9 +1020,7 @@ def params_to_nodes(params: dict, tag: str) -> list:
 
             # if a construct is found, add to nodes
             if data["construct"] != "":
-                logger.info(
-                    "Adding component: " + data["construct"] + "/" + node["text"]
-                )
+                logger.info("Adding component: " + data["construct"] + "/" + node["text"])
                 construct_node = create_construct_node(data["construct"], node)
                 construct_node["repositoryUrl"] = git_repo
                 construct_node["commitHash"] = version

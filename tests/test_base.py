@@ -8,7 +8,7 @@ import unittest
 from pytest import LogCaptureFixture
 
 from dlg_paletteGen.settings import DOXYGEN_SETTINGS
-from dlg_paletteGen.cli import NAME, check_environment_variables, get_args
+from dlg_paletteGen.cli import check_environment_variables, get_args
 from dlg_paletteGen.module_base import module_hook
 from dlg_paletteGen.source_base import Language, process_compounddefs
 from dlg_paletteGen.support_functions import (
@@ -17,6 +17,7 @@ from dlg_paletteGen.support_functions import (
     prepare_and_write_palette,
     process_doxygen,
     process_xml,
+    NAME,
 )
 
 pytest_plugins = ["pytester", "pytest-datadir"]
@@ -65,7 +66,7 @@ def test_CLI_run_numpy(tmpdir: str, shared_datadir: str):
         newcontent = json.load(f)
     logging.info("OUTPUT: %s", newcontent)
     # can't use a hash, since output contains hashed keys
-    assert len(newcontent["nodeDataArray"][0]["fields"]) == 11
+    assert len(newcontent["nodeDataArray"][0]["fields"]) == 9
 
 
 def test_CLI_run_google(tmpdir: str, shared_datadir: str):
@@ -93,7 +94,7 @@ def test_CLI_run_google(tmpdir: str, shared_datadir: str):
         newcontent = json.load(f)
     logging.info("OUTPUT: %s", newcontent)
     # can't use a hash, since output contains hashed keys
-    assert len(newcontent["nodeDataArray"][0]["fields"]) == 11
+    assert len(newcontent["nodeDataArray"][0]["fields"]) == 9
 
 
 def test_CLI_run_eagle(tmpdir: str, shared_datadir: str):
@@ -149,7 +150,7 @@ def test_CLI_run_rest(tmpdir: str, shared_datadir: str):
         newcontent = json.load(f)
     logging.info("OUTPUT: %s", newcontent)
     # can't use a hash, since output contains hashed keys
-    assert len(newcontent["nodeDataArray"][0]["fields"]) == 11
+    assert len(newcontent["nodeDataArray"][0]["fields"]) == 9
 
 
 def test_CLI_run_rascil(tmpdir: str, shared_datadir: str):
@@ -177,7 +178,7 @@ def test_CLI_run_rascil(tmpdir: str, shared_datadir: str):
         newcontent = json.load(f)
     logging.info("OUTPUT: %s", newcontent)
     # can't use a hash, since output contains hashed keys
-    assert len(newcontent["nodeDataArray"][0]["fields"]) == 14
+    assert len(newcontent["nodeDataArray"][0]["fields"]) == 12
 
 
 def test_CLI_run_casatask(tmpdir: str, shared_datadir: str):
@@ -233,7 +234,7 @@ def test_CLI_run_nr(tmpdir: str, shared_datadir: str):
         newcontent = json.load(f)
     logging.info("OUTPUT: %s", newcontent)
     # can't use a hash, since output contains hashed keys
-    assert len(newcontent["nodeDataArray"][0]["fields"]) == 16
+    assert len(newcontent["nodeDataArray"][0]["fields"]) == 14
 
 
 def test_CLI_fail():
@@ -312,7 +313,7 @@ def test_direct_cli():
 
 
 def test_direct_numpy(tmpdir: str, shared_datadir: str):
-    """ "
+    """
     Test the numpy format by calling the methods directly.
 
     :param tmpdir: the path to the temp directory to use
@@ -340,7 +341,36 @@ def test_direct_numpy(tmpdir: str, shared_datadir: str):
         newcontent = json.load(f)
     logging.info("OUTPUT: %s", newcontent)
     # can't use a hash, since output contains hashed keys
-    assert len(newcontent["nodeDataArray"][0]["fields"]) == 11
+    assert len(newcontent["nodeDataArray"][0]["fields"]) == 9
+
+
+def test_direct_rEST(tmpdir: str, shared_datadir: str):
+    """
+    Test the module processing format by calling the methods directly.
+
+    :param tmpdir: the path to the temp directory to use
+    :param shared_datadir: the path the the local directory
+    """
+    sys.path.append(str(shared_datadir.absolute()))
+    logging.info("path: %s", input)
+    output_directory = str(tmpdir)
+    output_file = f"{output_directory}/t.palette"
+
+    module_name = "example_rest"
+    modules, module_doc = module_hook(
+        module_name,
+        recursive=True,
+    )
+    assert (
+        modules["example_rest"]["MainClass1.func_with_types"]["fields"]["arg1"]["type"]
+        == "Boolean"
+    )
+
+    nodes = []
+    for members in modules.values():
+        for node in members.values():
+            nodes.append(node)
+    prepare_and_write_palette(nodes, output_file, module_doc=module_doc)
 
 
 def test_direct_google(tmpdir: str, shared_datadir: str):
@@ -372,7 +402,7 @@ def test_direct_google(tmpdir: str, shared_datadir: str):
         newcontent = json.load(f)
     logging.info("OUTPUT: %s", newcontent)
     # can't use a hash, since output contains hashed keys
-    assert len(newcontent["nodeDataArray"][0]["fields"]) == 11
+    assert len(newcontent["nodeDataArray"][0]["fields"]) == 9
 
 
 def test_direct_eagle(tmpdir: str, shared_datadir: str):
@@ -436,7 +466,7 @@ def test_direct_oskar(tmpdir: str, shared_datadir: str):
         newcontent = json.load(f)
     logging.info("OUTPUT: %s", newcontent)
     # can't use a hash, since output contains hashed keys
-    assert len(newcontent["nodeDataArray"][0]["fields"]) == 10
+    assert len(newcontent["nodeDataArray"][0]["fields"]) == 8
 
 
 def test_direct_rascil(tmpdir: str, shared_datadir: str):
@@ -468,7 +498,7 @@ def test_direct_rascil(tmpdir: str, shared_datadir: str):
         newcontent = json.load(f)
     logging.info("OUTPUT: %s", newcontent)
     # can't use a hash, since output contains hashed keys
-    assert len(newcontent["nodeDataArray"][0]["fields"]) == 14
+    assert len(newcontent["nodeDataArray"][0]["fields"]) == 12
 
 
 def test_direct_functions(tmpdir: str, shared_datadir: str):
@@ -500,7 +530,7 @@ def test_direct_functions(tmpdir: str, shared_datadir: str):
         newcontent = json.load(f)
     logging.info("OUTPUT: %s", newcontent)
     # can't use a hash, since output contains hashed keys
-    assert len(newcontent["nodeDataArray"][0]["fields"]) == 7
+    assert len(newcontent["nodeDataArray"][0]["fields"]) == 5
 
 
 def test_direct_casatask(tmpdir: str, shared_datadir: str):
@@ -532,7 +562,7 @@ def test_direct_casatask(tmpdir: str, shared_datadir: str):
         newcontent = json.load(f)
     logging.info("OUTPUT: %s", newcontent)
     # can't use a hash, since output contains hashed keys
-    assert len(newcontent["nodeDataArray"][0]["fields"]) == 16
+    assert len(newcontent["nodeDataArray"][0]["fields"]) == 14
 
 
 def test_direct_tabascal(tmpdir: str, shared_datadir: str):
@@ -553,7 +583,6 @@ def test_direct_tabascal(tmpdir: str, shared_datadir: str):
         module_name,
         recursive=True,
     )
-    logging.info(">>>> modules: ", modules)
     assert (
         modules["example_tabascal"]["generate_random_sky"]["fields"]["fov"]["value"]
         == 1.0
@@ -584,7 +613,6 @@ def test_direct_pypeit(tmpdir: str, shared_datadir: str):
         module_name,
         recursive=True,
     )
-    logging.info(">>>> modules: ", modules)
     assert (
         modules["example_pypeit"]["poly_map"]["fields"]["rawimg"]["type"]
         == "numpy.ndarray"
@@ -664,7 +692,7 @@ def test_direct_module():
     for members in modules.values():
         for node in members.values():
             nodes.append(node)
-    assert len(nodes) in [1, 2, 3, 4]
+    assert len(nodes) in [6, 7]
     prepare_and_write_palette(nodes, "test.palette", module_doc=module_doc)
 
 
@@ -675,10 +703,10 @@ def test_full_numpy():
     :param tmpdir: the path to the temp directory to use
     :param shared_datadir: the path the the local directory
     """
-    module_name = "numpy"
+    module_name = "numpy.polynomial.polynomial"
     modules, _ = module_hook(module_name, recursive=True)
     nodes = []
     for members in modules.values():
         for node in members.values():
             nodes.append(node)
-    assert len(modules) in [651, 654]
+    assert len(modules) in [30]

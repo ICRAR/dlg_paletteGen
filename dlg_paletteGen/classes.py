@@ -1,22 +1,24 @@
-"""
-The main classes used by this module.
-"""
+# pylint: disable=too-few-public-methods
+"""The main classes used by this module."""
+
+from __future__ import annotations
 
 import inspect
 import re
 import xml.etree.ElementTree as ET
 from typing import Union
 
+from docstring_parser import parse
+
 from .settings import VALUE_TYPES, Language, logger
 from .support_functions import cleanString, guess_type_from_default, typeFix
 
 
 class DummySig:
-    """
-    Dummy signature class for PyBind11 functions
-    """
+    """Dummy signature class for PyBind11 functions."""
 
     def __init__(self, module):
+        """Initialize DummySig."""
         self.module = module
         self.name = module.__name__ if inspect.ismodule(module) else module
         self.__qualname__ = self.__name__ = self.name
@@ -24,9 +26,7 @@ class DummySig:
         self.parameters, self.ret = self.get_pb11_sig()
 
     def get_pb11_sig(self):
-        """
-        Process the docstring from the PyBind11 functions
-        """
+        """Process the docstring from the PyBind11 functions."""
         parameters = {}
         ret = None
         if self.docstring:
@@ -92,9 +92,7 @@ class DummySig:
 
 
 class DummyParam:  # no-eq: R0903
-    """
-    Dummy Parameter class
-    """
+    """Dummy Parameter class."""
 
     annotation = None
     kind = "POSITIONAL_OR_KEYWORD"
@@ -104,6 +102,7 @@ class DummyParam:  # no-eq: R0903
 class DetailedDescription:
     """
     Class performs parsing of detailed description elements.
+
     This class is used for both compound (e.g. class) level descriptions
     as well as function/method level.
     """
@@ -117,119 +116,55 @@ class DetailedDescription:
 
     def __init__(self, descr: Union[str | None], name=None):
         """
+        Initialize description object using a string.
+
         :param descr: Text of the detaileddescription node
         """
         self.name = name
         self.description = descr if descr else ""
         self.format = ""
         self._identify_format()
-        self.main_descr, self.params = self.process_descr()
-        self.brief_descr = (
-            self.main_descr.split(".")[0] + "." if self.main_descr else ""
-        )
-        self.returns = None
+        self.main_descr, self.params, self.returns = self.process_descr()
+        self.brief_descr = self.main_descr.split(".")[0] + "." if self.main_descr else ""
 
-    def _process_rEST(self, dd="") -> tuple:
+    def _process_rEST(self, dd="") -> Union[tuple | None]:
         """
-        Parse parameter descirptions found in a detailed_description tag. This
-        assumes rEST style documentation.
+        Process the rEST-style docstring.
 
-        :param dd: str, detailed description; the content of the description
-                   node
+        :param dd: str, the content of the detailed description tag
 
         :returns: tuple, description and parameter dictionary
         """
         logger.debug("Processing rEST style doc_strings")
         if not dd:
             dd = self.description
-        result = {}
+        dp = parse(dd)
+        self.returns = dp.returns
+        spds = dp.params
 
-        indent = re.findall(r"(\n *):param", dd)
-        if indent:
-            ds = re.sub(
-                re.findall(r"(\n *):param", dd)[0],
-                "\n",
-                dd,
-            )
-        else:
-            ds = dd
-        ds = ds.lstrip()
+        try:
+            self.params = {}
+            for item in spds:
+                vtype = item.type_name
+                if vtype:
+                    vtype = re.sub(r"^:", "", vtype)
+                    vtype = re.sub(r"[`^~]", "", vtype)
+                    vtype = re.sub(r"'", "", vtype)
+                    logger.debug(">>>> replaced: %s", vtype)
+                else:
+                    vtype = ""
+                self.params[item.arg_name] = {"type": vtype, "desc": item.description}
 
-        if ds.find("Returns:") >= 0:
-            split_str = "Returns:"
-        elif ds.find(":returns:") >= 0:
-            split_str = ":returns:"
-        elif ds.find(":return:") >= 0:  # take care of mis-spelling
-            split_str = ":return:"
-        else:
-            split_str = ""
-        ds = ds.split(split_str)[0] if split_str else ds
-        param_lines = [p.replace("\n", "").strip() for p in ds.split(":param")[1:]]
-        type_lines = [p.replace("\n", "").strip() for p in ds.split(":type")[1:]]
-        # param_lines = [line.strip() for line in ds]
-
-        for p_line in param_lines:
-            # logger.debug("p_line: %s", p_line)
-
-            try:
-                index_of_second_colon = p_line.index(":", 0)
-            except ValueError:
-                # didnt find second colon, skip
-                # logger.debug("Skipping this one: %s", p_line)
-                continue
-
-            param_name = p_line[:index_of_second_colon].strip()
-            param_description = p_line[
-                index_of_second_colon + 2 :  # noqa: E203
-            ].strip()  # noqa: E203
-            t_ind = param_description.find(":type")
-            t_ind = t_ind if t_ind > -1 else None  # type: ignore
-            param_description = param_description[:t_ind]
-            # logger.debug("%s description: %s", param_name,
-            # param_description)
-
-            if len(type_lines) != 0:
-                result.update({param_name: {"desc": param_description, "type": None}})
-            else:
-                result.update(
-                    {
-                        param_name: {
-                            "desc": param_description,
-                            "type": typeFix(
-                                re.split(r"[,\s\n]", param_description.strip())[0]
-                            ),
-                        }
-                    }
-                )
-
-        for t_line in type_lines:
-            # logger.debug("t_line: %s", t_line)
-
-            try:
-                index_of_second_colon = t_line.index(":", 0)
-            except ValueError:
-                # didnt find second colon, skip
-                # logger.debug("Skipping this one: %s", t_line)
-                continue
-
-            param_name = t_line[:index_of_second_colon].strip()
-            param_type = t_line[index_of_second_colon + 2 :].strip()  # noqa: E203
-            p_ind = param_type.find(":param")
-            p_ind = p_ind if p_ind > -1 else None  # type: ignore
-            param_type = param_type[:p_ind]
-            param_type = typeFix(param_type)
-
-            # if param exists, update type
-            if param_name in result:
-                result[param_name]["type"] = param_type
-            else:
-                logger.warning("Type spec without matching description %s", param_name)
-
-        return ds.split(":param")[0].strip(), result
+        except IndexError:
+            logger.debug(">>> spds matching failed %s:", spds)
+            raise
+        logger.debug("rEST_style param dict %r", self.params)
+        # extract return documentation
+        return self.description, self.params, self.returns
 
     def _process_Numpy(self, dd: str) -> tuple:
         """
-        Process the Numpy-style docstring
+        Process the Numpy-style docstring.
 
         :param dd: str, the content of the detailed description tag
 
@@ -238,28 +173,23 @@ class DetailedDescription:
         logger.debug("Processing Numpy style doc_strings")
         if not dd:
             dd = self.description
-        ds = dd.strip("\n")
-        split = re.split(r"\n([\w ]+):*\n---*\n", ds.lstrip())
-        split = ["Description"] + split
-        dsplit = dict(zip(split[::2], split[1::2]))
+            logger.debug("Replacing Returns:!")
+            dd = re.sub(r"Returns:", "Returns", dd)
+        dp = parse(dd)
+        self.returns = dp.returns
+        spds = dp.params
 
-        self.main_descr = dsplit["Description"]
-        parameters = dsplit["Parameters"] if "Parameters" in dsplit else ""
-        self.returns = dsplit["Returns"] if "Returns" in dsplit else None
-
-        # split param lines
-        spds = re.split(r"([\w_]+) *: ", parameters)[1:]
-        spdd = dict(zip(spds[::2], spds[1::2]))
         try:
             self.params = {}
-            for item in spdd.items():
-                key = item[0]
-                vtype = re.findall(r" *`*([\a-zA-Z,\._]+)`+_*[\n,]", item[1])
-                desc = re.sub(r" *`*[\a-zA-Z,\._]+`+_*[\n,]", "", item[1].strip())
-                self.params[key] = {
-                    "type": vtype[0] if len(vtype) > 0 else "",
-                    "desc": desc,
-                }
+            for item in spds:
+                vtype = item.type_name
+                if vtype:
+                    vtype = re.sub(r"^:", "", vtype)
+                    vtype = re.sub(r"[`^~]", "", vtype)
+                    vtype = re.sub(r"[_$]", "", vtype)
+                else:
+                    vtype = ""
+                self.params[item.arg_name] = {"type": vtype, "desc": item.description}
 
         except IndexError:
             logger.debug(">>> spds matching failed %s:", spds)
@@ -270,7 +200,8 @@ class DetailedDescription:
 
     def _process_Google(self, dd: str):
         """
-        Process the Google-style docstring
+        Process the Google-style docstring.
+
         TODO: still some corner cases of OSKAR to be fixed:
         oskar.Telescope.set_noise_freq
 
@@ -282,40 +213,41 @@ class DetailedDescription:
         logger.debug("Processing Google style doc_strings")
         if dd:
             self.description = dd
-        rest = ""
-        sdd = re.split("\n *Args: *\n", self.description)
-        if len(sdd) == 2:
-            (self.main_descr, rest) = sdd
-        elif len(sdd) == 1:
-            self.main_descr = sdd[0]
-
-        # extract parameter documentation (up to Returns line)
-        pds = re.split(r"\n *Returns:* *\n", rest)[0]
-        indent = len(re.findall(r"^ *", pds)[0])
-        pds = re.sub(r"\n" + r" " * indent, "\n", "\n" + pds)  # remove indentation
-        # split param lines
-        spds = re.split(r"\n(.+):\n", pds)[1:]
-        spdd = zip(spds[::2], spds[1::2])
+        dp = parse(dd)
+        self.returns = dp.returns
+        spds = dp.params
         try:
             self.params = {}
-            for item in spdd:
-                key = re.sub(r" *\(.+\)", "", item[0])
-                vtype = re.findall(r" *\((`*[\a-zA-Z,\._]+`*)_*\)", item[0])
-                desc = re.sub(r"\n {2,}", " ", item[1].strip())
-                self.params[key] = {
-                    "type": vtype[0] if len(vtype) > 0 else "",
-                    "desc": desc,
-                }
+            for item in spds:
+                vtype = item.type_name
+                if vtype:
+                    vtype = re.sub(r"^:", "", vtype)
+                    vtype = re.sub(r"[`^~]", "", vtype)
+                    vtype = re.sub(r"[_$]", "", vtype)
+                else:
+                    vtype = ""
+                self.params[item.arg_name] = {"type": vtype, "desc": item.description}
 
         except IndexError:
-            logger.debug(">>> spds matching failed %s %s:", pds, spds)
+            logger.debug(">>> spds matching failed %s:", spds)
             raise
-        rest = pds[1] if len(pds) > 1 else ""
-        return self.description, self.params
+        if self.returns and self.returns.description and not self.returns.type_name:
+            try:
+                (
+                    _,
+                    self.returns.return_name,
+                    self.returns.type_name,
+                    self.returns.description,
+                ) = re.split(r"([\w_]+) +\((\w+)\): ", self.returns.description)
+            except ValueError:
+                # if we can't get anything out of the description we just ignore that
+                pass
+        return self.description, self.params, self.returns
 
     def _process_casa(self, dd: str):
         """
-        Parse the special docstring for casatasks
+        Parse the special docstring for casatasks.
+
         Extract the parameters from the casatask doc string.
 
         :param task: The casatask to derive the parameters from.
@@ -335,9 +267,7 @@ class DetailedDescription:
         dList = dStr.split("\n")
         try:
             start_ind = [
-                idx
-                for idx, s in enumerate(dList)
-                if re.findall(r"-{1,20} parameter", s)
+                idx for idx, s in enumerate(dList) if re.findall(r"-{1,20} parameter", s)
             ][0] + 1
         except IndexError:
             start_ind = 0
@@ -372,12 +302,14 @@ class DetailedDescription:
             dList[: start_ind - 1]
         )  # return main description as well
         logger.debug(">>> CASA: finished processing of descr: %s", self.params)
-        return (self.description, self.params)
+        self.returns = ""  # placeholder
+        return (self.description, self.params, self.returns)
 
     def _identify_format(self):
         """
-        Identifying docstring format using the format templates
-        defined in KNOWN_FORMATS.
+        Identify docstring format.
+
+        Using the format templates defined in KNOWN_FORMATS.
         """
         logger.debug("Identifying doc_string style format")
         ds = self.description if self.description else ""
@@ -392,34 +324,26 @@ class DetailedDescription:
             logger.debug("Unknown param desc format!")
 
     def _gen_code_block(self):
-        """
-        Update indenation for pre-formatting the description
-        """
+        """Update indentation for pre-formatting the description."""
         if self.description:
             self.description = self.description.replace("\n", "\n    ")
 
     def process_descr(self):
-        """
-        Helper function to provide plugin style parsers for various
-        formats.
-        """
+        """Provide plugin style parsers for various formats."""
         do = f"_process_{self.format}"
         if hasattr(self, do) and callable(func := getattr(self, do)):
             logger.debug("Calling %s parser function", do)
             pd = func(self.description)
             self.description = pd[0]
             self._gen_code_block()
-            return self.description, pd[1]
+            return pd[0], pd[1], pd[2]
         logger.debug("Format not recognized or can't execute %s", do)
         logger.debug("Returning description unparsed!")
-        return (self._gen_code_block(), {})
+        return (self._gen_code_block(), {}, {})
 
 
 class GreatGrandChild:
-    """
-    The great-grandchild class performs most of the parsing to construct the
-    palette nodes from the doxygen XML.
-    """
+    """Perform parsing to construct the palette nodes from the doxygen XML."""
 
     def __init__(
         self,
@@ -429,14 +353,13 @@ class GreatGrandChild:
         parent_member: Union["Child", None] = None,
     ):
         """
-        Constructor of great-grandchild object.
+        Construct great-grandchild object.
 
         :param ggchild: dict, if existing great-grandchild
         :param func_name: str, the function name
         :param return_type: str, the return type of the component
         :param parent_member: dict, contains the descriptions found in parent
         """
-
         self.func_path = ""
         self.func_name = func_name
         self.func_title = func_name
@@ -456,12 +379,11 @@ class GreatGrandChild:
         self, ggchild: ET.Element, parent_member: Union["Child", None] = None
     ):
         """
-        Process GreatGrandChild
+        Process GreatGrandChild.
 
         :param ggchild: dict, the great grandchild element
         :param parent_member: dict, member dict from parent class
         """
-
         # logger.debug("Initialized ggchild member: %s", self.member)
         logger.debug("New GreatGrandChild element: %s", ggchild.tag)  # type: ignore
         if ggchild.tag == "name":  # type: ignore
@@ -510,10 +432,7 @@ class GreatGrandChild:
                     desc = f"_@classmethod_: {desc}"
                 elif self.is_member:
                     desc = f"_::memberfunction_: {desc}"
-                logger.debug(
-                    "adding description param: %s",
-                    desc,
-                )
+                logger.debug("adding description param")
                 self.member["params"]["description"] = desc
 
         elif ggchild.tag == "param":  # type: ignore
@@ -551,10 +470,11 @@ class GreatGrandChild:
                 if default_value.find("/") >= 0:
                     default_value = f'"{default_value}"'
             # attach description from parent, if available
-            if parent_member and name in parent_member.member["params"]:
-                member_desc = parent_member.member["params"][name]
-            else:
-                member_desc = ""
+            member_desc = ""
+            # if parent_member and name in parent_member.member["params"]:
+            #     member_desc = parent_member.member["params"][name]
+            # else:
+            #     member_desc = ""
             if name in ["self", "cls"]:
                 port = (
                     "InputPort"
@@ -632,7 +552,8 @@ class GreatGrandChild:
     ):
         """
         Set the description field of a of parameter <name> from parameters.
-        TODO: This should really be part of a class
+
+        TODO: This should really be part of a class.
 
         :param name: str, the parameter to set the description
         :param descrition: str, the description to add to the existing string
@@ -640,34 +561,25 @@ class GreatGrandChild:
         :param params: dict, the set of parameters
         """
         p_type = "" if not p_type else p_type
-        if name in params:
+        if description and name in params and description != params[name]:
+            logger.debug("Adding description '%s' to '%s'", description, params[name])
             params[name] += description
-            # if p["key"] == name:
-            #     p["value"] = p["value"] + description
-            #     # insert the type
-            #     pp = p["value"].split("/", 2)
-            #     p["value"] = "/".join(pp[:1] + [p_type] + pp[2:])
-            #     p["type"] = p_type
-            #     break
 
 
 class Child:
-    """
-    Child class for hierarchy.
-    """
+    """Child class for hierarchy."""
 
     def __init__(
-        self,
-        child: ET.Element,
-        language: Language,
-        parent: Union["Child", None] = None,
+        self, child: ET.Element, language: Language, parent: Union["Child", None] = None
     ):
         """
-        Private function to process a child element.
+        Process a child element.
 
-        :param child: dict, the parsed child element from XML
-        :param language,
-        :param parent, Child, parent object or None
+        Parameters:
+        -----------
+        child: dict, the parsed child element from XML
+        language: Language, Python or C
+        parent: Child, parent object or None
         """
         members = []
         self.type = "generic"
@@ -733,7 +645,8 @@ class Child:
         parent: Union["Child", None] = None,
     ) -> Union[dict, None]:
         """
-        Private function to process a grandchild element
+        Process a grandchild element.
+
         Starts the construction of the member data structure
 
         :param gchild: dict, the parsed grandchild element from XML
@@ -750,31 +663,14 @@ class Child:
 
             member["params"].update(
                 {
-                    "input_parser": "pickle/Select/"
-                    + "ComponentParameter/NoPort/readwrite/pickle,eval,"
-                    + "npy,path,dataurl/False/False/Input port "
-                    + "parsing technique",
-                }
-            )
-            member["params"].update(
-                {
-                    "output_parser": "pickle/Select/"
-                    + "ComponentParameter/NoPort/readwrite/pickle,eval,"
-                    + "npy,path,dataurl/False/False/Output port parsing "
-                    + "technique",
-                }
-            )
-
-            member["params"].update(
-                {
-                    "execution_time": "5/Integer/ComponentParameter/NoPort/"
+                    "execution_time": "5/Integer/ConstraintParameter/NoPort/"
                     + "readwrite//False/False/Estimate of execution time "
                     + "(in seconds) for this application."
                 }
             )
             member["params"].update(
                 {
-                    "num_cpus": "1/Integer/ComponentParameter/NoPort/"
+                    "num_cpus": "1/Integer/ConstraintParameter/NoPort/"
                     + "readwrite//False/False/Number of cores used."
                 }
             )
