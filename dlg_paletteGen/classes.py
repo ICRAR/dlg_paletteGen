@@ -503,14 +503,6 @@ class GreatGrandChild:
                     f"{default_value}/{value_type}/ApplicationArgument/{port}/"
                     + f"{access}//False/False/{member_desc}"
                 )
-                logger.debug(
-                    ">>>> default_value: %s, value_type: %s, port: %s, access: %s, member_desc: %s",
-                    default_value,
-                    value_type,
-                    port,
-                    access,
-                    member_desc,
-                )
                 logger.debug("adding param: %s", {"key": str(name), "value": value})
                 self.member["params"].update({name: value})
 
