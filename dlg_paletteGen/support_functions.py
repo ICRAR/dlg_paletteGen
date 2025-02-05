@@ -12,6 +12,7 @@
 import ast
 import datetime
 import importlib
+import importlib.metadata
 import inspect
 import io
 import json
@@ -736,7 +737,9 @@ def populateFields(parameters: dict, dd) -> dict:
                 field[p]["type"] = typeFix(f"{v.annotation.__name__}")
             else:
                 field[p]["type"] = typeFix(
-                    v.annotation if isinstance(v.annotation, str) else repr(v.annotation)
+                    v.annotation
+                    if isinstance(v.annotation, str)
+                    else repr(v.annotation)
                 )
             logger.debug("Parameter type from annotation: %s", field[p]["type"])
         # else we use the type from default value
@@ -759,7 +762,8 @@ def populateFields(parameters: dict, dd) -> dict:
             # complex types can't be specified on a simple form field
             # thus we assume they are provided through a port.
             # Like this we can support any type.
-            field[p]["usage"] = "InputPort"
+            # maybe a bit confusing for users to do this...
+            # field[p]["usage"] = "InputPort"
             field[p]["value"] = None
         field[p]["description"] = param_desc["desc"]
         if p in ["self", "class"]:
@@ -771,7 +775,9 @@ def populateFields(parameters: dict, dd) -> dict:
         logger.debug("Final type of parameter %s: %s", p, field[p]["type"])
         if isinstance(field[p]["value"], numpy.ndarray):
             try:
-                field[p]["value"] = field[p]["defaultValue"] = field[p]["value"].tolist()
+                field[p]["value"] = field[p]["defaultValue"] = field[p][
+                    "value"
+                ].tolist()
             except NotImplementedError:
                 field[p]["value"] = []
         if repr(field[p]["value"]) == "nan" and numpy.isnan(field[p]["value"]):
@@ -839,7 +845,9 @@ def populateDefaultFields(Node):  # pylint: disable=invalid-name
     et[n]["value"] = 2
     et[n]["defaultValue"] = 2
     et[n]["type"] = "Integer"
-    et[n]["description"] = "Estimate of execution time (in seconds) for this application."
+    et[n][
+        "description"
+    ] = "Estimate of execution time (in seconds) for this application."
     et[n]["parameterType"] = "ConstraintParameter"
     Node["fields"].update(et)
 
