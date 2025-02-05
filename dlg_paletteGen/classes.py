@@ -125,9 +125,7 @@ class DetailedDescription:
         self.format = ""
         self._identify_format()
         self.main_descr, self.params, self.returns = self.process_descr()
-        self.brief_descr = (
-            self.main_descr.split(".")[0] + "." if self.main_descr else ""
-        )
+        self.brief_descr = self.main_descr.split(".")[0] + "." if self.main_descr else ""
 
     def _process_rEST(self, dd="") -> Union[tuple | None]:
         """
@@ -233,13 +231,17 @@ class DetailedDescription:
         except IndexError:
             logger.debug(">>> spds matching failed %s:", spds)
             raise
-        if self.returns.description and not self.returns.type_name:
-            (
-                _,
-                self.returns.return_name,
-                self.returns.type_name,
-                self.returns.description,
-            ) = re.split(r"([\w_]+) +\((\w+)\): ", self.returns.description)
+        if self.returns and self.returns.description and not self.returns.type_name:
+            try:
+                (
+                    _,
+                    self.returns.return_name,
+                    self.returns.type_name,
+                    self.returns.description,
+                ) = re.split(r"([\w_]+) +\((\w+)\): ", self.returns.description)
+            except ValueError:
+                # if we can't get anything out of the description we just ignore that
+                pass
         return self.description, self.params, self.returns
 
     def _process_casa(self, dd: str):
@@ -265,9 +267,7 @@ class DetailedDescription:
         dList = dStr.split("\n")
         try:
             start_ind = [
-                idx
-                for idx, s in enumerate(dList)
-                if re.findall(r"-{1,20} parameter", s)
+                idx for idx, s in enumerate(dList) if re.findall(r"-{1,20} parameter", s)
             ][0] + 1
         except IndexError:
             start_ind = 0
@@ -432,10 +432,7 @@ class GreatGrandChild:
                     desc = f"_@classmethod_: {desc}"
                 elif self.is_member:
                     desc = f"_::memberfunction_: {desc}"
-                logger.debug(
-                    "adding description param: %s",
-                    desc,
-                )
+                logger.debug("adding description param")
                 self.member["params"]["description"] = desc
 
         elif ggchild.tag == "param":  # type: ignore

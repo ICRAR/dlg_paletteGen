@@ -66,7 +66,7 @@ def test_CLI_run_numpy(tmpdir: str, shared_datadir: str):
         newcontent = json.load(f)
     logging.info("OUTPUT: %s", newcontent)
     # can't use a hash, since output contains hashed keys
-    assert len(newcontent["nodeDataArray"][0]["fields"]) == 11
+    assert len(newcontent["nodeDataArray"][0]["fields"]) == 9
 
 
 def test_CLI_run_google(tmpdir: str, shared_datadir: str):
@@ -94,7 +94,7 @@ def test_CLI_run_google(tmpdir: str, shared_datadir: str):
         newcontent = json.load(f)
     logging.info("OUTPUT: %s", newcontent)
     # can't use a hash, since output contains hashed keys
-    assert len(newcontent["nodeDataArray"][0]["fields"]) == 11
+    assert len(newcontent["nodeDataArray"][0]["fields"]) == 9
 
 
 def test_CLI_run_eagle(tmpdir: str, shared_datadir: str):
@@ -150,7 +150,7 @@ def test_CLI_run_rest(tmpdir: str, shared_datadir: str):
         newcontent = json.load(f)
     logging.info("OUTPUT: %s", newcontent)
     # can't use a hash, since output contains hashed keys
-    assert len(newcontent["nodeDataArray"][0]["fields"]) == 11
+    assert len(newcontent["nodeDataArray"][0]["fields"]) == 9
 
 
 def test_CLI_run_rascil(tmpdir: str, shared_datadir: str):
@@ -178,7 +178,7 @@ def test_CLI_run_rascil(tmpdir: str, shared_datadir: str):
         newcontent = json.load(f)
     logging.info("OUTPUT: %s", newcontent)
     # can't use a hash, since output contains hashed keys
-    assert len(newcontent["nodeDataArray"][0]["fields"]) == 14
+    assert len(newcontent["nodeDataArray"][0]["fields"]) == 12
 
 
 def test_CLI_run_casatask(tmpdir: str, shared_datadir: str):
@@ -234,7 +234,7 @@ def test_CLI_run_nr(tmpdir: str, shared_datadir: str):
         newcontent = json.load(f)
     logging.info("OUTPUT: %s", newcontent)
     # can't use a hash, since output contains hashed keys
-    assert len(newcontent["nodeDataArray"][0]["fields"]) == 16
+    assert len(newcontent["nodeDataArray"][0]["fields"]) == 14
 
 
 def test_CLI_fail():
@@ -341,7 +341,7 @@ def test_direct_numpy(tmpdir: str, shared_datadir: str):
         newcontent = json.load(f)
     logging.info("OUTPUT: %s", newcontent)
     # can't use a hash, since output contains hashed keys
-    assert len(newcontent["nodeDataArray"][0]["fields"]) == 11
+    assert len(newcontent["nodeDataArray"][0]["fields"]) == 9
 
 
 def test_direct_rEST(tmpdir: str, shared_datadir: str):
@@ -402,7 +402,7 @@ def test_direct_google(tmpdir: str, shared_datadir: str):
         newcontent = json.load(f)
     logging.info("OUTPUT: %s", newcontent)
     # can't use a hash, since output contains hashed keys
-    assert len(newcontent["nodeDataArray"][0]["fields"]) == 11
+    assert len(newcontent["nodeDataArray"][0]["fields"]) == 9
 
 
 def test_direct_eagle(tmpdir: str, shared_datadir: str):
@@ -466,7 +466,7 @@ def test_direct_oskar(tmpdir: str, shared_datadir: str):
         newcontent = json.load(f)
     logging.info("OUTPUT: %s", newcontent)
     # can't use a hash, since output contains hashed keys
-    assert len(newcontent["nodeDataArray"][0]["fields"]) == 10
+    assert len(newcontent["nodeDataArray"][0]["fields"]) == 8
 
 
 def test_direct_rascil(tmpdir: str, shared_datadir: str):
@@ -498,7 +498,7 @@ def test_direct_rascil(tmpdir: str, shared_datadir: str):
         newcontent = json.load(f)
     logging.info("OUTPUT: %s", newcontent)
     # can't use a hash, since output contains hashed keys
-    assert len(newcontent["nodeDataArray"][0]["fields"]) == 14
+    assert len(newcontent["nodeDataArray"][0]["fields"]) == 12
 
 
 def test_direct_functions(tmpdir: str, shared_datadir: str):
@@ -530,7 +530,7 @@ def test_direct_functions(tmpdir: str, shared_datadir: str):
         newcontent = json.load(f)
     logging.info("OUTPUT: %s", newcontent)
     # can't use a hash, since output contains hashed keys
-    assert len(newcontent["nodeDataArray"][0]["fields"]) == 7
+    assert len(newcontent["nodeDataArray"][0]["fields"]) == 5
 
 
 def test_direct_casatask(tmpdir: str, shared_datadir: str):
@@ -562,7 +562,7 @@ def test_direct_casatask(tmpdir: str, shared_datadir: str):
         newcontent = json.load(f)
     logging.info("OUTPUT: %s", newcontent)
     # can't use a hash, since output contains hashed keys
-    assert len(newcontent["nodeDataArray"][0]["fields"]) == 16
+    assert len(newcontent["nodeDataArray"][0]["fields"]) == 14
 
 
 def test_direct_tabascal(tmpdir: str, shared_datadir: str):
