@@ -4,6 +4,26 @@ Changelog
 
 (unreleased)
 ------------
+- Merge branch 'parser_update' [Andreas Wicenec]
+- Adjusting tests. [Andreas Wicenec]
+- Removed stray debug log. [Andreas Wicenec]
+- Fixed some detailed parser issues. [Andreas Wicenec]
+- Format and test fix. [Andreas Wicenec]
+- Removed commented code. [Andreas Wicenec]
+- Enabled support for direct function parsing. [Andreas Wicenec]
+- Old code removed. [Andreas Wicenec]
+- Fixed recursive behavior. [Andreas Wicenec]
+- Updates to improve parameter parsing. [Andreas Wicenec]
+- Parser updates to support additional packages. [Andreas Wicenec]
+- Formatting changes. [Andreas Wicenec]
+- Updated Google and Numpy extraction. [Andreas Wicenec]
+- Make colon after Returns optional. [Andreas Wicenec]
+- Fixed Google docstring extraction. [Andreas Wicenec]
+
+
+0.3.9 (2024-11-11)
+------------------
+- Release: version 0.3.9 🚀 [Andreas Wicenec]
 - Fixed some import hierarchy issues. [Andreas Wicenec]
 - Playning around with recursion issues. [Andreas Wicenec]
 - Fixed Numpy doc Returns line treatment. [Andreas Wicenec]
