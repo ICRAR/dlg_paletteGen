@@ -4,6 +4,27 @@ Changelog
 
 (unreleased)
 ------------
+- Release: version 0.4.0 🚀 [Andreas Wicenec]
+- Adjusting tests. [Andreas Wicenec]
+- Removed stray debug log. [Andreas Wicenec]
+- Fixed some detailed parser issues. [Andreas Wicenec]
+- Format and test fix. [Andreas Wicenec]
+- Removed commented code. [Andreas Wicenec]
+- Enabled support for direct function parsing. [Andreas Wicenec]
+- Old code removed. [Andreas Wicenec]
+- Fixed recursive behavior. [Andreas Wicenec]
+- Updates to improve parameter parsing. [Andreas Wicenec]
+- Parser updates to support additional packages. [Andreas Wicenec]
+- Formatting changes. [Andreas Wicenec]
+- Updated Google and Numpy extraction. [Andreas Wicenec]
+- Make colon after Returns optional. [Andreas Wicenec]
+- Fixed Google docstring extraction. [Andreas Wicenec]
+- Main: Add prerequisites to README.md. [Ryan Bunney]
+
+
+0.4.0 (2025-02-05)
+------------------
+- Release: version 0.4.0 🚀 [Andreas Wicenec]
 - Merge branch 'parser_update' [Andreas Wicenec]
 - Adjusting tests. [Andreas Wicenec]
 - Removed stray debug log. [Andreas Wicenec]
@@ -19,6 +40,23 @@ Changelog
 - Updated Google and Numpy extraction. [Andreas Wicenec]
 - Make colon after Returns optional. [Andreas Wicenec]
 - Fixed Google docstring extraction. [Andreas Wicenec]
+
+
+0.3.10 (2024-11-15)
+-------------------
+- Release: version 0.3.10 🚀 [Ryan Bunney]
+- Merge pull request #7 from ICRAR/fix_linting. [Ryan Bunney]
+
+  Fix linting: address failing workflows on github
+- Use numpy module len() value reported on CI machines. [Ryan Bunney]
+- Formatting. [Ryan Bunney]
+- Update tests and None checks to see if this fixes test failures. [Ryan
+  Bunney]
+- Fix linting: More yaml errors. [Ryan Bunney]
+- Fix linting: More yaml errors. [Ryan Bunney]
+- Fix linting: Fix yaml error. [Ryan Bunney]
+- Fix linting: Update actions to run on all pushes. [Ryan Bunney]
+- Fix linting: address failing workflows on github. [Ryan Bunney]
 
 
 0.3.9 (2024-11-11)
