@@ -39,11 +39,19 @@ class CustomFormatter(logging.Formatter):
 # create console handler with a higher log level
 ch = logging.StreamHandler(sys.stdout)
 ch.setLevel(logging.DEBUG)
-
 ch.setFormatter(CustomFormatter())
 
+ch2 = logging.StreamHandler(sys.stderr)
+ch2.setLevel(logging.ERROR)
+ch2.setFormatter(CustomFormatter())
+
+root_logger = logging.getLogger()
+root_logger.setLevel(logging.INFO)
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+# logger = logging.getLogger()
 logger.addHandler(ch)
+logger.addHandler(ch2)
 
 
 # these are our supported base types

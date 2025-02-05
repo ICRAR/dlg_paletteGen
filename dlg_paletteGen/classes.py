@@ -125,7 +125,9 @@ class DetailedDescription:
         self.format = ""
         self._identify_format()
         self.main_descr, self.params, self.returns = self.process_descr()
-        self.brief_descr = self.main_descr.split(".")[0] + "." if self.main_descr else ""
+        self.brief_descr = (
+            self.main_descr.split(".")[0] + "." if self.main_descr else ""
+        )
 
     def _process_rEST(self, dd="") -> Union[tuple | None]:
         """
@@ -173,6 +175,8 @@ class DetailedDescription:
         logger.debug("Processing Numpy style doc_strings")
         if not dd:
             dd = self.description
+            logger.debug("Replacing Returns:!")
+            dd = re.sub(r"Returns:", "Returns", dd)
         dp = parse(dd)
         self.returns = dp.returns
         spds = dp.params
@@ -229,6 +233,13 @@ class DetailedDescription:
         except IndexError:
             logger.debug(">>> spds matching failed %s:", spds)
             raise
+        if self.returns.description and not self.returns.type_name:
+            (
+                _,
+                self.returns.return_name,
+                self.returns.type_name,
+                self.returns.description,
+            ) = re.split(r"([\w_]+) +\((\w+)\): ", self.returns.description)
         return self.description, self.params, self.returns
 
     def _process_casa(self, dd: str):
@@ -254,7 +265,9 @@ class DetailedDescription:
         dList = dStr.split("\n")
         try:
             start_ind = [
-                idx for idx, s in enumerate(dList) if re.findall(r"-{1,20} parameter", s)
+                idx
+                for idx, s in enumerate(dList)
+                if re.findall(r"-{1,20} parameter", s)
             ][0] + 1
         except IndexError:
             start_ind = 0
@@ -460,10 +473,11 @@ class GreatGrandChild:
                 if default_value.find("/") >= 0:
                     default_value = f'"{default_value}"'
             # attach description from parent, if available
-            if parent_member and name in parent_member.member["params"]:
-                member_desc = parent_member.member["params"][name]
-            else:
-                member_desc = ""
+            member_desc = ""
+            # if parent_member and name in parent_member.member["params"]:
+            #     member_desc = parent_member.member["params"][name]
+            # else:
+            #     member_desc = ""
             if name in ["self", "cls"]:
                 port = (
                     "InputPort"
@@ -488,6 +502,14 @@ class GreatGrandChild:
                 value = (
                     f"{default_value}/{value_type}/ApplicationArgument/{port}/"
                     + f"{access}//False/False/{member_desc}"
+                )
+                logger.debug(
+                    ">>>> default_value: %s, value_type: %s, port: %s, access: %s, member_desc: %s",
+                    default_value,
+                    value_type,
+                    port,
+                    access,
+                    member_desc,
                 )
                 logger.debug("adding param: %s", {"key": str(name), "value": value})
                 self.member["params"].update({name: value})
@@ -550,7 +572,8 @@ class GreatGrandChild:
         :param params: dict, the set of parameters
         """
         p_type = "" if not p_type else p_type
-        if name in params:
+        if description and name in params and description != params[name]:
+            logger.debug("Adding description '%s' to '%s'", description, params[name])
             params[name] += description
 
 
@@ -651,31 +674,14 @@ class Child:
 
             member["params"].update(
                 {
-                    "input_parser": "pickle/Select/"
-                    + "ComponentParameter/NoPort/readwrite/pickle,eval,"
-                    + "npy,path,dataurl/False/False/Input port "
-                    + "parsing technique",
-                }
-            )
-            member["params"].update(
-                {
-                    "output_parser": "pickle/Select/"
-                    + "ComponentParameter/NoPort/readwrite/pickle,eval,"
-                    + "npy,path,dataurl/False/False/Output port parsing "
-                    + "technique",
-                }
-            )
-
-            member["params"].update(
-                {
-                    "execution_time": "5/Integer/ComponentParameter/NoPort/"
+                    "execution_time": "5/Integer/ConstraintParameter/NoPort/"
                     + "readwrite//False/False/Estimate of execution time "
                     + "(in seconds) for this application."
                 }
             )
             member["params"].update(
                 {
-                    "num_cpus": "1/Integer/ComponentParameter/NoPort/"
+                    "num_cpus": "1/Integer/ConstraintParameter/NoPort/"
                     + "readwrite//False/False/Number of cores used."
                 }
             )
