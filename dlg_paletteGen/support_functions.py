@@ -8,12 +8,15 @@
 # pylint: disable=protected-access
 # pylint: disable=dangerous-default-value
 """Support functions."""
+"""Support functions."""
 
 import ast
 import datetime
 import importlib
 import importlib.metadata
+import importlib.metadata
 import inspect
+import io
 import io
 import json
 import os
@@ -87,8 +90,54 @@ VERSION = meta["Version"]
 # pkg_name = this_module()
 
 
+def read(*paths, **kwargs):
+    """
+    Read the contents of a text file safely.
+
+    >>> read("dlg_paletteGen", "VERSION")
+    '0.1.0'
+    >>> read("README.md")
+    ...
+    """
+    content = ""
+    with io.open(
+        os.path.join(os.path.dirname(__file__), *paths),
+        encoding=kwargs.get("encoding", "utf8"),
+    ) as open_file:
+        content = open_file.read().strip()
+    return content
+
+
+def this_module() -> str:
+    """Inspect this module and return the name."""
+    stack = inspect.stack()
+    module = inspect.getmodule(stack[1][0])
+    if module is None:
+        raise ValueError("module not found")
+    if module.__name__ != "__main__":
+        return module.__name__
+    package = "" if module.__package__ is None else module.__package__
+    mfname = stack[0].filename
+    if mfname is None:
+        return package
+    fname = os.path.basename(mfname)
+    fname = fname.removesuffix(".py")
+    if fname in ("__init__", "__main__"):
+        return package
+    return f"{package}.{fname}"
+
+
+nn = this_module()
+NAME = "dlg_paletteGen"
+meta = importlib.metadata.metadata(NAME)
+VERSION = meta["Version"]
+
+# pkg_name = this_module()
+
+
 def cleanString(input_text: str) -> str:
     """
+    Remove ANSI escape strings from input.
     Remove ANSI escape strings from input.
 
     :param input_text: string to clean
@@ -102,6 +151,7 @@ def cleanString(input_text: str) -> str:
 
 def convert_type_str(input_type: str = "") -> str:
     """
+    Convert the string provided into a supported type string.
     Convert the string provided into a supported type string.
 
     :param value_type: str, type string to be converted
@@ -118,6 +168,7 @@ def convert_type_str(input_type: str = "") -> str:
 
 def guess_type_from_default(default_value: typing.Any = "", raw=False):
     """
+    Guess the parameter type from a default_value provided.
     Guess the parameter type from a default_value provided.
 
     The value can be of any type by itself, including a JSON string
@@ -159,6 +210,9 @@ def guess_type_from_default(default_value: typing.Any = "", raw=False):
 
 def typeFix(value_type: Union[Any, None] = "", default_value: Any = None) -> str:
     """
+    Fix or guess the type of a parameter.
+
+    If a value_type is provided, this will be used to determine the type.
     Fix or guess the type of a parameter.
 
     If a value_type is provided, this will be used to determine the type.
@@ -223,6 +277,9 @@ def check_text_element(xml_element: ET.Element, sub_element: str):
     Check a xml_element for the first occurance of sub_elements.
 
     Return the joined text content of them.
+    Check a xml_element for the first occurance of sub_elements.
+
+    Return the joined text content of them.
     """
     text = ""
     sub = xml_element.find(sub_element)
@@ -235,6 +292,7 @@ def check_text_element(xml_element: ET.Element, sub_element: str):
 
 def modify_doxygen_options(doxygen_filename: str, options: dict):
     """
+    Update default doxygen config for this task.
     Update default doxygen config for this task.
 
     :param doxygen_filename: str, the file name of the config file
@@ -266,10 +324,14 @@ def modify_doxygen_options(doxygen_filename: str, options: dict):
 
 def get_next_id() -> str:
     """Use tempfile.mktmp now."""
+    """Use tempfile.mktmp now."""
     return tempfile.mktemp(prefix="", dir="")
 
 
 def get_mod_name(mod) -> str:
+    """Get a name from a module in all cases."""
+    if isinstance(mod, numpy.ndarray):
+        logger.debug("Trying to get module name: %s", mod)
     """Get a name from a module in all cases."""
     if isinstance(mod, numpy.ndarray):
         logger.debug("Trying to get module name: %s", mod)
@@ -357,6 +419,7 @@ def write_palette_json(
     block_dag: list,
 ):
     """
+    Construct palette header and Write nodes to the output file.
     Construct palette header and Write nodes to the output file.
 
     :param output_filename: str, the name of the output file
@@ -462,6 +525,7 @@ def get_submodules(module):
     """
     Retrieve names of sub-modules using iter_modules.
 
+
     This will also return sub-packages. Third tuple
     item is a flag ispkg indicating that.
 
@@ -482,6 +546,19 @@ def get_submodules(module):
                 )
                 continue
             if isinstance(
+                type_mod,
+                (
+                    str,
+                    int,
+                    float,
+                    bytes,
+                    bytearray,
+                    bool,
+                    dict,
+                    list,
+                    tuple,
+                    numpy.ndarray,
+                ),
                 type_mod,
                 (
                     str,
@@ -546,6 +623,10 @@ def get_submodules(module):
 
 def import_using_name(mod_name: str, traverse: bool = False, err_log=True):
     """
+    Import a module using its name.
+
+    Try hard to go up the hierarchy if direct import is not possible.
+    This only imports actual modules,
     Import a module using its name.
 
     Try hard to go up the hierarchy if direct import is not possible.
@@ -616,6 +697,7 @@ def import_using_name(mod_name: str, traverse: bool = False, err_log=True):
                         except Exception as e:
                             raise ValueError(
                                 f"Problem importing module {mod}, {e}"
+                                f"Problem importing module {mod}, {e}"
                             ) from e
             else:
                 logger.debug("Recursive import failed! %s", parts[0] in sys.modules)
@@ -638,6 +720,7 @@ def initializeField(
     positional: bool = False,
 ):
     """Construct a dummy field."""
+    """Construct a dummy field."""
     field = {}  # type: ignore
     fieldValue = {}
     fieldValue["name"] = name
@@ -656,6 +739,7 @@ def initializeField(
 
 
 def get_value_type_from_default(default):
+    """Extract value and type from default value."""
     """Extract value and type from default value."""
     param_desc = {
         "value": None,
@@ -712,6 +796,7 @@ def get_value_type_from_default(default):
 
 def populateFields(parameters: dict, dd) -> dict:
     """Populate a field from signature parameters and mixin documentation if available."""
+    """Populate a field from signature parameters and mixin documentation if available."""
     fields = {}
     descr_miss = []
 
@@ -764,6 +849,8 @@ def populateFields(parameters: dict, dd) -> dict:
             # Like this we can support any type.
             # maybe a bit confusing for users to do this...
             # field[p]["usage"] = "InputPort"
+            # maybe a bit confusing for users to do this...
+            # field[p]["usage"] = "InputPort"
             field[p]["value"] = None
         field[p]["description"] = param_desc["desc"]
         # if p in ["self", "class"]:
@@ -806,6 +893,10 @@ def constructNode(
 
     For some reason sub-classing benedict did not work here, thus we use a
     function instead.
+    Construct a palette node using default parameters if not specified otherwise.
+
+    For some reason sub-classing benedict did not work here, thus we use a
+    function instead.
     """
     Node = {}
     Node["category"] = category
@@ -822,6 +913,9 @@ def constructNode(
 
 def populateDefaultFields(Node):  # pylint: disable=invalid-name
     """
+    Populate a palette node with the default field definitions.
+
+    This is separate from the
     Populate a palette node with the default field definitions.
 
     This is separate from the
@@ -907,12 +1001,20 @@ def populateDefaultFields(Node):  # pylint: disable=invalid-name
 
 def constructPalette():
     """Construct the structure of a palette."""
+    """Construct the structure of a palette."""
     palette = {
         "modelData": {
             "filePath": "",
             "fileType": "Palette",
+            "fileType": "Palette",
             "shortDescription": "",
             "detailedDescription": "",
+            "repoService": "",
+            "repoBranch": "",
+            "repo": "",
+            "generatorName": NAME,
+            "generatorVersion": VERSION,
+            "generatorCommitHash": "",
             "repoService": "",
             "repoBranch": "",
             "repo": "",

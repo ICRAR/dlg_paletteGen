@@ -10,6 +10,8 @@ from typing import Optional, Union
 
 from docstring_parser import parse
 
+from docstring_parser import parse
+
 from .settings import VALUE_TYPES, Language, logger
 from .support_functions import cleanString, guess_type_from_default, typeFix
 
