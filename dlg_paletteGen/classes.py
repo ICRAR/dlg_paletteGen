@@ -297,7 +297,8 @@ class DetailedDescription:
                     if len(p.strip()) > 0
                 ]
                 paramDocs[i] = paramDocs[i] + " " + " ".join(pl)
-        self.params = dict(zip(paramNames, paramDocs))
+        self.params = {k: {"type": None, "desc": v} for k, v in zip(paramNames,
+                                                                    paramDocs)}
         self.description = "\n".join(
             dList[: start_ind - 1]
         )  # return main description as well
