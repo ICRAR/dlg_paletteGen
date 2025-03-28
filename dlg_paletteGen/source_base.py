@@ -65,6 +65,20 @@ class FieldUsage(PGenEnum):
     InputOutput = "InputOutput"
 
 
+class FieldEncoding(PGenEnum):
+    """Set the FieldEncoding."""
+
+    dill = "dill"
+    pickle = "pickle"
+    npy = "npy"
+    path = "path"
+    utf8 = "utf-8"
+    eval = "eval"
+    dataurl = "dataurl"
+    binary = "binary"
+    raw = "raw"
+
+
 class FieldAccess(PGenEnum):
     """Set the FieldAccess."""
 
@@ -893,7 +907,7 @@ def create_construct_node(node_type: str, node: dict) -> dict:
                     "keyAttribute": False,
                     "id": str(uuid.uuid4()),
                     "parameterType": "ApplicationArgument",
-                    "usage": "OutputPort",
+                    "usage": FieldUsage.OutputPort,
                 },
             ]
         )

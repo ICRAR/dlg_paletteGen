@@ -12,7 +12,6 @@
 import ast
 import datetime
 import importlib
-import importlib.metadata
 import inspect
 import io
 import json
@@ -78,6 +77,13 @@ def this_module() -> str:
         return package
     return f"{package}.{fname}"
 
+
+nn = this_module()
+NAME = "dlg_paletteGen"
+meta = importlib.metadata.metadata(NAME)
+VERSION = meta["Version"]
+
+# pkg_name = this_module()
 
 nn = this_module()
 NAME = "dlg_paletteGen"
@@ -162,6 +168,9 @@ def typeFix(value_type: Union[Any, None] = "", default_value: Any = None) -> str
     Fix or guess the type of a parameter.
 
     If a value_type is provided, this will be used to determine the type.
+    Fix or guess the type of a parameter.
+
+    If a value_type is provided, this will be used to determine the type.
 
     :param value_type: any, convert type to one of our strings
     :param default_value: any, this will be used to determine the
@@ -169,8 +178,19 @@ def typeFix(value_type: Union[Any, None] = "", default_value: Any = None) -> str
 
     :returns: str, the converted type as a supported string
     """
-    path_ind = 0
-    if not value_type and default_value:
+    path_ind = 0.0
+    if hasattr(value_type, "__module__"):  # this path is for annotations
+        if value_type.__module__ in ["typing", "types"]:  # complex annotation
+            # guess_type = str(value_type).split(".", 1)[1]
+            guess_type = str(value_type)
+            path_ind = 0.1
+        elif value_type.__module__ == "builtins" or hasattr(value_type, "__name__"):
+            guess_type = value_type.__name__  # type: ignore
+            path_ind = 0.2
+        else:
+            guess_type = "UNIDENTIFIED"
+            path_ind = 0.3
+    elif not value_type and default_value:
         try:  # first check for standard types
             value_type = type(default_value).__name__
         except TypeError:
@@ -209,6 +229,9 @@ def typeFix(value_type: Union[Any, None] = "", default_value: Any = None) -> str
 
 def check_text_element(xml_element: ET.Element, sub_element: str):
     """
+    Check a xml_element for the first occurance of sub_elements.
+
+    Return the joined text content of them.
     Check a xml_element for the first occurance of sub_elements.
 
     Return the joined text content of them.
@@ -255,10 +278,14 @@ def modify_doxygen_options(doxygen_filename: str, options: dict):
 
 def get_next_id() -> str:
     """Use tempfile.mktmp now."""
+    """Use tempfile.mktmp now."""
     return tempfile.mktemp(prefix="", dir="")
 
 
 def get_mod_name(mod) -> str:
+    """Get a name from a module in all cases."""
+    if isinstance(mod, numpy.ndarray):
+        logger.debug("Trying to get module name: %s", mod)
     """Get a name from a module in all cases."""
     if isinstance(mod, numpy.ndarray):
         logger.debug("Trying to get module name: %s", mod)
@@ -539,6 +566,10 @@ def import_using_name(mod_name: str, traverse: bool = False, err_log=True):
 
     Try hard to go up the hierarchy if direct import is not possible.
     This only imports actual modules,
+    Import a module using its name.
+
+    Try hard to go up the hierarchy if direct import is not possible.
+    This only imports actual modules,
     not classes, functions, or types. In those cases it will return the
     lowest module in the hierarchy. As a final fallback it will return the
     highest level module.
@@ -552,6 +583,7 @@ def import_using_name(mod_name: str, traverse: bool = False, err_log=True):
         return None
     parts = mod_name.split(".")
     exists = ".".join(parts[:-1]) in sys.modules if not traverse else False
+    mod_version = "Unknown"
     if parts[-1].startswith("_"):
         return None
     try:  # direct import first
@@ -569,6 +601,8 @@ def import_using_name(mod_name: str, traverse: bool = False, err_log=True):
             if parts[0] and not exists:
                 try:
                     mod = importlib.import_module(parts[0])
+                    if hasattr(mod, "__version__"):
+                        mod_version = mod.__version__
                 except ImportError as e:
                     if err_log:
                         logger.error(
@@ -602,18 +636,19 @@ def import_using_name(mod_name: str, traverse: bool = False, err_log=True):
                         except Exception as e:
                             raise ValueError(
                                 f"Problem importing module {mod}, {e}"
+                                f"Problem importing module {mod}, {e}"
                             ) from e
-                logger.debug("Loaded module: %s", mod_name)
             else:
                 logger.debug("Recursive import failed! %s", parts[0] in sys.modules)
                 return None
+    logger.debug("Loaded module: %s version: %s", mod_name, mod_version)
     return mod
 
 
 def initializeField(
     name: str = "dummy",
-    value: Any = "dummy",
-    defaultValue: Any = "dummy",
+    value: Any = "",
+    defaultValue: Any = "",
     description: str = "no description found",
     vtype: Union[str, None] = None,
     parameterType: str = "ComponentParameter",
@@ -623,6 +658,7 @@ def initializeField(
     precious: bool = False,
     positional: bool = False,
 ):
+    """Construct a dummy field."""
     """Construct a dummy field."""
     field = {}  # type: ignore
     fieldValue = {}
@@ -642,6 +678,7 @@ def initializeField(
 
 
 def get_value_type_from_default(default):
+    """Extract value and type from default value."""
     """Extract value and type from default value."""
     param_desc = {
         "value": None,
@@ -696,15 +733,16 @@ def get_value_type_from_default(default):
     return param_desc
 
 
-def populateFields(parameters: dict, dd) -> dict:
+def populateFields(sig: Any, dd) -> dict:
     """Populate a field from signature parameters and mixin documentation if available."""
     fields = {}
+    bfield = {}
     descr_miss = []
 
     new_param = inspect.Parameter(
         "base_name", inspect._ParameterKind.POSITIONAL_OR_KEYWORD
     )
-    items = list(parameters.items()) + [(new_param.name, new_param)]
+    items = list(sig.parameters.items()) + [(new_param.name, new_param)]
     for p, v in items:
         field = initializeField(p)
 
@@ -722,23 +760,11 @@ def populateFields(parameters: dict, dd) -> dict:
         field[p]["value"] = field[p]["defaultValue"] = param_desc["value"]
 
         # deal with the type
-        if (
-            v.annotation  # type from inspect is first choice.
-            and v.annotation not in [None, inspect._empty]
-            and (hasattr(v.annotation, "__name__") or hasattr(v.annotation, "__repr__"))
-        ):
-            if (
-                hasattr(v.annotation, "__name__")
-                and hasattr(v.annotation, "__module__")
-                and v.annotation.__module__ != "builtins"
-            ):
-                field[p]["type"] = f"{v.annotation.__module__}.{v.annotation.__name__}"
-            elif hasattr(v.annotation, "__name__"):
-                field[p]["type"] = typeFix(f"{v.annotation.__name__}")
-            else:
-                field[p]["type"] = typeFix(
-                    v.annotation if isinstance(v.annotation, str) else repr(v.annotation)
-                )
+        if v.annotation and v.annotation not in [  # type from inspect is first choice.
+            None,
+            inspect._empty,
+        ]:
+            field[p]["type"] = typeFix(v.annotation)
             logger.debug("Parameter type from annotation: %s", field[p]["type"])
         # else we use the type from default value
         elif field[p]["name"] == "args":
@@ -753,21 +779,12 @@ def populateFields(parameters: dict, dd) -> dict:
         else:
             field[p]["type"] = CVALUE_TYPES["NoneType"]
 
-        if (
-            field[p]["type"] not in SVALUE_TYPES.values()
-            and field[p]["name"] != "base_name"
-        ):
-            # complex types can't be specified on a simple form field
-            # thus we assume they are provided through a port.
-            # Like this we can support any type.
-            # maybe a bit confusing for users to do this...
-            # field[p]["usage"] = "InputPort"
-            field[p]["value"] = None
         field[p]["description"] = param_desc["desc"]
-        if p in ["self", "class"]:
-            field[p]["parameterType"] = "ComponentParameter"
-        else:
-            field[p]["parameterType"] = "ApplicationArgument"
+        # if p in ["self", "class"]:
+        #     field[p]["parameterType"] = "ComponentParameter"
+        # else:
+        #     field[p]["parameterType"] = "ApplicationArgument"
+        field[p]["parameterType"] = "ApplicationArgument"
         field[p]["options"] = None
         field[p]["positional"] = v.kind == inspect.Parameter.POSITIONAL_ONLY
         logger.debug("Final type of parameter %s: %s", p, field[p]["type"])
@@ -778,8 +795,29 @@ def populateFields(parameters: dict, dd) -> dict:
                 field[p]["value"] = []
         if repr(field[p]["value"]) == "nan" and numpy.isnan(field[p]["value"]):
             field[p]["value"] = None
+        if p != "base_name":
+            fields.update(field)
+        else:
+            bfield = field
+    if hasattr(sig, "return_annotation") and sig.return_annotation is not None:
+        field = initializeField("output")
+        field["output"]["type"] = typeFix(sig.return_annotation)
+        field["output"]["usage"] = "OutputPort"
+        field["output"]["encoding"] = "dill"
         fields.update(field)
-
+        logger.debug(
+            "Identified type %s and assigned OutputPort.", field["output"]["type"]
+        )
+        # TODO: mixin documentation for output
+        # if dd and dd.returns and dd.returns.type_name:
+        # if dd and dd.returns:
+        #     logger.info(
+        #         ">>>>> %s returns: %s of type %s",
+        #         node["name"],
+        #         dd.returns.return_name,
+        #         dd.returns.type_name,
+        #     )
+    fields.update(bfield)
     fields["base_name"]["parameterType"] = "ComponentParameter"
     fields["base_name"]["type"] = "String"
     fields["base_name"]["readonly"] = True
@@ -801,6 +839,10 @@ def constructNode(
 
     For some reason sub-classing benedict did not work here, thus we use a
     function instead.
+    Construct a palette node using default parameters if not specified otherwise.
+
+    For some reason sub-classing benedict did not work here, thus we use a
+    function instead.
     """
     Node = {}
     Node["category"] = category
@@ -817,6 +859,9 @@ def constructNode(
 
 def populateDefaultFields(Node):  # pylint: disable=invalid-name
     """
+    Populate a palette node with the default field definitions.
+
+    This is separate from the
     Populate a palette node with the default field definitions.
 
     This is separate from the
@@ -858,10 +903,24 @@ def populateDefaultFields(Node):  # pylint: disable=invalid-name
     n = "func_name"
     fn = initializeField(name=n)
     fn[n]["name"] = n
-    fn[n]["value"] = "example.function"
-    fn[n]["defaultValue"] = "example.function"
+    fn[n]["value"] = "my_func"
+    fn[n]["defaultValue"] = "my_func"
     fn[n]["type"] = "String"
     fn[n]["description"] = "Complete import path of function"
+    fn[n]["readonly"] = True
+    Node["fields"].update(fn)
+
+    n = "func_code"
+    fn = initializeField(name=n)
+    fn[n]["name"] = n
+    fn[n]["value"] = ""
+    fn[n]["defaultValue"] = ""
+    fn[n]["type"] = "String"
+    fn[n]["description"] = (
+        "Here you can define an in-line function in the following way: "
+        + "def my_func(a, b): return a+b NOTE: The name of the function has to "
+        + "match the func_name field above."
+    )
     fn[n]["readonly"] = True
     Node["fields"].update(fn)
 
@@ -875,37 +934,25 @@ def populateDefaultFields(Node):  # pylint: disable=invalid-name
     dc[n]["readonly"] = True
     Node["fields"].update(dc)
 
-    n = "input_parser"
-    inpp = initializeField(name=n)
-    inpp[n]["name"] = n
-    inpp[n]["description"] = "Input port parsing technique"
-    inpp[n]["value"] = "pickle"
-    inpp[n]["defaultValue"] = "pickle"
-    inpp[n]["type"] = "Select"
-    inpp[n]["options"] = ["pickle", "eval", "npy", "path", "dataurl"]
-    Node["fields"].update(inpp)
-
-    n = "output_parser"
-    outpp = initializeField(name=n)
-    outpp[n]["name"] = n
-    outpp[n]["description"] = "Output port parsing technique"
-    outpp[n]["value"] = "pickle"
-    outpp[n]["defaultValue"] = "pickle"
-    outpp[n]["type"] = "Select"
-    outpp[n]["options"] = ["pickle", "eval", "npy", "path", "dataurl"]
-    Node["fields"].update(outpp)
-
     return Node
 
 
 def constructPalette():
     """Construct the structure of a palette."""
+    """Construct the structure of a palette."""
     palette = {
         "modelData": {
             "filePath": "",
             "fileType": "Palette",
+            "fileType": "Palette",
             "shortDescription": "",
             "detailedDescription": "",
+            "repoService": "",
+            "repoBranch": "",
+            "repo": "",
+            "generatorName": NAME,
+            "generatorVersion": VERSION,
+            "generatorCommitHash": "",
             "repoService": "",
             "repoBranch": "",
             "repo": "",

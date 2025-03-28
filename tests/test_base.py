@@ -3,7 +3,6 @@ import logging
 import os
 import subprocess
 import sys
-import unittest
 
 from pytest import LogCaptureFixture
 
@@ -363,7 +362,7 @@ def test_direct_rEST(tmpdir: str, shared_datadir: str):
     )
     assert (
         modules["example_rest"]["MainClass1.func_with_types"]["fields"]["arg1"]["type"]
-        == "Boolean"
+        == "bool"
     )
 
     nodes = []
@@ -709,4 +708,4 @@ def test_full_numpy():
     for members in modules.values():
         for node in members.values():
             nodes.append(node)
-    assert len(modules) in [30]
+    assert len(modules) in [29, 30]

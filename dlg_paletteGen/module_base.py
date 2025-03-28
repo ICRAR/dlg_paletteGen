@@ -15,6 +15,7 @@ import typing
 from typing import _SpecialForm
 
 from .classes import DetailedDescription, DummyParam, DummySig, logger
+from .source_base import FieldUsage
 from .support_functions import (
     constructNode,
     get_mod_name,
@@ -225,15 +226,7 @@ def construct_member_node(member, module=None, parent=None, name=None) -> dict:
 
     sig, dd = _get_docs(member, module, node)
     # fill custom ApplicationArguments first
-    fields = populateFields(sig.parameters, dd)
-    # if dd and dd.returns and dd.returns.type_name:
-    if dd and dd.returns:
-        logger.info(
-            ">>>>> %s returns: %s of type %s",
-            node["name"],
-            dd.returns.return_name,
-            dd.returns.type_name,
-        )
+    fields = populateFields(sig, dd)
     ind = -1
     load_name = node["name"]
     if hasattr(member, "__module__") and member.__module__:
@@ -255,7 +248,8 @@ def construct_member_node(member, module=None, parent=None, name=None) -> dict:
         if k == "self" and ind == 0:
             node["category"] = "PythonMemberFunction"
             if member.__name__ in ["__init__", "__cls__"]:
-                fields["self"]["usage"] = "OutputPort"
+                fields["self"]["usage"] = FieldUsage.OutputPort
+                fields["self"]["parameterType"] = "ComponentParameter"
             elif inspect.ismethoddescriptor(member):
                 fields["self"]["usage"] = "InputOutput"
             else:
