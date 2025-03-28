@@ -4,6 +4,18 @@ Changelog
 
 (unreleased)
 ------------
+- Merge branch 'DGEN-19' [Andreas Wicenec]
+- Fixed tests. [Andreas Wicenec]
+- Added output port if return_annotation exists. [Andreas Wicenec]
+- Merge branch 'parser_update' into DGEN-19. [Andreas Wicenec]
+- Always use type annotations. [Andreas Wicenec]
+- Try to get version of module. [Andreas Wicenec]
+- Merge pull request #9 from ICRAR/casaDocstring_BugFix. [Ryan Bunney]
+
+  Update self.params created by _process_casa consistent with other docstring types.
+- Make the self.params created by _process_casa consistent with other
+  docstring types. [Ryan Bunney]
+- Release: version 0.4.0 🚀 [Andreas Wicenec]
 - Release: version 0.4.0 🚀 [Andreas Wicenec]
 - Adjusting tests. [Andreas Wicenec]
 - Removed stray debug log. [Andreas Wicenec]
