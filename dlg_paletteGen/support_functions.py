@@ -170,7 +170,18 @@ def typeFix(value_type: Union[Any, None] = "", default_value: Any = None) -> str
     :returns: str, the converted type as a supported string
     """
     path_ind = 0
-    if not value_type and default_value:
+    if hasattr(value_type, "__module__"):  # this path is for annotations
+        if value_type.__module__ in ["typing", "types"]:  # complex annotation
+            # guess_type = str(value_type).split(".", 1)[1]
+            guess_type = str(value_type)
+            path_ind = 0.1
+        elif value_type.__module__ == "builtins" or hasattr(value_type, "__name__"):
+            guess_type = value_type.__name__
+            path_ind = 0.2
+        else:
+            guess_type = "UNIDENTIFIED"
+            path_ind = 0.3
+    elif not value_type and default_value:
         try:  # first check for standard types
             value_type = type(default_value).__name__
         except TypeError:
@@ -725,25 +736,11 @@ def populateFields(parameters: dict, dd) -> dict:
         field[p]["value"] = field[p]["defaultValue"] = param_desc["value"]
 
         # deal with the type
-        if (
-            v.annotation  # type from inspect is first choice.
-            and v.annotation not in [None, inspect._empty]
-            and (hasattr(v.annotation, "__name__") or hasattr(v.annotation, "__repr__"))
-        ):
-            if (
-                hasattr(v.annotation, "__name__")
-                and hasattr(v.annotation, "__module__")
-                and v.annotation.__module__ != "builtins"
-            ):
-                field[p]["type"] = f"{v.annotation.__module__}.{v.annotation.__name__}"
-            elif hasattr(v.annotation, "__name__"):
-                field[p]["type"] = typeFix(f"{v.annotation.__name__}")
-            else:
-                field[p]["type"] = typeFix(
-                    v.annotation
-                    if isinstance(v.annotation, str)
-                    else repr(v.annotation)
-                )
+        if v.annotation and v.annotation not in [  # type from inspect is first choice.
+            None,
+            inspect._empty,
+        ]:
+            field[p]["type"] = typeFix(v.annotation)
             logger.debug("Parameter type from annotation: %s", field[p]["type"])
         # else we use the type from default value
         elif field[p]["name"] == "args":
