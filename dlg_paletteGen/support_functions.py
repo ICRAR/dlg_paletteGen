@@ -708,8 +708,8 @@ def import_using_name(mod_name: str, traverse: bool = False, err_log=True):
 
 def initializeField(
     name: str = "dummy",
-    value: Any = "dummy",
-    defaultValue: Any = "dummy",
+    value: Any = "",
+    defaultValue: Any = "",
     description: str = "no description found",
     vtype: Union[str, None] = None,
     parameterType: str = "ComponentParameter",
@@ -794,16 +794,17 @@ def get_value_type_from_default(default):
     return param_desc
 
 
-def populateFields(parameters: dict, dd) -> dict:
+def populateFields(sig: inspect.signature, dd) -> dict:
     """Populate a field from signature parameters and mixin documentation if available."""
     """Populate a field from signature parameters and mixin documentation if available."""
     fields = {}
+    bfield = {}
     descr_miss = []
 
     new_param = inspect.Parameter(
         "base_name", inspect._ParameterKind.POSITIONAL_OR_KEYWORD
     )
-    items = list(parameters.items()) + [(new_param.name, new_param)]
+    items = list(sig.parameters.items()) + [(new_param.name, new_param)]
     for p, v in items:
         field = initializeField(p)
 
@@ -870,8 +871,29 @@ def populateFields(parameters: dict, dd) -> dict:
                 field[p]["value"] = []
         if repr(field[p]["value"]) == "nan" and numpy.isnan(field[p]["value"]):
             field[p]["value"] = None
+        if p != "base_name":
+            fields.update(field)
+        else:
+            bfield = field
+    if hasattr(sig, "return_annotation") and sig.return_annotation is not None:
+        field = initializeField("output")
+        field["output"]["type"] = typeFix(sig.return_annotation)
+        field["output"]["usage"] = "OutputPort"
+        field["output"]["encoding"] = "dill"
         fields.update(field)
-
+        logger.debug(
+            "Identified type %s and assigned OutputPort.", field["output"]["type"]
+        )
+        # TODO: mixin documentation for output
+        # if dd and dd.returns and dd.returns.type_name:
+        # if dd and dd.returns:
+        #     logger.info(
+        #         ">>>>> %s returns: %s of type %s",
+        #         node["name"],
+        #         dd.returns.return_name,
+        #         dd.returns.type_name,
+        #     )
+    fields.update(bfield)
     fields["base_name"]["parameterType"] = "ComponentParameter"
     fields["base_name"]["type"] = "String"
     fields["base_name"]["readonly"] = True
@@ -959,10 +981,22 @@ def populateDefaultFields(Node):  # pylint: disable=invalid-name
     n = "func_name"
     fn = initializeField(name=n)
     fn[n]["name"] = n
-    fn[n]["value"] = "example.function"
-    fn[n]["defaultValue"] = "example.function"
+    fn[n]["value"] = "my_func"
+    fn[n]["defaultValue"] = "my_func"
     fn[n]["type"] = "String"
     fn[n]["description"] = "Complete import path of function"
+    fn[n]["readonly"] = True
+    Node["fields"].update(fn)
+
+    n = "func_code"
+    fn = initializeField(name=n)
+    fn[n]["name"] = n
+    fn[n]["value"] = ""
+    fn[n]["defaultValue"] = ""
+    fn[n]["type"] = "String"
+    fn[n][
+        "description"
+    ] = "Here you can define an in-line function in the following way: def my_func(a, b): return a+b NOTE: The name of the function has to match the func_name field above."
     fn[n]["readonly"] = True
     Node["fields"].update(fn)
 
@@ -975,26 +1009,6 @@ def populateDefaultFields(Node):  # pylint: disable=invalid-name
     dc[n]["description"] = "The python class that implements this application"
     dc[n]["readonly"] = True
     Node["fields"].update(dc)
-
-    n = "input_parser"
-    inpp = initializeField(name=n)
-    inpp[n]["name"] = n
-    inpp[n]["description"] = "Input port parsing technique"
-    inpp[n]["value"] = "pickle"
-    inpp[n]["defaultValue"] = "pickle"
-    inpp[n]["type"] = "Select"
-    inpp[n]["options"] = ["pickle", "eval", "npy", "path", "dataurl"]
-    Node["fields"].update(inpp)
-
-    n = "output_parser"
-    outpp = initializeField(name=n)
-    outpp[n]["name"] = n
-    outpp[n]["description"] = "Output port parsing technique"
-    outpp[n]["value"] = "pickle"
-    outpp[n]["defaultValue"] = "pickle"
-    outpp[n]["type"] = "Select"
-    outpp[n]["options"] = ["pickle", "eval", "npy", "path", "dataurl"]
-    Node["fields"].update(outpp)
 
     return Node
 

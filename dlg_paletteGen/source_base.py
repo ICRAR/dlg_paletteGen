@@ -65,6 +65,20 @@ class FieldUsage(PGenEnum):
     InputOutput = "InputOutput"
 
 
+class FieldEncoding(PGenEnum):
+    """Set the FieldEncoding."""
+
+    dill = "dill"
+    pickle = "pickle"
+    npy = "npy"
+    path = "path"
+    utf8 = "utf-8"
+    eval = "eval"
+    dataurl = "dataurl"
+    binary = "binary"
+    raw = "raw"
+
+
 class FieldAccess(PGenEnum):
     """Set the FieldAccess."""
 
@@ -437,7 +451,11 @@ def create_palette_node_from_params(params) -> tuple:
             # check that type is a known value
             if not FieldType.has_key(field_type):
                 logger.warning(
-                    text + " '" + internal_name + "' field_type is Unknown: " + field_type
+                    text
+                    + " '"
+                    + internal_name
+                    + "' field_type is Unknown: "
+                    + field_type
                 )
 
             # check that usage is a known value
@@ -893,7 +911,7 @@ def create_construct_node(node_type: str, node: dict) -> dict:
                     "keyAttribute": False,
                     "id": str(uuid.uuid4()),
                     "parameterType": "ApplicationArgument",
-                    "usage": "OutputPort",
+                    "usage": FieldUsage.OutputPort,
                 },
             ]
         )
@@ -1020,7 +1038,9 @@ def params_to_nodes(params: dict, tag: str) -> list:
 
             # if a construct is found, add to nodes
             if data["construct"] != "":
-                logger.info("Adding component: " + data["construct"] + "/" + node["text"])
+                logger.info(
+                    "Adding component: " + data["construct"] + "/" + node["text"]
+                )
                 construct_node = create_construct_node(data["construct"], node)
                 construct_node["repositoryUrl"] = git_repo
                 construct_node["commitHash"] = version
