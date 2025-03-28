@@ -552,6 +552,7 @@ def import_using_name(mod_name: str, traverse: bool = False, err_log=True):
         return None
     parts = mod_name.split(".")
     exists = ".".join(parts[:-1]) in sys.modules if not traverse else False
+    mod_version = "Unknown"
     if parts[-1].startswith("_"):
         return None
     try:  # direct import first
@@ -569,6 +570,8 @@ def import_using_name(mod_name: str, traverse: bool = False, err_log=True):
             if parts[0] and not exists:
                 try:
                     mod = importlib.import_module(parts[0])
+                    if hasattr(mod, "__version__"):
+                        mod_version = mod.__version__
                 except ImportError as e:
                     if err_log:
                         logger.error(
@@ -603,10 +606,10 @@ def import_using_name(mod_name: str, traverse: bool = False, err_log=True):
                             raise ValueError(
                                 f"Problem importing module {mod}, {e}"
                             ) from e
-                logger.debug("Loaded module: %s", mod_name)
             else:
                 logger.debug("Recursive import failed! %s", parts[0] in sys.modules)
                 return None
+    logger.debug("Loaded module: %s version: %s", mod_name, mod_version)
     return mod
 
 
@@ -737,7 +740,9 @@ def populateFields(parameters: dict, dd) -> dict:
                 field[p]["type"] = typeFix(f"{v.annotation.__name__}")
             else:
                 field[p]["type"] = typeFix(
-                    v.annotation if isinstance(v.annotation, str) else repr(v.annotation)
+                    v.annotation
+                    if isinstance(v.annotation, str)
+                    else repr(v.annotation)
                 )
             logger.debug("Parameter type from annotation: %s", field[p]["type"])
         # else we use the type from default value
@@ -764,16 +769,19 @@ def populateFields(parameters: dict, dd) -> dict:
             # field[p]["usage"] = "InputPort"
             field[p]["value"] = None
         field[p]["description"] = param_desc["desc"]
-        if p in ["self", "class"]:
-            field[p]["parameterType"] = "ComponentParameter"
-        else:
-            field[p]["parameterType"] = "ApplicationArgument"
+        # if p in ["self", "class"]:
+        #     field[p]["parameterType"] = "ComponentParameter"
+        # else:
+        #     field[p]["parameterType"] = "ApplicationArgument"
+        field[p]["parameterType"] = "ApplicationArgument"
         field[p]["options"] = None
         field[p]["positional"] = v.kind == inspect.Parameter.POSITIONAL_ONLY
         logger.debug("Final type of parameter %s: %s", p, field[p]["type"])
         if isinstance(field[p]["value"], numpy.ndarray):
             try:
-                field[p]["value"] = field[p]["defaultValue"] = field[p]["value"].tolist()
+                field[p]["value"] = field[p]["defaultValue"] = field[p][
+                    "value"
+                ].tolist()
             except NotImplementedError:
                 field[p]["value"] = []
         if repr(field[p]["value"]) == "nan" and numpy.isnan(field[p]["value"]):
@@ -841,7 +849,9 @@ def populateDefaultFields(Node):  # pylint: disable=invalid-name
     et[n]["value"] = 2
     et[n]["defaultValue"] = 2
     et[n]["type"] = "Integer"
-    et[n]["description"] = "Estimate of execution time (in seconds) for this application."
+    et[n][
+        "description"
+    ] = "Estimate of execution time (in seconds) for this application."
     et[n]["parameterType"] = "ConstraintParameter"
     Node["fields"].update(et)
 

@@ -115,7 +115,9 @@ def _get_name(name: str, member, module=None, parent=None) -> str:
     elif inspect.isclass(member):
         mname = getattr(member, "__class__").__name__
     else:
-        mname = f"{member_name}" if hasattr(member, "__name__") else f"{module_name}.name"
+        mname = (
+            f"{member_name}" if hasattr(member, "__name__") else f"{module_name}.name"
+        )
     logger.debug(">>>>> mname: %s, %s.%s", mname, parent, module_name)
     if name and not mname:
         mname = name
@@ -256,6 +258,7 @@ def construct_member_node(member, module=None, parent=None, name=None) -> dict:
             node["category"] = "PythonMemberFunction"
             if member.__name__ in ["__init__", "__cls__"]:
                 fields["self"]["usage"] = "OutputPort"
+                fields["self"]["parameterType"] = "ComponentParameter"
             elif inspect.ismethoddescriptor(member):
                 fields["self"]["usage"] = "InputOutput"
             else:
@@ -325,7 +328,9 @@ def get_members(mod: types.ModuleType, module_members=[], parent=None):
             nodes = get_class_members(m, parent=parent)
             logger.debug("Class members: %s", nodes.keys())
         else:
-            nodes = {name: construct_member_node(m, module=mod, parent=parent, name=name)}
+            nodes = {
+                name: construct_member_node(m, module=mod, parent=parent, name=name)
+            }
 
         for name, node in nodes.items():
             if name in module_members:
