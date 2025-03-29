@@ -1,22 +1,8 @@
-"""
-
-"""
+""" """
 
 __all__ = ["calibrate_list_rsexecute_workflow"]
 
 import logging
-
-from rascil.processing_components.calibration import (
-    apply_calibration_chain,
-    solve_calibrate_chain,
-)
-from rascil.processing_components.visibility import (
-    integrate_visibility_by_channel,
-    divide_visibility,
-)
-from rascil.processing_components.visibility import concatenate_visibility
-
-from rascil.workflows.rsexecute.execution_support.rsexecute import rsexecute
 
 log = logging.getLogger("rascil-logger")
 
@@ -30,11 +16,12 @@ def calibrate_list_rsexecute_workflow(
     global_solution=True,
     **kwargs,
 ):
-    """Create a set of components for (optionally global) calibration of a list of visibilities
+    """Create a set of components for calibration of a list of visibilities
 
-    If global solution is true then visibilities are gathered to a single visibility data set which is then
-    self-calibrated. The resulting gaintable is then effectively scattered out for application to each visibility
-    set. If global solution is false then the solutions are performed locally.
+    If global solution is true then visibilities are gathered to a single visibility
+    data set which is then self-calibrated. The resulting gaintable is then effectively
+    scattered out for application to each visibility set. If global solution is false
+    then the solutions are performed locally.
 
     :param vis_list: list of visibilities (or graph)
     :param model_vislist: list of model visibilities (or graph)
@@ -48,7 +35,9 @@ def calibrate_list_rsexecute_workflow(
     if global_solution:
         log.info("calibration_solve: Performing global solution of gains for all vis")
     else:
-        log.info("calibration_solve: Performing separate solution of gains for each vis")
+        log.info(
+            "calibration_solve: Performing separate solution of gains for each vis"
+        )
 
     def calibration_solve(vis, modelvis=None, gt=None):
         return solve_calibrate_chain(
