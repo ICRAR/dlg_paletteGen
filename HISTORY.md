@@ -4,6 +4,10 @@ Changelog
 
 (unreleased)
 ------------
+- Aut-reformat. [Andreas Wicenec]
+- Re-format example_rascil. [Andreas Wicenec]
+- Removed dependecy from merklelib. [Andreas Wicenec]
+- Release: version 0.4.1 🚀 [Andreas Wicenec]
 - Merge branch 'DGEN-19' [Andreas Wicenec]
 - Fixed tests. [Andreas Wicenec]
 - Added output port if return_annotation exists. [Andreas Wicenec]
