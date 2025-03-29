@@ -102,7 +102,9 @@ def get_args(args=None):
     )
     if not args:
         if len(sys.argv) == 1:
-            print("\x1b[31;20mInsufficient number of " + "arguments provided!!!\n\x1b[0m")
+            print(
+                "\x1b[31;20mInsufficient number of " + "arguments provided!!!\n\x1b[0m"
+            )
             parser.print_help(sys.stderr)
             sys.exit(1)
         args = parser.parse_args()
@@ -113,7 +115,7 @@ def get_args(args=None):
         logger.setLevel(logging.DEBUG)
     logger.debug("DEBUG logging switched on")
     if args.module:
-        args.ofile = args.idir = "."
+        args.idir = "."  # ignore whatever is provided as idir
     if args.module and not args.split and args.ofile == ".":
         args.ofile = f"{args.module.replace('.','_')}.palette"
     if args.recursive:
