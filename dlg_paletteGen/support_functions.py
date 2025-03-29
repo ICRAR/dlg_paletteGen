@@ -12,6 +12,7 @@
 import ast
 import datetime
 import importlib
+import importlib.metadata
 import inspect
 import io
 import json
