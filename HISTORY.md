@@ -2,6 +2,12 @@ Changelog
 =========
 
 
+(unreleased)
+------------
+- Added importlib.metadata import. [Andreas Wicenec]
+- Release: version 0.4.2 🚀 [Andreas Wicenec]
+
+
 0.4.1 (2025-03-29)
 ------------------
 - Release: version 0.4.1 🚀 [Andreas Wicenec]
