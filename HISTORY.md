@@ -2,8 +2,9 @@ Changelog
 =========
 
 
-(unreleased)
-------------
+0.4.1 (2025-03-29)
+------------------
+- Release: version 0.4.1 🚀 [Andreas Wicenec]
 - Release: version 0.4.1 🚀 [Andreas Wicenec]
 - Release: version 0.4.1 🚀 [Andreas Wicenec]
 - Aut-reformat. [Andreas Wicenec]
