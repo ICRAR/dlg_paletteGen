@@ -5,6 +5,7 @@ Changelog
 (unreleased)
 ------------
 - Release: version 0.4.1 🚀 [Andreas Wicenec]
+- Release: version 0.4.1 🚀 [Andreas Wicenec]
 - Aut-reformat. [Andreas Wicenec]
 - Re-format example_rascil. [Andreas Wicenec]
 - Removed dependecy from merklelib. [Andreas Wicenec]
