@@ -35,9 +35,7 @@ def calibrate_list_rsexecute_workflow(
     if global_solution:
         log.info("calibration_solve: Performing global solution of gains for all vis")
     else:
-        log.info(
-            "calibration_solve: Performing separate solution of gains for each vis"
-        )
+        log.info("calibration_solve: Performing separate solution of gains for each vis")
 
     def calibration_solve(vis, modelvis=None, gt=None):
         return solve_calibrate_chain(
