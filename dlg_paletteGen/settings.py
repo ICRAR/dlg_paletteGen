@@ -1,5 +1,6 @@
 """Set global values."""
 
+import inspect
 import logging
 import sys
 from enum import Enum
@@ -71,10 +72,12 @@ CVALUE_TYPES = {
     "array_like": "numpy.array",
     numpy.ndarray.__name__: "numpy.array",
     numpy._globals._NoValueType.__name__: "Object",  # type: ignore
+    inspect._empty: "None",
     "type": "Object",
     "any": "Object",
     "NoneType": "None",
     "builtins.NoneType": "None",
+    "inspect._empty": "None",
 }
 
 BLOCKDAG_DATA_FIELDS = [
