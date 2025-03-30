@@ -89,7 +89,7 @@ def get_args(args=None):
     parser.add_argument(
         "-t",
         "--tag",
-        help="filter components with matching tag (only applicable is source mode)",
+        help="filter components with matching tag (only applicable in source mode)",
         default="",
     )
     parser.add_argument(
@@ -131,7 +131,9 @@ def get_args(args=None):
     )
     if not args:
         if len(sys.argv) == 1:
-            print("\x1b[31;20mInsufficient number of " + "arguments provided!!!\n\x1b[0m")
+            print(
+                "\x1b[31;20mInsufficient number of " + "arguments provided!!!\n\x1b[0m"
+            )
             parser.print_help(sys.stderr)
             sys.exit(1)
         args = parser.parse_args()
