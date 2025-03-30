@@ -18,7 +18,7 @@ It operates in two main modes:
    directory name and uses doxygen to extract the documentation as
    XML. It then parses the XML to derive the same information as
    when called with a module name.
-   Special flags:
+   Special flags:  # noqa: RST301
       The -t flag allows to filter DALiuGE specific components.
       The -s flag allows to
 
@@ -131,9 +131,7 @@ def get_args(args=None):
     )
     if not args:
         if len(sys.argv) == 1:
-            print(
-                "\x1b[31;20mInsufficient number of " + "arguments provided!!!\n\x1b[0m"
-            )
+            print("\x1b[31;20mInsufficient number of arguments provided!!!\n\x1b[0m")
             parser.print_help(sys.stderr)
             sys.exit(1)
         args = parser.parse_args()
