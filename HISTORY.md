@@ -4,6 +4,13 @@ Changelog
 
 (unreleased)
 ------------
+- Deal with return values, types and description. [Andreas Wicenec]
+- Fixed linting error. [Andreas Wicenec]
+
+
+0.4.4 (2025-03-30)
+------------------
+- Release: version 0.4.4 🚀 [Andreas Wicenec]
 - Improved help text and CLI parameter handling. [Andreas Wicenec]
 - Updated documentation and CLI parameter handling. [Andreas Wicenec]
 - Use output file name if provided in module mode. [Andreas Wicenec]
