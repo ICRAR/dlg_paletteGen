@@ -294,7 +294,7 @@ def test_direct_cli():
 
         idir = "."
         tag = ""
-        ofile = "t.palette"
+        ofile = "."
         parse_all = False
         module = "dlg_paletteGen"
         recursive = True

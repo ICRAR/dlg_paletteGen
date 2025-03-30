@@ -1,9 +1,29 @@
 # pylint: disable=consider-using-with
-"""This is the palette generator of the DALiuGE system.
+"""
+This is the palette generator of the DALiuGE system.
 
-It processes a file or a directory of source files and
-produces a DALiuGE compatible palette file containing the
+It produces a DALiuGE compatible palette file containing the
 information required to use functions and components in graphs.
+
+It operates in two main modes:
+
+1) module mode: when providing a module name using the -m flag.
+   In this mode dlg_paletteGen tries to import the module and
+   then uses introspection to identify classes, methods and functions
+   and their arguments along with the documentation, if available
+   in-line. It also tries to infer the types of arguments.
+
+2) source code mode: this is used when the -m flag does not exist.
+   It is using the first positional parameter as an input file or
+   directory name and uses doxygen to extract the documentation as
+   XML. It then parses the XML to derive the same information as
+   when called with a module name.
+   Special flags:
+      The -t flag allows to filter DALiuGE specific components.
+      The -s flag allows to
+
+
+
 For more information please refer to the documentation
 https://icrar.github.io/dlg_paletteGen/
 
@@ -60,9 +80,17 @@ def get_args(args=None):
     )
     parser.add_argument("idir", help="input directory path or file name")
     parser.add_argument("ofile", help="output file name")
-    parser.add_argument("-m", "--module", help="Module load path name", default="")
     parser.add_argument(
-        "-t", "--tag", help="filter components with matching tag", default=""
+        "-m",
+        "--module",
+        help="Module load path name (if set idir is ignored)",
+        default="",
+    )
+    parser.add_argument(
+        "-t",
+        "--tag",
+        help="filter components with matching tag (only applicable is source mode)",
+        default="",
     )
     parser.add_argument(
         "-c",
@@ -78,7 +106,8 @@ def get_args(args=None):
     parser.add_argument(
         "-S",
         "--split",
-        help="Split into sub-module palettes",
+        help="Split into sub-module palettes "
+        + "(ofile is ignored, only applicable in module mode)",
         action="store_true",
         default=False,
     )
@@ -102,9 +131,7 @@ def get_args(args=None):
     )
     if not args:
         if len(sys.argv) == 1:
-            print(
-                "\x1b[31;20mInsufficient number of " + "arguments provided!!!\n\x1b[0m"
-            )
+            print("\x1b[31;20mInsufficient number of " + "arguments provided!!!\n\x1b[0m")
             parser.print_help(sys.stderr)
             sys.exit(1)
         args = parser.parse_args()
@@ -116,6 +143,7 @@ def get_args(args=None):
     logger.debug("DEBUG logging switched on")
     if args.module:
         args.idir = "."  # ignore whatever is provided as idir
+        args.parse_all = True  # in module mode parse everything
     if args.module and not args.split and args.ofile == ".":
         args.ofile = f"{args.module.replace('.','_')}.palette"
     if args.recursive:
