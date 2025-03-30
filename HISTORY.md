@@ -4,6 +4,14 @@ Changelog
 
 (unreleased)
 ------------
+- Improved help text and CLI parameter handling. [Andreas Wicenec]
+- Updated documentation and CLI parameter handling. [Andreas Wicenec]
+- Use output file name if provided in module mode. [Andreas Wicenec]
+
+
+0.4.3 (2025-03-29)
+------------------
+- Release: version 0.4.3 🚀 [Andreas Wicenec]
 - Added importlib.metadata import. [Andreas Wicenec]
 - Release: version 0.4.2 🚀 [Andreas Wicenec]
 
