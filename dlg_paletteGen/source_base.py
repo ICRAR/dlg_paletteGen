@@ -113,6 +113,7 @@ def check_required_fields_for_category(message: str, fields: list, catg: str):
     if catg in [
         "DynlibApp",
         "PythonApp",
+        "PythonFunction",
         "PythonMemberFunction",
         "Branch",
         "BashShellApp",
@@ -125,6 +126,7 @@ def check_required_fields_for_category(message: str, fields: list, catg: str):
     if catg in [
         "DynlibApp",
         "PythonApp",
+        "PythonFunction",
         "PythonMemberFunction",
         "Branch",
         "BashShellApp",
@@ -450,7 +452,11 @@ def create_palette_node_from_params(params) -> tuple:
             # check that type is a known value
             if not FieldType.has_key(field_type):
                 logger.warning(
-                    text + " '" + internal_name + "' field_type is Unknown: " + field_type
+                    text
+                    + " '"
+                    + internal_name
+                    + "' field_type is Unknown: "
+                    + field_type
                 )
 
             # check that usage is a known value
@@ -1033,7 +1039,9 @@ def params_to_nodes(params: dict, tag: str) -> list:
 
             # if a construct is found, add to nodes
             if data["construct"] != "":
-                logger.info("Adding component: " + data["construct"] + "/" + node["text"])
+                logger.info(
+                    "Adding component: " + data["construct"] + "/" + node["text"]
+                )
                 construct_node = create_construct_node(data["construct"], node)
                 construct_node["repositoryUrl"] = git_repo
                 construct_node["commitHash"] = version

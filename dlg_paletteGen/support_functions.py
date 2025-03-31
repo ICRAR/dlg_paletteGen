@@ -800,7 +800,9 @@ def populateFields(sig: Any, dd) -> dict:
         logger.debug("Final type of parameter %s: %s", p, field[p]["type"])
         if isinstance(field[p]["value"], numpy.ndarray):
             try:
-                field[p]["value"] = field[p]["defaultValue"] = field[p]["value"].tolist()
+                field[p]["value"] = field[p]["defaultValue"] = field[p][
+                    "value"
+                ].tolist()
             except NotImplementedError:
                 field[p]["value"] = []
         if repr(field[p]["value"]) == "nan" and numpy.isnan(field[p]["value"]):
@@ -831,7 +833,8 @@ def populateFields(sig: Any, dd) -> dict:
 
 
 def constructNode(
-    category: str = "PythonApp",
+    category: str = "PythonFunction",
+    categoryType: str = "Application",
     name: str = "example_function",
     description: str = "",
     repositoryUrl: str = "dlg_paletteGen.generated",
@@ -851,6 +854,7 @@ def constructNode(
     """
     Node = {}
     Node["category"] = category
+    Node["categoryType"] = categoryType
     Node["id"] = get_next_id()
     Node["name"] = name
     Node["description"] = description
@@ -891,7 +895,9 @@ def populateDefaultFields(Node):  # pylint: disable=invalid-name
     et[n]["value"] = 2
     et[n]["defaultValue"] = 2
     et[n]["type"] = "Integer"
-    et[n]["description"] = "Estimate of execution time (in seconds) for this application."
+    et[n][
+        "description"
+    ] = "Estimate of execution time (in seconds) for this application."
     et[n]["parameterType"] = "ConstraintParameter"
     Node["fields"].update(et)
 
