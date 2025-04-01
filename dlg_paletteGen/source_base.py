@@ -745,7 +745,7 @@ def create_construct_node(node_type: str, node: dict) -> dict:
         "inputAppFields": [],
         "outputAppFields": [],
         "inputApplicationName": "GenericScatterApp",
-        "inputApplicationType": "PythonApp",
+        "inputApplicationType": "DALiuGEApp",
         "inputApplicationKey": None,
         "inputApplicationDescription": "",
         "outputApplicationName": "",
