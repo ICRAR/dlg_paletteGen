@@ -833,7 +833,7 @@ def populateFields(sig: Any, dd) -> dict:
 
 
 def constructNode(
-    category: str = "PythonFunction",
+    category: str = "PyFuncApp",
     categoryType: str = "Application",
     name: str = "example_function",
     description: str = "",
