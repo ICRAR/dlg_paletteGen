@@ -76,9 +76,9 @@ class NullBarrierApp(BarrierAppDROP):
 # @param category DALiuGEApp
 # @param tag template
 # @param dropclass DALiuGEApp/String/ComponentParameter/NoPort/ReadOnly//False/False/Application class
-# @param num_cpus 1/int/ConstraintParameter/NoPort/ReadOnly//False/False/Number of cores used
-# @param execution_time 5/float/ConstraintParameter/NoPort/ReadOnly//False/False/Estimated execution time
-# @param group_start False/bool/ComponentParameter/NoPort/ReadWrite//False/False/Is this node the start of a group?
+# @param num_cpus 1/Integer/ConstraintParameter/NoPort/ReadOnly//False/False/Number of cores used
+# @param execution_time 5/Float/ConstraintParameter/NoPort/ReadOnly//False/False/Estimated execution time
+# @param group_start False/Boolean/ComponentParameter/NoPort/ReadWrite//False/False/Is this node the start of a group?
 # @par EAGLE_END
 class DALiuGEApp(BarrierAppDROP):
     """A placeholder BarrierAppDrop that just aids the generation of the palette component"""
