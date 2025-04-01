@@ -113,8 +113,8 @@ def check_required_fields_for_category(message: str, fields: list, catg: str):
     """
     if catg in [
         "DynlibApp",
-        "PythonApp",
-        "PythonFunction",
+        "DALiuGEApp",
+        "PyFuncApp",
         "PythonMemberFunction",
         "Branch",
         "BashShellApp",
@@ -126,8 +126,8 @@ def check_required_fields_for_category(message: str, fields: list, catg: str):
 
     if catg in [
         "DynlibApp",
-        "PythonApp",
-        "PythonFunction",
+        "DALiuGEApp",
+        "PyFuncApp",
         "PythonMemberFunction",
         "Branch",
         "BashShellApp",
@@ -746,7 +746,7 @@ def create_construct_node(node_type: str, node: dict) -> dict:
         "inputAppFields": [],
         "outputAppFields": [],
         "inputApplicationName": "GenericScatterApp",
-        "inputApplicationType": "PythonApp",
+        "inputApplicationType": "DALiuGEApp",
         "inputApplicationKey": None,
         "inputApplicationDescription": "",
         "outputApplicationName": "",

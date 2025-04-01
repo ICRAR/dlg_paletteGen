@@ -697,7 +697,7 @@ class Child:
                     }
                 )
             elif language == Language.PYTHON:
-                member["params"].update({"category": "PythonApp"})
+                member["params"].update({"category": "DALiuGEApp"})
                 member["params"].update(
                     {
                         "dropclass": "dlg.apps.pyfunc.PyFuncApp/"
