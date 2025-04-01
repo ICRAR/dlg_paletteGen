@@ -69,18 +69,18 @@ class NullBarrierApp(BarrierAppDROP):
 
 
 ##
-# @brief PythonApp
+# @brief DALiuGEApp
 # @details A placeholder APP to aid construction of new applications.
 # This is mainly useful (and used) when starting a new workflow from scratch.
 # @par EAGLE_START
-# @param category PythonApp
+# @param category DALiuGEApp
 # @param tag template
-# @param dropclass PythonApp/String/ComponentParameter/NoPort/ReadOnly//False/False/Application class
+# @param dropclass DALiuGEApp/String/ComponentParameter/NoPort/ReadOnly//False/False/Application class
 # @param num_cpus 1/Integer/ConstraintParameter/NoPort/ReadOnly//False/False/Number of cores used
 # @param execution_time 5/Float/ConstraintParameter/NoPort/ReadOnly//False/False/Estimated execution time
 # @param group_start False/Boolean/ComponentParameter/NoPort/ReadWrite//False/False/Is this node the start of a group?
 # @par EAGLE_END
-class PythonApp(BarrierAppDROP):
+class DALiuGEApp(BarrierAppDROP):
     """A placeholder BarrierAppDrop that just aids the generation of the palette component"""
 
     pass
@@ -92,7 +92,7 @@ class PythonApp(BarrierAppDROP):
 # This is mainly useful (and used) to test graph translation and structure
 # without executing real algorithms. Very useful for debugging.
 # @par EAGLE_START
-# @param category PythonApp
+# @param category DALiuGEApp
 # @param tag daliuge
 # @param sleep_time 5/Integer/ApplicationArgument/NoPort/ReadWrite//False/False/The number of seconds to sleep
 # @param dropclass dlg.apps.simple.SleepApp/String/ComponentParameter/NoPort/ReadOnly//False/False/Application class
@@ -139,7 +139,7 @@ class SleepApp(BarrierAppDROP):
 # the graph. If an input is a container (e.g. a directory) it copies the
 # content recursively.
 # @par EAGLE_START
-# @param category PythonApp
+# @param category DALiuGEApp
 # @param tag daliuge
 # @param bufsize 65536/Integer/ApplicationArgument/NoPort/ReadWrite//False/False/Buffer size
 # @param dropclass dlg.apps.simple.CopyApp/String/ComponentParameter/NoPort/ReadOnly//False/False/Application class
@@ -196,7 +196,7 @@ class CopyApp(BarrierAppDROP):
 ##
 # @brief SleepAndCopyApp
 # @par EAGLE_START
-# @param category PythonApp
+# @param category DALiuGEApp
 # @param tag daliuge
 # @param sleep_time 5/Integer/ApplicationArgument/NoPort/ReadWrite//False/False/The number of seconds to sleep
 # @param dropclass dlg.apps.simple.SleepAndCopyApp/String/ComponentParameter/NoPort/ReadOnly//False/False/Application class
@@ -219,7 +219,7 @@ class SleepAndCopyApp(SleepApp, CopyApp):
 # size indicates the number of elements ranging between the values low and high.
 # The resulting array will be send to all connected output apps.
 # @par EAGLE_START
-# @param category PythonApp
+# @param category DALiuGEApp
 # @param tag daliuge
 # @param size 100/Integer/ApplicationArgument/NoPort/ReadWrite//False/False/The size of the array
 # @param low 0/Float/ApplicationArgument/NoPort/ReadWrite//False/False/Low value of range in array [inclusive]
@@ -299,7 +299,7 @@ class RandomArrayApp(BarrierAppDROP):
 # Users can add as many producers to the input array port as required and the resulting array
 # will also be send to all connected output apps.
 # @par EAGLE_START
-# @param category PythonApp
+# @param category DALiuGEApp
 # @param tag daliuge
 # @param method mean/Select/ApplicationArgument/NoPort/ReadWrite/mean,median/False/False/The method used for averaging
 # @param dropclass dlg.apps.simple.AverageArraysApp/String/ComponentParameter/NoPort/ReadOnly//False/False/Application class
@@ -391,7 +391,7 @@ class AverageArraysApp(BarrierAppDROP):
 #
 # @par EAGLE_START
 # @param construct Gather
-# @param category PythonApp
+# @param category DALiuGEApp
 # @param tag daliuge
 # @param num_of_inputs 4/Integer/ConstructParameter/NoPort/ReadWrite//False/False/The Gather "width", stating how many inputs each Gather instance will handle
 # @param dropclass dlg.apps.simple.GenericGatherApp/String/ComponentParameter/NoPort/ReadOnly//False/False/Application class
@@ -436,7 +436,7 @@ class GenericGatherApp(BarrierAppDROP):
 # @brief GenericNpyGatherApp
 # @details A BarrierAppDrop that combines one or more inputs using cumulative operations.
 # @par EAGLE_START
-# @param category PythonApp
+# @param category DALiuGEApp
 # @param construct Gather
 # @param tag daliuge
 # @param num_of_inputs 4/Integer/ConstructParameter/NoPort/ReadWrite//False/False/The Gather width, stating how many inputs each Gather instance will handle
@@ -536,7 +536,7 @@ class GenericNpyGatherApp(BarrierAppDROP):
 # to connect the single output port to multiple sinks, which will all receive
 # the same message. App does not require any input.
 # @par EAGLE_START
-# @param category PythonApp
+# @param category DALiuGEApp
 # @param tag daliuge
 # @param greet World/String/ApplicationArgument/NoPort/ReadWrite//False/False/What appears after 'Hello '
 # @param dropclass dlg.apps.simple.HelloWorldApp/String/ComponentParameter/NoPort/ReadOnly//False/False/Application class
@@ -591,7 +591,7 @@ class HelloWorldApp(BarrierAppDROP):
 # @details A simple APP that retrieves the content of a URL and writes
 # it to all outputs.
 # @par EAGLE_START
-# @param category PythonApp
+# @param category DALiuGEApp
 # @param tag daliuge
 # @param url None/String/ApplicationArgument/NoPort/ReadWrite//False/False/The URL to retrieve
 # @param dropclass dlg.apps.simple.UrlRetrieveApp/String/ComponentParameter/NoPort/ReadOnly//False/False/Application class
@@ -643,7 +643,7 @@ class UrlRetrieveApp(BarrierAppDROP):
 # the number of outputs will be distributed across the first len(outputs)-1 elements of the
 # resulting array.
 # @par EAGLE_START
-# @param category PythonApp
+# @param category DALiuGEApp
 # @param construct Scatter
 # @param tag daliuge
 # @param num_of_copies 4/Integer/ConstructParameter/NoPort/ReadWrite//False/False/Specifies the number of replications of the content of the scatter construct
@@ -708,7 +708,7 @@ class GenericScatterApp(BarrierAppDROP):
 # resulting array.
 # @par EAGLE_START
 # @param construct Scatter
-# @param category PythonApp
+# @param category DALiuGEApp
 # @param tag daliuge
 # @param num_of_copies 4/Integer/ConstructParameter/NoPort/ReadWrite//False/False/Specifies the number of replications of the content of the scatter construct
 # @param scatter_axes /String/ApplicationArgument/NoPort/ReadWrite//False/False/The axes to split input ndarrays on, e.g. [0,0,0], length must match the number of input ports
@@ -786,7 +786,7 @@ class SimpleBranch(BranchAppDrop, NullBarrierApp):
 # the remaining array on. This app is useful for a loop.
 #
 # @par EAGLE_START
-# @param category PythonApp
+# @param category DALiuGEApp
 # @param tag daliuge
 # @param dropclass dlg.apps.simple.PickOne/String/ComponentParameter/NoPort/ReadOnly//False/False/Application class
 # @param execution_time 5/Float/ConstraintParameter/NoPort/ReadOnly//False/False/Estimated execution time
@@ -845,7 +845,7 @@ class PickOne(BarrierAppDROP):
 # since this operation will not yield.
 # The resulting array will be sent to all connected output apps.
 # @par EAGLE_START
-# @param category PythonApp
+# @param category DALiuGEApp
 # @param tag daliuge
 # @param size 100/Integer/ApplicationArgument/NoPort/ReadWrite//False/False/the size of the array
 # @param dropclass dlg.apps.simple.ListAppendThrashingApp/String/ComponentParameter/NoPort/ReadOnly//False/False/Application class
