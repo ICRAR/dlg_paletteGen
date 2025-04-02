@@ -794,9 +794,7 @@ def populateFields(sig: Any, dd) -> dict:
         logger.debug("Final type of parameter %s: %s", p, field[p]["type"])
         if isinstance(field[p]["value"], numpy.ndarray):
             try:
-                field[p]["value"] = field[p]["defaultValue"] = field[p][
-                    "value"
-                ].tolist()
+                field[p]["value"] = field[p]["defaultValue"] = field[p]["value"].tolist()
             except NotImplementedError:
                 field[p]["value"] = []
         if repr(field[p]["value"]) == "nan" and numpy.isnan(field[p]["value"]):
@@ -889,9 +887,7 @@ def populateDefaultFields(Node):  # pylint: disable=invalid-name
     et[n]["value"] = 2
     et[n]["defaultValue"] = 2
     et[n]["type"] = "int"
-    et[n][
-        "description"
-    ] = "Estimate of execution time (in seconds) for this application."
+    et[n]["description"] = "Estimate of execution time (in seconds) for this application."
     et[n]["parameterType"] = "ConstraintParameter"
     Node["fields"].update(et)
 
