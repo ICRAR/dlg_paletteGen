@@ -14,9 +14,9 @@ import types
 import typing
 from typing import _SpecialForm
 
-from .classes import DetailedDescription, DummyParam, DummySig, logger
-from .source_base import FieldUsage
-from .support_functions import (
+from dlg_paletteGen.classes import DetailedDescription, DummyParam, DummySig, logger
+from dlg_paletteGen.source_base import FieldUsage
+from dlg_paletteGen.support_functions import (
     constructNode,
     get_mod_name,
     get_submodules,
@@ -116,7 +116,7 @@ def _get_name(name: str, member, module=None, parent=None) -> str:
     elif inspect.isclass(member):
         mname = getattr(member, "__class__").__name__
     else:
-        mname = f"{member_name}" if hasattr(member, "__name__") else f"{module_name}.name"
+        mname = f"{member_name}" if hasattr(member, "__name__") else ""
     logger.debug(">>>>> mname: %s, %s.%s", mname, parent, module_name)
     if name and not mname:
         mname = name
@@ -230,7 +230,12 @@ def construct_member_node(member, module=None, parent=None, name=None) -> dict:
     ind = -1
     load_name = node["name"]
     if hasattr(member, "__module__") and member.__module__:
-        load_name = f"{member.__module__}.{node['name']}"
+        if load_name in member.__module__:
+            # If the load_name is "name", and member.__module__ is already "module.name"
+            # This stops us creating the incorrect "module.name.name"
+            load_name = member.__module__
+        else:
+            load_name = f"{member.__module__}.{node['name']}"
     elif hasattr(member, "__package__"):
         load_name = f"{member.__package__}.{load_name}"
     elif parent:

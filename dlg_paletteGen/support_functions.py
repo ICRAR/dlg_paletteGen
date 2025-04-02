@@ -29,7 +29,7 @@ from typing import Any, Union
 import numpy
 from blockdag import build_block_dag
 
-from .settings import (
+from dlg_paletteGen.settings import (
     BLOCKDAG_DATA_FIELDS,
     CVALUE_TYPES,
     DOXYGEN_SETTINGS,
