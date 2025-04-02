@@ -12,11 +12,11 @@ from dlg_paletteGen.classes import Child, Language, logger
 from .support_functions import check_text_element, get_next_id
 
 KNOWN_PARAM_DATA_TYPES = [
-    "String",
-    "Integer",
-    "Float",
+    "str",
+    "int",
+    "float",
     "Object",
-    "Boolean",
+    "bool",
     "Select",
     "Password",
     "Json",
@@ -113,7 +113,8 @@ def check_required_fields_for_category(message: str, fields: list, catg: str):
     """
     if catg in [
         "DynlibApp",
-        "PythonApp",
+        "DALiuGEApp",
+        "PyFuncApp",
         "PythonMemberFunction",
         "Branch",
         "BashShellApp",
@@ -125,7 +126,8 @@ def check_required_fields_for_category(message: str, fields: list, catg: str):
 
     if catg in [
         "DynlibApp",
-        "PythonApp",
+        "DALiuGEApp",
+        "PyFuncApp",
         "PythonMemberFunction",
         "Branch",
         "BashShellApp",
@@ -264,7 +266,7 @@ def parse_value(component_name: str, field_name: str, value: str) -> tuple:
 
     # init attributes of the param
     default_value = ""
-    value_type: str = "String"
+    value_type: str = "str"
     field_type: str = FieldType.ComponentParameter
     field_usage: str = FieldUsage.NoPort
     access: str = FieldAccess.readwrite
@@ -744,7 +746,7 @@ def create_construct_node(node_type: str, node: dict) -> dict:
         "inputAppFields": [],
         "outputAppFields": [],
         "inputApplicationName": "GenericScatterApp",
-        "inputApplicationType": "PythonApp",
+        "inputApplicationType": "DALiuGEApp",
         "inputApplicationKey": None,
         "inputApplicationDescription": "",
         "outputApplicationName": "",
@@ -760,7 +762,7 @@ def create_construct_node(node_type: str, node: dict) -> dict:
                 "defaultValue": "",
                 "description": "Application class",
                 "readonly": True,
-                "type": "String",
+                "type": "str",
                 "precious": False,
                 "options": [],
                 "positional": False,
@@ -775,7 +777,7 @@ def create_construct_node(node_type: str, node: dict) -> dict:
                 "defaultValue": "0",
                 "description": "Estimated execution time",
                 "readonly": False,
-                "type": "Float",
+                "type": "float",
                 "precious": False,
                 "options": [],
                 "positional": False,
@@ -790,7 +792,7 @@ def create_construct_node(node_type: str, node: dict) -> dict:
                 "defaultValue": "0",
                 "description": "Number of cores used",
                 "readonly": False,
-                "type": "Integer",
+                "type": "int",
                 "precious": False,
                 "options": [],
                 "positional": False,
@@ -805,7 +807,7 @@ def create_construct_node(node_type: str, node: dict) -> dict:
                 "defaultValue": "False",
                 "description": "Component is start of a group",
                 "readonly": False,
-                "type": "Boolean",
+                "type": "bool",
                 "precious": False,
                 "options": [],
                 "positional": False,
@@ -860,7 +862,7 @@ def create_construct_node(node_type: str, node: dict) -> dict:
             create_field(
                 "num_of_copies",
                 "4",
-                "Integer",
+                "int",
                 FieldType.ConstructParameter,
                 FieldUsage.NoPort,
                 FieldAccess.readwrite,
@@ -915,7 +917,7 @@ def create_construct_node(node_type: str, node: dict) -> dict:
             create_field(
                 "num_of_copies",
                 "4",
-                "Integer",
+                "int",
                 FieldType.ConstructParameter,
                 FieldUsage.NoPort,
                 FieldAccess.readwrite,
@@ -940,7 +942,7 @@ def create_construct_node(node_type: str, node: dict) -> dict:
                     "defaultValue": "",
                     "description": "",
                     "readonly": False,
-                    "type": "String",
+                    "type": "str",
                     "precious": False,
                     "options": [],
                     "positional": False,
@@ -955,7 +957,7 @@ def create_construct_node(node_type: str, node: dict) -> dict:
             create_field(
                 "num_of_inputs",
                 "4",
-                "Integer",
+                "int",
                 FieldType.ConstructParameter,
                 FieldUsage.NoPort,
                 FieldAccess.readwrite,
