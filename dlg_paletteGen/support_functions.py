@@ -206,7 +206,7 @@ def typeFix(value_type: Union[Any, None] = "", default_value: Any = None) -> str
         except TypeError:
             guess_type = str(guess_type_from_default(default_value))
         path_ind = 1
-    elif isinstance(value_type, str) and value_type in SVALUE_TYPES.values():
+    elif isinstance(value_type, str):
         guess_type = str(value_type)  # make lint happy and cast to string
         path_ind = 2
     elif isinstance(value_type, str) and value_type in SVALUE_TYPES:
@@ -800,7 +800,9 @@ def populateFields(sig: Any, dd) -> dict:
         logger.debug("Final type of parameter %s: %s", p, field[p]["type"])
         if isinstance(field[p]["value"], numpy.ndarray):
             try:
-                field[p]["value"] = field[p]["defaultValue"] = field[p]["value"].tolist()
+                field[p]["value"] = field[p]["defaultValue"] = field[p][
+                    "value"
+                ].tolist()
             except NotImplementedError:
                 field[p]["value"] = []
         if repr(field[p]["value"]) == "nan" and numpy.isnan(field[p]["value"]):
@@ -881,7 +883,7 @@ def populateDefaultFields(Node):  # pylint: disable=invalid-name
     n = "group_start"
     gs = initializeField(n)
     gs[n]["name"] = n
-    gs[n]["type"] = "Boolean"
+    gs[n]["type"] = "bool"
     gs[n]["value"] = "false"
     gs[n]["default_value"] = "false"
     gs[n]["description"] = "Is this node the start of a group?"
@@ -892,8 +894,10 @@ def populateDefaultFields(Node):  # pylint: disable=invalid-name
     et[n]["name"] = n
     et[n]["value"] = 2
     et[n]["defaultValue"] = 2
-    et[n]["type"] = "Integer"
-    et[n]["description"] = "Estimate of execution time (in seconds) for this application."
+    et[n]["type"] = "int"
+    et[n][
+        "description"
+    ] = "Estimate of execution time (in seconds) for this application."
     et[n]["parameterType"] = "ConstraintParameter"
     Node["fields"].update(et)
 
@@ -902,7 +906,7 @@ def populateDefaultFields(Node):  # pylint: disable=invalid-name
     ncpus[n]["name"] = n
     ncpus[n]["value"] = 1
     ncpus[n]["default_value"] = 1
-    ncpus[n]["type"] = "Integer"
+    ncpus[n]["type"] = "int"
     ncpus[n]["description"] = "Number of cores used."
     ncpus[n]["parameterType"] = "ConstraintParameter"
     Node["fields"].update(ncpus)
@@ -912,7 +916,7 @@ def populateDefaultFields(Node):  # pylint: disable=invalid-name
     fn[n]["name"] = n
     fn[n]["value"] = "my_func"
     fn[n]["defaultValue"] = "my_func"
-    fn[n]["type"] = "String"
+    fn[n]["type"] = "str"
     fn[n]["description"] = "Complete import path of function"
     fn[n]["readonly"] = True
     Node["fields"].update(fn)
@@ -922,7 +926,7 @@ def populateDefaultFields(Node):  # pylint: disable=invalid-name
     fn[n]["name"] = n
     fn[n]["value"] = ""
     fn[n]["defaultValue"] = ""
-    fn[n]["type"] = "String"
+    fn[n]["type"] = "str"
     fn[n]["description"] = (
         "Here you can define an in-line function in the following way: "
         + "def my_func(a, b): return a+b NOTE: The name of the function has to "
@@ -936,7 +940,7 @@ def populateDefaultFields(Node):  # pylint: disable=invalid-name
     dc[n]["name"] = n
     dc[n]["value"] = "dlg.apps.pyfunc.PyFuncApp"
     dc[n]["defaultValue"] = "dlg.apps.pyfunc.PyFuncApp"
-    dc[n]["type"] = "String"
+    dc[n]["type"] = "str"
     dc[n]["description"] = "The python class that implements this application"
     dc[n]["readonly"] = True
     Node["fields"].update(dc)

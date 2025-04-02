@@ -57,10 +57,10 @@ logger.addHandler(ch2)
 
 # these are our supported base types
 VALUE_TYPES = {
-    str: "String",
-    int: "Integer",
-    float: "Float",
-    bool: "Boolean",
+    str: "str",
+    int: "int",
+    float: "float",
+    bool: "bool",
     list: "list",
     dict: "dict",
     tuple: "Json",
