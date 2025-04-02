@@ -801,7 +801,9 @@ def populateFields(sig: Any, dd) -> dict:
         logger.debug("Final type of parameter %s: %s", p, field[p]["type"])
         if isinstance(field[p]["value"], numpy.ndarray):
             try:
-                field[p]["value"] = field[p]["defaultValue"] = field[p]["value"].tolist()
+                field[p]["value"] = field[p]["defaultValue"] = field[p][
+                    "value"
+                ].tolist()
             except NotImplementedError:
                 field[p]["value"] = []
         if repr(field[p]["value"]) == "nan" and numpy.isnan(field[p]["value"]):
@@ -919,7 +921,7 @@ def populateDefaultFields(Node):  # pylint: disable=invalid-name
     n = "group_start"
     gs = initializeField(n)
     gs[n]["name"] = n
-    gs[n]["type"] = "Boolean"
+    gs[n]["type"] = "bool"
     gs[n]["value"] = "false"
     gs[n]["default_value"] = "false"
     gs[n]["description"] = "Is this node the start of a group?"
@@ -950,8 +952,10 @@ def populateDefaultFields(Node):  # pylint: disable=invalid-name
     et[n]["name"] = n
     et[n]["value"] = 2
     et[n]["defaultValue"] = 2
-    et[n]["type"] = "Integer"
-    et[n]["description"] = "Estimate of execution time (in seconds) for this application."
+    et[n]["type"] = "int"
+    et[n][
+        "description"
+    ] = "Estimate of execution time (in seconds) for this application."
     et[n]["parameterType"] = "ConstraintParameter"
     Node["fields"].update(et)
 
@@ -960,7 +964,7 @@ def populateDefaultFields(Node):  # pylint: disable=invalid-name
     ncpus[n]["name"] = n
     ncpus[n]["value"] = 1
     ncpus[n]["default_value"] = 1
-    ncpus[n]["type"] = "Integer"
+    ncpus[n]["type"] = "int"
     ncpus[n]["description"] = "Number of cores used."
     ncpus[n]["parameterType"] = "ConstraintParameter"
     Node["fields"].update(ncpus)
