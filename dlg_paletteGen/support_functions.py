@@ -802,7 +802,9 @@ def populateFields(sig: Any, dd) -> dict:
         logger.debug("Final type of parameter %s: %s", p, field[p]["type"])
         if isinstance(field[p]["value"], numpy.ndarray):
             try:
-                field[p]["value"] = field[p]["defaultValue"] = field[p]["value"].tolist()
+                field[p]["value"] = field[p]["defaultValue"] = field[p][
+                    "value"
+                ].tolist()
             except NotImplementedError:
                 field[p]["value"] = []
         if repr(field[p]["value"]) == "nan" and numpy.isnan(field[p]["value"]):
@@ -944,8 +946,8 @@ def populateDefaultFields(Node):  # pylint: disable=invalid-name
     n = "dropclass"
     dc = initializeField(n)
     dc[n]["name"] = n
-    dc[n]["value"] = "dlg.apps.pyfunc.PythonFunction"
-    dc[n]["defaultValue"] = "dlg.apps.pyfunc.PythonFunction"
+    dc[n]["value"] = "dlg.apps.pyfunc.PyFuncApp"
+    dc[n]["defaultValue"] = "dlg.apps.pyfunc.PyFuncApp"
     dc[n]["type"] = "str"
     dc[n]["description"] = "The python class that implements this application"
     dc[n]["readonly"] = True
