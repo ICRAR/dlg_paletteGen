@@ -1,6 +1,6 @@
 """Entry point for dlg_paletteGen."""
 
-from .cli import main  # pragma: no cover
+from dlg_paletteGen.cli import main  # pragma: no cover
 
 if __name__ == "__main__":  # pragma: no cover
     # palette = main()
