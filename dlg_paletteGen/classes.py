@@ -129,7 +129,9 @@ class DetailedDescription:
         self.format = ""
         self._identify_format()
         self.main_descr, self.params, self.returns = self.process_descr()
-        self.brief_descr = self.main_descr.split(".")[0] + "." if self.main_descr else ""
+        self.brief_descr = (
+            self.main_descr.split(".")[0] + "." if self.main_descr else ""
+        )
 
     def _process_rEST(self, dd="") -> Union[tuple | None]:
         """
@@ -271,7 +273,9 @@ class DetailedDescription:
         dList = dStr.split("\n")
         try:
             start_ind = [
-                idx for idx, s in enumerate(dList) if re.findall(r"-{1,20} parameter", s)
+                idx
+                for idx, s in enumerate(dList)
+                if re.findall(r"-{1,20} parameter", s)
             ][0] + 1
         except IndexError:
             start_ind = 0
@@ -471,7 +475,7 @@ class GreatGrandChild:
             value_type = typeFix(value_type, default_value=default_value)
 
             # add the param
-            if str(value_type) == "String":
+            if str(value_type) == "str":
                 default_value = str(default_value).replace("'", "")
                 if default_value.find("/") >= 0:
                     default_value = f'"{default_value}"'
@@ -669,20 +673,20 @@ class Child:
 
             member["params"].update(
                 {
-                    "execution_time": "5/Integer/ConstraintParameter/NoPort/"
+                    "execution_time": "5/int/ConstraintParameter/NoPort/"
                     + "readwrite//False/False/Estimate of execution time "
                     + "(in seconds) for this application."
                 }
             )
             member["params"].update(
                 {
-                    "num_cpus": "1/Integer/ConstraintParameter/NoPort/"
+                    "num_cpus": "1/int/ConstraintParameter/NoPort/"
                     + "readwrite//False/False/Number of cores used."
                 }
             )
             member["params"].update(
                 {
-                    "group_start": "false/Boolean/ComponentParameter/NoPort/"
+                    "group_start": "false/bool/ComponentParameter/NoPort/"
                     + "readwrite//False/False/Is this node the start of "
                     + "a group?"
                 }
@@ -695,7 +699,7 @@ class Child:
                 )
                 member["params"].update(
                     {
-                        "libpath": " //String/ComponentParameter/NoPort/"
+                        "libpath": " //str/ComponentParameter/NoPort/"
                         + "readwrite//False/False/The location of the shared "
                         + "object/DLL that implements this application",
                     }
@@ -705,7 +709,7 @@ class Child:
                 member["params"].update(
                     {
                         "dropclass": "dlg.apps.pyfunc.PyFuncApp/"
-                        + "String/ComponentParameter/NoPort/readonly//False/"
+                        + "str/ComponentParameter/NoPort/readonly//False/"
                         + "False/"
                         + "The python class that implements this application",
                     }
@@ -728,7 +732,7 @@ class Child:
                 gg.member["params"].update(
                     {
                         "func_name": gg.func_name
-                        + "/String/ComponentParameter/NoPort/readonly/"
+                        + "/str/ComponentParameter/NoPort/readonly/"
                         + "/False/False/Complete import path of function",
                     }
                 )

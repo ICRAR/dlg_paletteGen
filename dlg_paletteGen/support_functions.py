@@ -206,7 +206,7 @@ def typeFix(value_type: Union[Any, None] = "", default_value: Any = None) -> str
         except TypeError:
             guess_type = str(guess_type_from_default(default_value))
         path_ind = 1
-    elif isinstance(value_type, str) and value_type in SVALUE_TYPES.values():
+    elif isinstance(value_type, str):
         guess_type = str(value_type)  # make lint happy and cast to string
         path_ind = 2
     elif isinstance(value_type, str) and value_type in SVALUE_TYPES:
@@ -287,7 +287,6 @@ def modify_doxygen_options(doxygen_filename: str, options: dict):
 
 
 def get_next_id() -> str:
-    """Use tempfile.mktmp now."""
     """Use tempfile.mktmp now."""
     return tempfile.mktemp(prefix="", dir="")
 
@@ -669,18 +668,19 @@ def initializeField(
     positional: bool = False,
 ):
     """Construct a dummy field."""
-    """Construct a dummy field."""
     field = {}  # type: ignore
     fieldValue = {}
+    fieldValue["id"] = get_next_id()
+    fieldValue["encoding"] = ""
     fieldValue["name"] = name
-    fieldValue["value"] = value
-    fieldValue["defaultValue"] = defaultValue
+    fieldValue["value"] = value if value else ""
+    fieldValue["defaultValue"] = defaultValue if defaultValue else ""
     fieldValue["description"] = description
     fieldValue["type"] = vtype  # type:ignore
     fieldValue["parameterType"] = parameterType
     fieldValue["usage"] = usage
     fieldValue["readonly"] = readonly  # type:ignore
-    fieldValue["options"] = options  # type:ignore
+    fieldValue["options"] = options if options else []  # type:ignore
     fieldValue["precious"] = precious  # type:ignore
     fieldValue["positional"] = positional  # type:ignore
     field.__setitem__(name, fieldValue)
@@ -746,7 +746,6 @@ def get_value_type_from_default(default):
 def populateFields(sig: Any, dd) -> dict:
     """Populate a field from signature parameters and mixin documentation."""
     fields = {}
-    bfield = {}
     descr_miss = []
 
     new_param = inspect.Parameter(
@@ -767,6 +766,8 @@ def populateFields(sig: Any, dd) -> dict:
                 param_desc["desc"] = f"Reference to {dd.name} object"
 
         # populate the field itself
+        if param_desc["value"] is None:
+            param_desc["value"] = ""
         field[p]["value"] = field[p]["defaultValue"] = param_desc["value"]
 
         # deal with the type
@@ -795,12 +796,14 @@ def populateFields(sig: Any, dd) -> dict:
         # else:
         #     field[p]["parameterType"] = "ApplicationArgument"
         field[p]["parameterType"] = "ApplicationArgument"
-        field[p]["options"] = None
+        field[p]["options"] = []
         field[p]["positional"] = v.kind == inspect.Parameter.POSITIONAL_ONLY
         logger.debug("Final type of parameter %s: %s", p, field[p]["type"])
         if isinstance(field[p]["value"], numpy.ndarray):
             try:
-                field[p]["value"] = field[p]["defaultValue"] = field[p]["value"].tolist()
+                field[p]["value"] = field[p]["defaultValue"] = field[p][
+                    "value"
+                ].tolist()
             except NotImplementedError:
                 field[p]["value"] = []
         if repr(field[p]["value"]) == "nan" and numpy.isnan(field[p]["value"]):
@@ -822,11 +825,11 @@ def populateFields(sig: Any, dd) -> dict:
         logger.debug(
             "Identified type %s and assigned OutputPort.", field["output"]["type"]
         )
-    fields.update(bfield)
-    fields["base_name"]["parameterType"] = "ComponentParameter"
-    fields["base_name"]["type"] = "String"
-    fields["base_name"]["readonly"] = True
-    fields["base_name"]["description"] = "The base class for this member function"
+    # fields.update(bfield)
+    # fields["base_name"]["parameterType"] = "ComponentParameter"
+    # fields["base_name"]["type"] = "String"
+    # fields["base_name"]["readonly"] = True
+    # fields["base_name"]["description"] = "The base class for this member function"
     return fields
 
 
@@ -850,7 +853,18 @@ def constructNode(
     For some reason sub-classing benedict did not work here, thus we use a
     function instead.
     """
-    Node = {}
+    Node = {
+            "inputAppFields": [],
+            "inputApplicationDescription": "",
+            "inputApplicationId": None,
+            "inputApplicationName": "",
+            "inputApplicationType": "None",
+            "outputAppFields": [],
+            "outputApplicationDescription": "",
+            "outputApplicationId": None,
+            "outputApplicationName": "",
+            "outputApplicationType": "None",
+    }
     Node["category"] = category
     Node["categoryType"] = categoryType
     Node["id"] = get_next_id()
@@ -893,7 +907,9 @@ def populateDefaultFields(Node):  # pylint: disable=invalid-name
     et[n]["value"] = 2
     et[n]["defaultValue"] = 2
     et[n]["type"] = "Integer"
-    et[n]["description"] = "Estimate of execution time (in seconds) for this application."
+    et[n][
+        "description"
+    ] = "Estimate of execution time (in seconds) for this application."
     et[n]["parameterType"] = "ConstraintParameter"
     Node["fields"].update(et)
 
@@ -913,7 +929,10 @@ def populateDefaultFields(Node):  # pylint: disable=invalid-name
     fn[n]["value"] = "my_func"
     fn[n]["defaultValue"] = "my_func"
     fn[n]["type"] = "String"
-    fn[n]["description"] = "Complete import path of function"
+    fn[n]["description"] = (
+        "Complete import path of function or just a function"
+        + " name which is also used in func_code below."
+    )
     fn[n]["readonly"] = True
     Node["fields"].update(fn)
 
@@ -931,6 +950,29 @@ def populateDefaultFields(Node):  # pylint: disable=invalid-name
     fn[n]["readonly"] = True
     Node["fields"].update(fn)
 
+    n = "log-level"
+    dc = initializeField(n)
+    dc[n]["name"] = n
+    dc[n]["value"] = "NOTSET"
+    dc[n]["defaultValue"] = "NOTSET"
+    dc[n]["type"] = "Select"
+    dc[n]["options"] = ["NOTSET", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
+    dc[n]["description"] = (
+        "Log-level to be used for this appplication."
+        + " If empty or NOTSET, the global setting will be used."
+    )
+    Node["fields"].update(dc)
+
+    n = "base_name"
+    fn = initializeField(name=n)
+    fn[n]["name"] = n
+    fn[n]["value"] = "dummy_base"
+    fn[n]["defaultValue"] = "dummy_base"
+    fn[n]["type"] = "String"
+    fn[n]["description"] = "The base class for this member function."
+    fn[n]["readonly"] = True
+    Node["fields"].update(fn)
+
     n = "dropclass"
     dc = initializeField(n)
     dc[n]["name"] = n
@@ -941,6 +983,35 @@ def populateDefaultFields(Node):  # pylint: disable=invalid-name
     dc[n]["readonly"] = True
     Node["fields"].update(dc)
 
+    n = "group_start"
+    gs = initializeField(n)
+    gs[n]["name"] = n
+    gs[n]["type"] = "Boolean"
+    gs[n]["value"] = "false"
+    gs[n]["defaultValue"] = "false"
+    gs[n]["description"] = "Is this node the start of a group?"
+    Node["fields"].update(gs)
+
+    n = "execution_time"
+    et = initializeField(n)
+    et[n]["name"] = n
+    et[n]["value"] = "2"
+    et[n]["defaultValue"] = "2"
+    et[n]["type"] = "Integer"
+    et[n]["description"] = "Estimate of execution time (in seconds) for this application."
+    et[n]["parameterType"] = "ConstraintParameter"
+    Node["fields"].update(et)
+
+    n = "num_cpus"
+    ncpus = initializeField(n)
+    ncpus[n]["name"] = n
+    ncpus[n]["value"] = "1"
+    ncpus[n]["defaultValue"] = "1"
+    ncpus[n]["type"] = "Integer"
+    ncpus[n]["description"] = "Number of cores used."
+    ncpus[n]["parameterType"] = "ConstraintParameter"
+    Node["fields"].update(ncpus)
+
     return Node
 
 
@@ -949,7 +1020,6 @@ def constructPalette():
     palette = {
         "modelData": {
             "filePath": "",
-            "fileType": "Palette",
             "fileType": "Palette",
             "shortDescription": "",
             "detailedDescription": "",
