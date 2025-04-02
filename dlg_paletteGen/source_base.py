@@ -12,11 +12,11 @@ from dlg_paletteGen.classes import Child, Language, logger
 from .support_functions import check_text_element, get_next_id
 
 KNOWN_PARAM_DATA_TYPES = [
-    "String",
-    "Integer",
-    "Float",
+    "str",
+    "int",
+    "float",
     "Object",
-    "Boolean",
+    "bool",
     "Select",
     "Password",
     "Json",
@@ -266,7 +266,7 @@ def parse_value(component_name: str, field_name: str, value: str) -> tuple:
 
     # init attributes of the param
     default_value = ""
-    value_type: str = "String"
+    value_type: str = "str"
     field_type: str = FieldType.ComponentParameter
     field_usage: str = FieldUsage.NoPort
     access: str = FieldAccess.readwrite
@@ -453,7 +453,11 @@ def create_palette_node_from_params(params) -> tuple:
             # check that type is a known value
             if not FieldType.has_key(field_type):
                 logger.warning(
-                    text + " '" + internal_name + "' field_type is Unknown: " + field_type
+                    text
+                    + " '"
+                    + internal_name
+                    + "' field_type is Unknown: "
+                    + field_type
                 )
 
             # check that usage is a known value
@@ -762,7 +766,7 @@ def create_construct_node(node_type: str, node: dict) -> dict:
                 "defaultValue": "",
                 "description": "Application class",
                 "readonly": True,
-                "type": "String",
+                "type": "str",
                 "precious": False,
                 "options": [],
                 "positional": False,
@@ -777,7 +781,7 @@ def create_construct_node(node_type: str, node: dict) -> dict:
                 "defaultValue": "0",
                 "description": "Estimated execution time",
                 "readonly": False,
-                "type": "Float",
+                "type": "float",
                 "precious": False,
                 "options": [],
                 "positional": False,
@@ -792,7 +796,7 @@ def create_construct_node(node_type: str, node: dict) -> dict:
                 "defaultValue": "0",
                 "description": "Number of cores used",
                 "readonly": False,
-                "type": "Integer",
+                "type": "int",
                 "precious": False,
                 "options": [],
                 "positional": False,
@@ -807,7 +811,7 @@ def create_construct_node(node_type: str, node: dict) -> dict:
                 "defaultValue": "False",
                 "description": "Component is start of a group",
                 "readonly": False,
-                "type": "Boolean",
+                "type": "bool",
                 "precious": False,
                 "options": [],
                 "positional": False,
@@ -862,7 +866,7 @@ def create_construct_node(node_type: str, node: dict) -> dict:
             create_field(
                 "num_of_copies",
                 "4",
-                "Integer",
+                "int",
                 FieldType.ConstructParameter,
                 FieldUsage.NoPort,
                 FieldAccess.readwrite,
@@ -917,7 +921,7 @@ def create_construct_node(node_type: str, node: dict) -> dict:
             create_field(
                 "num_of_copies",
                 "4",
-                "Integer",
+                "int",
                 FieldType.ConstructParameter,
                 FieldUsage.NoPort,
                 FieldAccess.readwrite,
@@ -942,7 +946,7 @@ def create_construct_node(node_type: str, node: dict) -> dict:
                     "defaultValue": "",
                     "description": "",
                     "readonly": False,
-                    "type": "String",
+                    "type": "str",
                     "precious": False,
                     "options": [],
                     "positional": False,
@@ -957,7 +961,7 @@ def create_construct_node(node_type: str, node: dict) -> dict:
             create_field(
                 "num_of_inputs",
                 "4",
-                "Integer",
+                "int",
                 FieldType.ConstructParameter,
                 FieldUsage.NoPort,
                 FieldAccess.readwrite,
@@ -1036,7 +1040,9 @@ def params_to_nodes(params: dict, tag: str) -> list:
 
             # if a construct is found, add to nodes
             if data["construct"] != "":
-                logger.info("Adding component: " + data["construct"] + "/" + node["text"])
+                logger.info(
+                    "Adding component: " + data["construct"] + "/" + node["text"]
+                )
                 construct_node = create_construct_node(data["construct"], node)
                 construct_node["repositoryUrl"] = git_repo
                 construct_node["commitHash"] = version
