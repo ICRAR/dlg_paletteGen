@@ -57,6 +57,16 @@ Changelog
 0.4.5 (2025-03-30)
 ------------------
 - Release: version 0.4.5 🚀 [Andreas Wicenec]
+- Re-formatting. [Andreas Wicenec]
+- Aligned all standard types to Python names. [Andreas Wicenec]
+- Categories are now DALiuGEApp and PyFuncApp. [Andreas Wicenec]
+- Fixed linting issue. [Andreas Wicenec]
+- Added support for PythonFunction category. [Andreas Wicenec]
+
+
+0.4.5 (2025-03-30)
+------------------
+- Release: version 0.4.5 🚀 [Andreas Wicenec]
 - Deal with return values, types and description. [Andreas Wicenec]
 - Fixed linting error. [Andreas Wicenec]
 
