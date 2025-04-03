@@ -25,6 +25,54 @@ from dlg_paletteGen.support_functions import (
     populateFields,
 )
 
+def import_using_name_no_longer_used(app, fname):
+    app = None # HACK
+    logger.debug("Importing %s", fname)
+    parts = fname.split(".")
+    # If only one part check if builtin
+    b = globals()["__builtins__"]
+    logger.debug(f"Function: {parts[0]}: {hasattr(b, parts[0])}")
+    if len(parts) < 2:
+        logger.debug(f"Builtins: {type(b)}")
+        logger.debug(f"Function {fname}: {hasattr(b, fname)}")
+        if fname in b:
+            return b[fname]
+        else:
+            msg = "%s is not builtin and does not contain a module name" % fname
+            raise Exception
+    elif parts[0] in b.keys():
+        return b[parts[0]]
+    else:
+        if len(parts) > 1:
+            if parts[-1] in ["__init__", "__class__"]:
+                parts = parts[:-1]
+            logger.debug("Recursive import: %s", parts)
+            try:
+                mod = importlib.import_module(parts[0], __name__)
+            except ImportError as e:
+                raise Exception
+            for m in parts[1:]:
+                try:
+                    logger.debug("Getting attribute %s", m)
+                    mod = getattr(mod, m)
+                except AttributeError as e:
+                    try:
+                        logger.debug(
+                            "Trying to load backwards: %s",
+                            ".".join(parts[:-1]),
+                        )
+                        mod = importlib.import_module(".".join(parts[:-1]), __name__)
+                        mod = getattr(mod, parts[-1])
+                        break
+                    except ModuleNotFoundError:
+                        # try again, sometimes fixes the namespace
+                        mod = import_using_name(app, fname)
+                        break
+                    except Exception as e:
+                        raise Exception
+            logger.debug("Loaded module: %s", mod)
+            return mod
+
 
 def get_class_members(cls, parent=None):
     """Inspect members of a class."""
@@ -230,10 +278,12 @@ def construct_member_node(member, module=None, parent=None, name=None) -> dict:
     ind = -1
     load_name = node["name"]
     if hasattr(member, "__module__") and member.__module__:
-        if load_name in member.__module__:
-            # If the load_name is "name", and member.__module__ is already "module.name"
-            # This stops us creating the incorrect "module.name.name"
-            load_name = member.__module__
+        if load_name in dir(module):
+            # If the load_name is accessible directly from the module,
+            # then we just need "module.loadname"
+            # This stops us possibly creating the incorrect "module.name.name" that would
+            # happen in the "else" below
+            load_name = f"{module.__name__}.{load_name}"
         else:
             load_name = f"{member.__module__}.{node['name']}"
     elif hasattr(member, "__package__"):
@@ -247,6 +297,11 @@ def construct_member_node(member, module=None, parent=None, name=None) -> dict:
     # fields["base_name"]["value"] = member.__qualname__.split(".", 1)[0]
     fields["base_name"]["value"] = ".".join(load_name.split(".")[:-1])
     fields["base_name"]["defaultValue"] = fields["base_name"]["value"]
+
+    try:
+        import_using_name(load_name, traverse=True)
+    except:
+        logger.critical("Can't load %s", load_name)
 
     for k, field in fields.items():
         ind += 1
