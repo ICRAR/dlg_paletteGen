@@ -644,7 +644,7 @@ def import_using_name(mod_name: str, traverse: bool = False, err_log=True):
                             ) from e
             else:
                 logger.debug("Recursive import failed! %s", parts[0] in sys.modules)
-                return None
+                raise ModuleNotFoundError
     logger.debug("Loaded module: %s version: %s", mod_name, mod_version)
     return mod
 
