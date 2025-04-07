@@ -14,9 +14,9 @@ import types
 import typing
 from typing import _SpecialForm
 
-from .classes import DetailedDescription, DummyParam, DummySig, logger
-from .source_base import FieldUsage
-from .support_functions import (
+from dlg_paletteGen.classes import DetailedDescription, DummyParam, DummySig, logger
+from dlg_paletteGen.source_base import FieldUsage
+from dlg_paletteGen.support_functions import (
     constructNode,
     get_mod_name,
     get_submodules,
@@ -24,7 +24,6 @@ from .support_functions import (
     populateDefaultFields,
     populateFields,
 )
-
 
 def get_class_members(cls, parent=None):
     """Inspect members of a class."""
@@ -116,7 +115,7 @@ def _get_name(name: str, member, module=None, parent=None) -> str:
     elif inspect.isclass(member):
         mname = getattr(member, "__class__").__name__
     else:
-        mname = f"{member_name}" if hasattr(member, "__name__") else f"{module_name}.name"
+        mname = f"{member_name}" if hasattr(member, "__name__") else ""
     logger.debug(">>>>> mname: %s, %s.%s", mname, parent, module_name)
     if name and not mname:
         mname = name
@@ -230,7 +229,14 @@ def construct_member_node(member, module=None, parent=None, name=None) -> dict:
     ind = -1
     load_name = node["name"]
     if hasattr(member, "__module__") and member.__module__:
-        load_name = f"{member.__module__}.{node['name']}"
+        if load_name in dir(module):
+            # If the load_name is accessible directly from the module,
+            # then we just need "module.loadname"
+            # This stops us possibly creating the incorrect "module.name.name" that would
+            # happen in the "else" below
+            load_name = f"{module.__name__}.{load_name}"
+        else:
+            load_name = f"{member.__module__}.{node['name']}"
     elif hasattr(member, "__package__"):
         load_name = f"{member.__package__}.{load_name}"
     elif parent:
@@ -242,6 +248,11 @@ def construct_member_node(member, module=None, parent=None, name=None) -> dict:
     # fields["base_name"]["value"] = member.__qualname__.split(".", 1)[0]
     fields["base_name"]["value"] = ".".join(load_name.split(".")[:-1])
     fields["base_name"]["defaultValue"] = fields["base_name"]["value"]
+
+    try:
+        import_using_name(load_name, traverse=True)
+    except (ModuleNotFoundError, AttributeError, ValueError) :
+        logger.critical("Cannot load %s, this method will likely fail", load_name)
 
     for k, field in fields.items():
         ind += 1
