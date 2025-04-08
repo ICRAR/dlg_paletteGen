@@ -801,7 +801,9 @@ def populateFields(sig: Any, dd) -> dict:
         logger.debug("Final type of parameter %s: %s", p, field[p]["type"])
         if isinstance(field[p]["value"], numpy.ndarray):
             try:
-                field[p]["value"] = field[p]["defaultValue"] = field[p]["value"].tolist()
+                field[p]["value"] = field[p]["defaultValue"] = field[p][
+                    "value"
+                ].tolist()
             except NotImplementedError:
                 field[p]["value"] = []
         if repr(field[p]["value"]) == "nan" and numpy.isnan(field[p]["value"]):
@@ -811,6 +813,7 @@ def populateFields(sig: Any, dd) -> dict:
         # else:
         #     bfield = field
     if hasattr(sig, "return_annotation") and sig.return_annotation != inspect._empty:
+
         field = initializeField("output")
         field["output"]["type"] = typeFix(sig.return_annotation)
         field["output"]["usage"] = "OutputPort"
@@ -890,6 +893,55 @@ def populateDefaultFields(Node):  # pylint: disable=invalid-name
     :param Node: a LG node from constructNode
     """
     # default field definitions
+    n = "group_start"
+    gs = initializeField(n)
+    gs[n]["name"] = n
+    gs[n]["type"] = "Boolean"
+    gs[n]["value"] = "false"
+    gs[n]["default_value"] = "false"
+    gs[n]["description"] = "Is this node the start of a group?"
+    Node["fields"].update(gs)
+
+    n = "base_name"
+    fn = initializeField(name=n)
+    fn[n]["name"] = n
+    fn[n]["value"] = "dummy_base"
+    fn[n]["defaultValue"] = "dummy_base"
+    fn[n]["type"] = "String"
+    fn[n]["description"] = "The base class for this member function."
+    fn[n]["readonly"] = True
+    Node["fields"].update(fn)
+
+    n = "dropclass"
+    dc = initializeField(n)
+    dc[n]["name"] = n
+    dc[n]["value"] = "dlg.apps.pyfunc.PyFuncApp"
+    dc[n]["defaultValue"] = "dlg.apps.pyfunc.PyFuncApp"
+    dc[n]["type"] = "String"
+    dc[n]["description"] = "The python class that implements this application"
+    dc[n]["readonly"] = True
+    Node["fields"].update(dc)
+
+    n = "execution_time"
+    et = initializeField(n)
+    et[n]["name"] = n
+    et[n]["value"] = 2
+    et[n]["defaultValue"] = 2
+    et[n]["type"] = "Integer"
+    et[n]["description"] = "Estimate of execution time (in seconds) for this application."
+    et[n]["parameterType"] = "ConstraintParameter"
+    Node["fields"].update(et)
+
+    n = "num_cpus"
+    ncpus = initializeField(n)
+    ncpus[n]["name"] = n
+    ncpus[n]["value"] = 1
+    ncpus[n]["default_value"] = 1
+    ncpus[n]["type"] = "Integer"
+    ncpus[n]["description"] = "Number of cores used."
+    ncpus[n]["parameterType"] = "ConstraintParameter"
+    Node["fields"].update(ncpus)
+
     n = "func_name"
     fn = initializeField(name=n)
     fn[n]["name"] = n
@@ -903,6 +955,23 @@ def populateDefaultFields(Node):  # pylint: disable=invalid-name
     fn[n]["readonly"] = True
     Node["fields"].update(fn)
 
+<<<<<<< HEAD
+=======
+    n = "func_code"
+    fn = initializeField(name=n)
+    fn[n]["name"] = n
+    fn[n]["value"] = ""
+    fn[n]["defaultValue"] = ""
+    fn[n]["type"] = "str"
+    fn[n]["description"] = (
+        "Here you can define an in-line function in the following way: "
+        + "def my_func(a, b): return a+b NOTE: The name of the function has to "
+        + "match the func_name field above."
+    )
+    fn[n]["readonly"] = True
+    Node["fields"].update(fn)
+
+>>>>>>> 07e5a25 (Added log_level field to default fields.)
     n = "log-level"
     dc = initializeField(n)
     dc[n]["name"] = n
@@ -916,6 +985,29 @@ def populateDefaultFields(Node):  # pylint: disable=invalid-name
     )
     Node["fields"].update(dc)
 
+<<<<<<< HEAD
+=======
+    n = "base_name"
+    fn = initializeField(name=n)
+    fn[n]["name"] = n
+    fn[n]["value"] = "dummy_base"
+    fn[n]["defaultValue"] = "dummy_base"
+    fn[n]["type"] = "str"
+    fn[n]["description"] = "The base class for this member function."
+    fn[n]["readonly"] = True
+    Node["fields"].update(fn)
+
+    n = "dropclass"
+    dc = initializeField(n)
+    dc[n]["name"] = n
+    dc[n]["value"] = "dlg.apps.pyfunc.PyFuncApp"
+    dc[n]["defaultValue"] = "dlg.apps.pyfunc.PyFuncApp"
+    dc[n]["type"] = "str"
+    dc[n]["description"] = "The python class that implements this application"
+    dc[n]["readonly"] = True
+    Node["fields"].update(dc)
+
+>>>>>>> 07e5a25 (Added log_level field to default fields.)
     n = "group_start"
     gs = initializeField(n)
     gs[n]["name"] = n
