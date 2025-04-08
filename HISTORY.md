@@ -4,6 +4,13 @@ Changelog
 
 (unreleased)
 ------------
+- Added log_level field to default fields. [Andreas Wicenec]
+- Merge branch 'DGEN-20' [Andreas Wicenec]
+
+
+0.4.6 (2025-04-02)
+------------------
+- Release: version 0.4.6 🚀 [Andreas Wicenec]
 - Re-formatting. [Andreas Wicenec]
 - Aligned all standard types to Python names. [Andreas Wicenec]
 - Categories are now DALiuGEApp and PythonFunction. [Andreas Wicenec]
