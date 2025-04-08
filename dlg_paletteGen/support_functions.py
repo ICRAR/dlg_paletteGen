@@ -740,7 +740,6 @@ def get_value_type_from_default(default):
 def populateFields(sig: Any, dd) -> dict:
     """Populate a field from signature parameters and mixin documentation."""
     fields = {}
-    bfield = {}
     descr_miss = []
 
     new_param = inspect.Parameter(
@@ -801,8 +800,8 @@ def populateFields(sig: Any, dd) -> dict:
             field[p]["value"] = None
         if p != "base_name":
             fields.update(field)
-        else:
-            bfield = field
+        # else:
+        #     bfield = field
     if hasattr(sig, "return_annotation"):
         field = initializeField("output")
         field["output"]["type"] = typeFix(sig.return_annotation)
@@ -816,11 +815,11 @@ def populateFields(sig: Any, dd) -> dict:
         logger.debug(
             "Identified type %s and assigned OutputPort.", field["output"]["type"]
         )
-    fields.update(bfield)
-    fields["base_name"]["parameterType"] = "ComponentParameter"
-    fields["base_name"]["type"] = "String"
-    fields["base_name"]["readonly"] = True
-    fields["base_name"]["description"] = "The base class for this member function"
+    # fields.update(bfield)
+    # fields["base_name"]["parameterType"] = "ComponentParameter"
+    # fields["base_name"]["type"] = "String"
+    # fields["base_name"]["readonly"] = True
+    # fields["base_name"]["description"] = "The base class for this member function"
     return fields
 
 
@@ -872,6 +871,66 @@ def populateDefaultFields(Node):  # pylint: disable=invalid-name
     :param Node: a LG node from constructNode
     """
     # default field definitions
+    n = "func_name"
+    fn = initializeField(name=n)
+    fn[n]["name"] = n
+    fn[n]["value"] = "my_func"
+    fn[n]["defaultValue"] = "my_func"
+    fn[n]["type"] = "str"
+    fn[n]["description"] = (
+        "Complete import path of function or just a function"
+        + " name which is also used in func_code below."
+    )
+    fn[n]["readonly"] = True
+    Node["fields"].update(fn)
+
+    n = "func_code"
+    fn = initializeField(name=n)
+    fn[n]["name"] = n
+    fn[n]["value"] = ""
+    fn[n]["defaultValue"] = ""
+    fn[n]["type"] = "str"
+    fn[n]["description"] = (
+        "Here you can define an in-line function in the following way: "
+        + "def my_func(a, b): return a+b NOTE: The name of the function has to "
+        + "match the func_name field above."
+    )
+    fn[n]["readonly"] = True
+    Node["fields"].update(fn)
+
+    n = "log-level"
+    dc = initializeField(n)
+    dc[n]["name"] = n
+    dc[n]["value"] = "NOTSET"
+    dc[n]["defaultValue"] = "NOTSET"
+    dc[n]["type"] = "Select"
+    dc[n]["options"] = ["NOTSET", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
+    dc[n]["description"] = (
+        "Log-level to be used for this appplication."
+        + " If empty or NOTSET, the global setting will be used."
+    )
+    Node["fields"].update(dc)
+
+    n = "base_name"
+    fn = initializeField(name=n)
+    fn[n]["name"] = n
+    fn[n]["value"] = "dummy_base"
+    fn[n]["defaultValue"] = "dummy_base"
+    fn[n]["type"] = "str"
+    fn[n]["description"] = "The base class for this member function."
+    fn[n]["readonly"] = True
+    Node["fields"].update(fn)
+
+    n = "dropclass"
+    dc = initializeField(n)
+    dc[n]["name"] = n
+    dc[n]["value"] = "dlg.apps.pyfunc.PyFuncApp"
+    dc[n]["defaultValue"] = "dlg.apps.pyfunc.PyFuncApp"
+    dc[n]["type"] = "str"
+    dc[n]["description"] = "The python class that implements this application"
+    dc[n]["readonly"] = True
+    Node["fields"].update(dc)
+
     n = "group_start"
     gs = initializeField(n)
     gs[n]["name"] = n
@@ -900,40 +959,6 @@ def populateDefaultFields(Node):  # pylint: disable=invalid-name
     ncpus[n]["description"] = "Number of cores used."
     ncpus[n]["parameterType"] = "ConstraintParameter"
     Node["fields"].update(ncpus)
-
-    n = "func_name"
-    fn = initializeField(name=n)
-    fn[n]["name"] = n
-    fn[n]["value"] = "my_func"
-    fn[n]["defaultValue"] = "my_func"
-    fn[n]["type"] = "str"
-    fn[n]["description"] = "Complete import path of function"
-    fn[n]["readonly"] = True
-    Node["fields"].update(fn)
-
-    n = "func_code"
-    fn = initializeField(name=n)
-    fn[n]["name"] = n
-    fn[n]["value"] = ""
-    fn[n]["defaultValue"] = ""
-    fn[n]["type"] = "str"
-    fn[n]["description"] = (
-        "Here you can define an in-line function in the following way: "
-        + "def my_func(a, b): return a+b NOTE: The name of the function has to "
-        + "match the func_name field above."
-    )
-    fn[n]["readonly"] = True
-    Node["fields"].update(fn)
-
-    n = "dropclass"
-    dc = initializeField(n)
-    dc[n]["name"] = n
-    dc[n]["value"] = "dlg.apps.pyfunc.PyFuncApp"
-    dc[n]["defaultValue"] = "dlg.apps.pyfunc.PyFuncApp"
-    dc[n]["type"] = "str"
-    dc[n]["description"] = "The python class that implements this application"
-    dc[n]["readonly"] = True
-    Node["fields"].update(dc)
 
     return Node
 
