@@ -22,6 +22,7 @@ import subprocess
 import sys
 import tempfile
 import typing
+import uuid
 import xml.etree.ElementTree as ET
 from pkgutil import iter_modules
 from typing import Any, Union
@@ -281,7 +282,6 @@ def modify_doxygen_options(doxygen_filename: str, options: dict):
 
 
 def get_next_id() -> str:
-    """Use tempfile.mktmp now."""
     """Use tempfile.mktmp now."""
     return tempfile.mktemp(prefix="", dir="")
 
@@ -663,18 +663,19 @@ def initializeField(
     positional: bool = False,
 ):
     """Construct a dummy field."""
-    """Construct a dummy field."""
     field = {}  # type: ignore
     fieldValue = {}
+    fieldValue["id"] = get_next_id()
+    fieldValue["encoding"] = ""
     fieldValue["name"] = name
-    fieldValue["value"] = value
-    fieldValue["defaultValue"] = defaultValue
+    fieldValue["value"] = value if value else ""
+    fieldValue["defaultValue"] = defaultValue if defaultValue else ""
     fieldValue["description"] = description
     fieldValue["type"] = vtype  # type:ignore
     fieldValue["parameterType"] = parameterType
     fieldValue["usage"] = usage
     fieldValue["readonly"] = readonly  # type:ignore
-    fieldValue["options"] = options  # type:ignore
+    fieldValue["options"] = options if options else []  # type:ignore
     fieldValue["precious"] = precious  # type:ignore
     fieldValue["positional"] = positional  # type:ignore
     field.__setitem__(name, fieldValue)
@@ -760,6 +761,8 @@ def populateFields(sig: Any, dd) -> dict:
                 param_desc["desc"] = f"Reference to {dd.name} object"
 
         # populate the field itself
+        if param_desc["value"] is None:
+            param_desc["value"] = ""
         field[p]["value"] = field[p]["defaultValue"] = param_desc["value"]
 
         # deal with the type
@@ -788,7 +791,7 @@ def populateFields(sig: Any, dd) -> dict:
         # else:
         #     field[p]["parameterType"] = "ApplicationArgument"
         field[p]["parameterType"] = "ApplicationArgument"
-        field[p]["options"] = None
+        field[p]["options"] = []
         field[p]["positional"] = v.kind == inspect.Parameter.POSITIONAL_ONLY
         logger.debug("Final type of parameter %s: %s", p, field[p]["type"])
         if isinstance(field[p]["value"], numpy.ndarray):
@@ -843,7 +846,18 @@ def constructNode(
     For some reason sub-classing benedict did not work here, thus we use a
     function instead.
     """
-    Node = {}
+    Node = {
+            "inputAppFields": [],
+            "inputApplicationDescription": "",
+            "inputApplicationId": None,
+            "inputApplicationName": "",
+            "inputApplicationType": "None",
+            "outputAppFields": [],
+            "outputApplicationDescription": "",
+            "outputApplicationId": None,
+            "outputApplicationName": "",
+            "outputApplicationType": "None",
+    }
     Node["category"] = category
     Node["categoryType"] = categoryType
     Node["id"] = get_next_id()
@@ -936,15 +950,15 @@ def populateDefaultFields(Node):  # pylint: disable=invalid-name
     gs[n]["name"] = n
     gs[n]["type"] = "bool"
     gs[n]["value"] = "false"
-    gs[n]["default_value"] = "false"
+    gs[n]["defaultValue"] = "false"
     gs[n]["description"] = "Is this node the start of a group?"
     Node["fields"].update(gs)
 
     n = "execution_time"
     et = initializeField(n)
     et[n]["name"] = n
-    et[n]["value"] = 2
-    et[n]["defaultValue"] = 2
+    et[n]["value"] = "2"
+    et[n]["defaultValue"] = "2"
     et[n]["type"] = "int"
     et[n]["description"] = "Estimate of execution time (in seconds) for this application."
     et[n]["parameterType"] = "ConstraintParameter"
@@ -953,8 +967,8 @@ def populateDefaultFields(Node):  # pylint: disable=invalid-name
     n = "num_cpus"
     ncpus = initializeField(n)
     ncpus[n]["name"] = n
-    ncpus[n]["value"] = 1
-    ncpus[n]["default_value"] = 1
+    ncpus[n]["value"] = "1"
+    ncpus[n]["defaultValue"] = "1"
     ncpus[n]["type"] = "int"
     ncpus[n]["description"] = "Number of cores used."
     ncpus[n]["parameterType"] = "ConstraintParameter"
@@ -969,15 +983,8 @@ def constructPalette():
         "modelData": {
             "filePath": "",
             "fileType": "Palette",
-            "fileType": "Palette",
             "shortDescription": "",
             "detailedDescription": "",
-            "repoService": "",
-            "repoBranch": "",
-            "repo": "",
-            "generatorName": NAME,
-            "generatorVersion": VERSION,
-            "generatorCommitHash": "",
             "repoService": "",
             "repoBranch": "",
             "repo": "",
