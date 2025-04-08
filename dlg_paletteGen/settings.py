@@ -77,7 +77,6 @@ CVALUE_TYPES = {
     "any": "Object",
     "NoneType": "None",
     "builtins.NoneType": "None",
-    "inspect._empty": "None",
 }
 
 BLOCKDAG_DATA_FIELDS = [

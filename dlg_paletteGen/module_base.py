@@ -239,9 +239,6 @@ def construct_member_node(member, module=None, parent=None, name=None) -> dict:
         load_name = load_name.replace("PyCapsule", get_mod_name(module))
     if load_name.find("object.__init__"):
         load_name = load_name.replace("object.__init__", node["name"])
-    # fields["base_name"]["value"] = member.__qualname__.split(".", 1)[0]
-    fields["base_name"]["value"] = ".".join(load_name.split(".")[:-1])
-    fields["base_name"]["defaultValue"] = fields["base_name"]["value"]
 
     for k, field in fields.items():
         ind += 1
@@ -265,6 +262,8 @@ def construct_member_node(member, module=None, parent=None, name=None) -> dict:
     node = populateDefaultFields(node)
     node["fields"]["func_name"]["defaultValue"] = load_name
     node["fields"]["func_name"]["value"] = node["fields"]["func_name"]["defaultValue"]
+    node["fields"]["base_name"]["value"] = ".".join(load_name.split(".")[:-1])
+    node["fields"]["base_name"]["defaultValue"] = node["fields"]["base_name"]["value"]
     if hasattr(sig, "ret"):
         logger.debug("Return type: %s", sig.ret)
     logger.debug("Constructed node for member %s: %s", node["name"], node)
