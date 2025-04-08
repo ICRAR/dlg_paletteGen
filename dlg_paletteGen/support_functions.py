@@ -808,9 +808,9 @@ def populateFields(sig: Any, dd) -> dict:
             field[p]["value"] = None
         if p != "base_name":
             fields.update(field)
-        else:
-            bfield = field
-    if hasattr(sig, "return_annotation") and sig.return_annotation != inspect._empty:
+        # else:
+        #     bfield = field
+    if hasattr(sig, "return_annotation"):
         field = initializeField("output")
         field["output"]["type"] = typeFix(sig.return_annotation)
         field["output"]["usage"] = "OutputPort"
