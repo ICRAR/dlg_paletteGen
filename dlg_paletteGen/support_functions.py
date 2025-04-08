@@ -22,6 +22,7 @@ import subprocess
 import sys
 import tempfile
 import typing
+import uuid
 import xml.etree.ElementTree as ET
 from pkgutil import iter_modules
 from typing import Any, Union
@@ -1013,7 +1014,7 @@ def populateDefaultFields(Node):  # pylint: disable=invalid-name
     gs[n]["name"] = n
     gs[n]["type"] = "bool"
     gs[n]["value"] = "false"
-    gs[n]["default_value"] = "false"
+    gs[n]["defaultValue"] = "false"
     gs[n]["description"] = "Is this node the start of a group?"
     Node["fields"].update(gs)
 
@@ -1040,8 +1041,8 @@ def populateDefaultFields(Node):  # pylint: disable=invalid-name
     n = "execution_time"
     et = initializeField(n)
     et[n]["name"] = n
-    et[n]["value"] = 2
-    et[n]["defaultValue"] = 2
+    et[n]["value"] = "2"
+    et[n]["defaultValue"] = "2"
     et[n]["type"] = "int"
     et[n]["description"] = "Estimate of execution time (in seconds) for this application."
     et[n]["parameterType"] = "ConstraintParameter"
@@ -1050,8 +1051,8 @@ def populateDefaultFields(Node):  # pylint: disable=invalid-name
     n = "num_cpus"
     ncpus = initializeField(n)
     ncpus[n]["name"] = n
-    ncpus[n]["value"] = 1
-    ncpus[n]["default_value"] = 1
+    ncpus[n]["value"] = "1"
+    ncpus[n]["defaultValue"] = "1"
     ncpus[n]["type"] = "int"
     ncpus[n]["description"] = "Number of cores used."
     ncpus[n]["parameterType"] = "ConstraintParameter"
