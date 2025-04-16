@@ -8,7 +8,6 @@ from enum import Enum
 from typing import Any, Union
 
 from dlg_paletteGen.classes import Child, Language, logger
-
 from dlg_paletteGen.support_functions import check_text_element, get_next_id
 
 KNOWN_PARAM_DATA_TYPES = [

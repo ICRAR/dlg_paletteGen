@@ -14,7 +14,12 @@ import types
 import typing
 from typing import _SpecialForm
 
-from dlg_paletteGen.classes import DetailedDescription, DummyParam, DummySig, logger
+from dlg_paletteGen.classes import (
+    DetailedDescription,
+    DummyParam,
+    DummySig,
+    logger,
+)
 from dlg_paletteGen.source_base import FieldUsage
 from dlg_paletteGen.support_functions import (
     constructNode,
@@ -24,6 +29,7 @@ from dlg_paletteGen.support_functions import (
     populateDefaultFields,
     populateFields,
 )
+
 
 def get_class_members(cls, parent=None):
     """Inspect members of a class."""
@@ -229,7 +235,7 @@ def construct_member_node(member, module=None, parent=None, name=None) -> dict:
     ind = -1
     load_name = node["name"]
     if hasattr(member, "__module__") and member.__module__:
-        if load_name in dir(module) and hasattr(module,"__name__"):
+        if load_name in dir(module) and hasattr(module, "__name__"):
             # If the load_name is accessible directly from the module,
             # then we just need "module.loadname"
             # This stops us possibly creating the incorrect "module.name.name" that would
@@ -251,7 +257,7 @@ def construct_member_node(member, module=None, parent=None, name=None) -> dict:
 
     try:
         import_using_name(load_name, traverse=True)
-    except (ModuleNotFoundError, AttributeError, ValueError) :
+    except (ModuleNotFoundError, AttributeError, ValueError):
         logger.critical("Cannot load %s, this method will likely fail", load_name)
 
     for k, field in fields.items():

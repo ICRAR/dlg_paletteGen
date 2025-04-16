@@ -362,7 +362,7 @@ def test_direct_rEST(tmpdir: str, shared_datadir: str):
     )
     assert (
         modules["example_rest"]["MainClass1.func_with_types"]["fields"]["arg1"]["type"]
-        == "bool"
+        == "Boolean"
     )
 
     nodes = []
