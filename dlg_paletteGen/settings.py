@@ -70,6 +70,7 @@ SVALUE_TYPES = {k.__name__: v for k, v in VALUE_TYPES.items() if hasattr(k, "__n
 
 CVALUE_TYPES = {
     "array_like": "numpy.array",
+    "arraylike": "numpy.array",
     numpy.ndarray.__name__: "numpy.array",
     numpy._globals._NoValueType.__name__: "Object",  # type: ignore
     inspect._empty: "None",
