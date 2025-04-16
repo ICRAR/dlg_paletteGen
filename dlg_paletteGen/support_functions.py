@@ -183,8 +183,11 @@ def typeFix(value_type: Union[Any, None] = "", default_value: Any = None) -> str
     path_ind = 0.0
     guess_type = "UNIDENTIFIED"
     if value_type is None:
-        guess_type = "None"
-    elif hasattr(value_type, "__module__"):  # this path is for annotations
+        return CVALUE_TYPES["NoneType"]
+    if value_type not in VALUE_TYPES and hasattr(
+        value_type, "__module__"
+    ):  # this path is for annotations
+        # if hasattr(value_type, "__module__"):  # this path is for annotations
         if value_type.__module__ in ["typing", "types"]:  # complex annotation
             # guess_type = str(value_type).split(".", 1)[1]
             guess_type = str(value_type).replace("typing.", "")
