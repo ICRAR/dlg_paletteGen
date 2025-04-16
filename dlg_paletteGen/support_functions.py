@@ -181,10 +181,16 @@ def typeFix(value_type: Union[Any, None] = "", default_value: Any = None) -> str
     """
     path_ind = 0.0
     guess_type = "UNIDENTIFIED"
-    if hasattr(value_type, "__module__"):  # this path is for annotations
+    KNOWN_TYPES = VALUE_TYPES
+    KNOWN_TYPES.update(SVALUE_TYPES)
+    if value_type is None:
+        return CVALUE_TYPES["NoneType"]
+    if value_type not in KNOWN_TYPES and hasattr(value_type, "__module__"):  # this path is for annotations
+    # if hasattr(value_type, "__module__"):  # this path is for annotations
         if value_type.__module__ in ["typing", "types"]:  # complex annotation
             # guess_type = str(value_type).split(".", 1)[1]
-            guess_type = str(value_type)
+            guess_type = str(value_type).replace("typing.", "")
+            guess_type = guess_type.replace("types", "")
             path_ind = 0.1
         elif value_type != inspect._empty and (
             value_type.__module__ == "builtins" or hasattr(value_type, "__name__")
@@ -192,6 +198,7 @@ def typeFix(value_type: Union[Any, None] = "", default_value: Any = None) -> str
             guess_type = value_type.__name__  # type: ignore
             path_ind = 0.2
         else:
+            guess_type = CVALUE_TYPES["inspect._empty"]
             path_ind = 0.3
     elif not value_type and default_value:
         try:  # first check for standard types
@@ -222,7 +229,7 @@ def typeFix(value_type: Union[Any, None] = "", default_value: Any = None) -> str
         guess_type = str(value_type)
         path_ind = 8
     else:
-        guess_type = "UNIDENTIFIED"
+        guess_type = str(value_type)
         path_ind = 9
     logger.debug(
         "Parameter type guessed from %s: %s, %3.1f", value_type, guess_type, path_ind
@@ -802,7 +809,7 @@ def populateFields(sig: Any, dd) -> dict:
             fields.update(field)
         else:
             bfield = field
-    if hasattr(sig, "return_annotation"):
+    if hasattr(sig, "return_annotation") and sig.return_annotation != inspect._empty:
         field = initializeField("output")
         field["output"]["type"] = typeFix(sig.return_annotation)
         field["output"]["usage"] = "OutputPort"

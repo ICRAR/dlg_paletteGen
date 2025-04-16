@@ -229,7 +229,7 @@ def construct_member_node(member, module=None, parent=None, name=None) -> dict:
     ind = -1
     load_name = node["name"]
     if hasattr(member, "__module__") and member.__module__:
-        if load_name in dir(module):
+        if load_name in dir(module) and hasattr(module,"__name__"):
             # If the load_name is accessible directly from the module,
             # then we just need "module.loadname"
             # This stops us possibly creating the incorrect "module.name.name" that would
