@@ -4,6 +4,25 @@ Changelog
 
 (unreleased)
 ------------
+- Fixed linting and test error. [Andreas Wicenec]
+- Fixed some edge cases on casa; made shure others are still working.
+  [Andreas Wicenec]
+- Fix linter issues. [Ryan Bunney]
+- Improve robustness of the load_name setting using dir(module). [Ryan
+  Bunney]
+
+  This ensures that the load_name is actually found in module.load_name, rather than
+  the previous approach which was more of a 'guess'.
+- Update naming management to address casa issue. [Ryan Bunney]
+
+  - Use empty string in _get_name() when not a class and doesn't have __name__
+  - Use member.__module__ if the name of the member is in the module, rather than appending a duplicate at the end (module.name.name).
+  - Use absolute over relative imports for modules.
+
+
+0.4.7 (2025-04-08)
+------------------
+- Release: version 0.4.7 🚀 [Andreas Wicenec]
 - Added log_level field to default fields. [Andreas Wicenec]
 - Merge branch 'DGEN-20' [Andreas Wicenec]
 
@@ -13,7 +32,7 @@ Changelog
 - Release: version 0.4.6 🚀 [Andreas Wicenec]
 - Re-formatting. [Andreas Wicenec]
 - Aligned all standard types to Python names. [Andreas Wicenec]
-- Categories are now DALiuGEApp and PythonFunction. [Andreas Wicenec]
+- Categories are now DALiuGEApp and PyFuncApp. [Andreas Wicenec]
 - Fixed linting issue. [Andreas Wicenec]
 - Added support for PythonFunction category. [Andreas Wicenec]
 
