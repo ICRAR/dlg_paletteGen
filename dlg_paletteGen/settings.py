@@ -57,12 +57,12 @@ logger.addHandler(ch2)
 
 # these are our supported base types
 VALUE_TYPES = {
-    str: "str",
-    int: "int",
-    float: "float",
-    bool: "bool",
-    list: "list",
-    dict: "dict",
+    str: "String",
+    int: "Integer",
+    float: "Float",
+    bool: "Boolean",
+    list: "List",
+    dict: "Dict",
     tuple: "Json",
 }
 
@@ -78,6 +78,7 @@ CVALUE_TYPES = {
     "any": "Object",
     "NoneType": "None",
     "builtins.NoneType": "None",
+    "inspect._empty": "None",
 }
 
 BLOCKDAG_DATA_FIELDS = [
