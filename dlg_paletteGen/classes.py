@@ -471,7 +471,7 @@ class GreatGrandChild:
             value_type = typeFix(value_type, default_value=default_value)
 
             # add the param
-            if str(value_type) == "str":
+            if str(value_type) == "String":
                 default_value = str(default_value).replace("'", "")
                 if default_value.find("/") >= 0:
                     default_value = f'"{default_value}"'
@@ -669,20 +669,20 @@ class Child:
 
             member["params"].update(
                 {
-                    "execution_time": "5/int/ConstraintParameter/NoPort/"
+                    "execution_time": "5/Integer/ConstraintParameter/NoPort/"
                     + "readwrite//False/False/Estimate of execution time "
                     + "(in seconds) for this application."
                 }
             )
             member["params"].update(
                 {
-                    "num_cpus": "1/int/ConstraintParameter/NoPort/"
+                    "num_cpus": "1/Integer/ConstraintParameter/NoPort/"
                     + "readwrite//False/False/Number of cores used."
                 }
             )
             member["params"].update(
                 {
-                    "group_start": "false/bool/ComponentParameter/NoPort/"
+                    "group_start": "false/Boolean/ComponentParameter/NoPort/"
                     + "readwrite//False/False/Is this node the start of "
                     + "a group?"
                 }
@@ -695,17 +695,17 @@ class Child:
                 )
                 member["params"].update(
                     {
-                        "libpath": " //str/ComponentParameter/NoPort/"
+                        "libpath": " //String/ComponentParameter/NoPort/"
                         + "readwrite//False/False/The location of the shared "
                         + "object/DLL that implements this application",
                     }
                 )
             elif language == Language.PYTHON:
-                member["params"].update({"category": "DALiuGEApp"})
+                member["params"].update({"category": "PythonApp"})
                 member["params"].update(
                     {
                         "dropclass": "dlg.apps.pyfunc.PyFuncApp/"
-                        + "str/ComponentParameter/NoPort/readonly//False/"
+                        + "String/ComponentParameter/NoPort/readonly//False/"
                         + "False/"
                         + "The python class that implements this application",
                     }
@@ -728,7 +728,7 @@ class Child:
                 gg.member["params"].update(
                     {
                         "func_name": gg.func_name
-                        + "/str/ComponentParameter/NoPort/readonly/"
+                        + "/String/ComponentParameter/NoPort/readonly/"
                         + "/False/False/Complete import path of function",
                     }
                 )

@@ -671,8 +671,8 @@ def test_guess_type_from_default():
     """
     Test the function
     """
-    assert guess_type_from_default(234) == "int"
-    assert guess_type_from_default(234.0) == "float"
+    assert guess_type_from_default(234) == "Integer"
+    assert guess_type_from_default(234.0) == "Float"
     assert guess_type_from_default("[2,3,4]") == "list"
     assert guess_type_from_default({234}) == "Object"
 
