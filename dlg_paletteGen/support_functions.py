@@ -22,7 +22,6 @@ import subprocess
 import sys
 import tempfile
 import typing
-import uuid
 import xml.etree.ElementTree as ET
 from pkgutil import iter_modules
 from typing import Any, Union
@@ -674,8 +673,8 @@ def initializeField(
     fieldValue["id"] = get_next_id()
     fieldValue["encoding"] = ""
     fieldValue["name"] = name
-    fieldValue["value"] = value if value else ""
-    fieldValue["defaultValue"] = defaultValue if defaultValue else ""
+    fieldValue["value"] = value if value is not None else ""
+    fieldValue["defaultValue"] = defaultValue if defaultValue is not None else ""
     fieldValue["description"] = description
     fieldValue["type"] = vtype  # type:ignore
     fieldValue["parameterType"] = parameterType
@@ -853,16 +852,16 @@ def constructNode(
     function instead.
     """
     Node = {
-            "inputAppFields": [],
-            "inputApplicationDescription": "",
-            "inputApplicationId": None,
-            "inputApplicationName": "",
-            "inputApplicationType": "None",
-            "outputAppFields": [],
-            "outputApplicationDescription": "",
-            "outputApplicationId": None,
-            "outputApplicationName": "",
-            "outputApplicationType": "None",
+        "inputAppFields": [],
+        "inputApplicationDescription": "",
+        "inputApplicationId": None,
+        "inputApplicationName": "",
+        "inputApplicationType": "None",
+        "outputAppFields": [],
+        "outputApplicationDescription": "",
+        "outputApplicationId": None,
+        "outputApplicationName": "",
+        "outputApplicationType": "None",
     }
     Node["category"] = category
     Node["categoryType"] = categoryType
@@ -952,9 +951,7 @@ def populateDefaultFields(Node):  # pylint: disable=invalid-name
     et[n]["value"] = 2
     et[n]["defaultValue"] = 2
     et[n]["type"] = "Integer"
-    et[n][
-        "description"
-    ] = "Estimate of execution time (in seconds) for this application."
+    et[n]["description"] = "Estimate of execution time (in seconds) for this application."
     et[n]["parameterType"] = "ConstraintParameter"
     Node["fields"].update(et)
 
@@ -969,6 +966,7 @@ def populateDefaultFields(Node):  # pylint: disable=invalid-name
     Node["fields"].update(ncpus)
 
     return Node
+
 
 def constructPalette():
     """Construct the structure of a palette."""

@@ -7,7 +7,7 @@ import sys
 from pytest import LogCaptureFixture
 
 from dlg_paletteGen.settings import DOXYGEN_SETTINGS
-from dlg_paletteGen.cli import check_environment_variables, get_args
+from dlg_paletteGen.__main__ import check_environment_variables, get_args
 from dlg_paletteGen.module_base import module_hook
 from dlg_paletteGen.source_base import Language, process_compounddefs
 from dlg_paletteGen.support_functions import (
@@ -671,9 +671,9 @@ def test_guess_type_from_default():
     """
     Test the function
     """
-    assert guess_type_from_default(234) == "int"
-    assert guess_type_from_default(234.0) == "float"
-    assert guess_type_from_default("[2,3,4]") == "list"
+    assert guess_type_from_default(234) == "Integer"
+    assert guess_type_from_default(234.0) == "Float"
+    assert guess_type_from_default("[2,3,4]") == "List"
     assert guess_type_from_default({234}) == "Object"
 
 
