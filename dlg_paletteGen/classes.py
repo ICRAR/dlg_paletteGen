@@ -704,7 +704,7 @@ class Child:
                         + "str/ComponentParameter/NoPort/readonly//False/"
                         + "False/"
                         + "The python class that implements this application",
-                    }PythonFunction
+                    }
                 )
 
             logger.debug("Processing %d great grand children", len(gchild))
