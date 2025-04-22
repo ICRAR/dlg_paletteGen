@@ -6,7 +6,7 @@ Changelog
 ------------
 - Re-formatting. [Andreas Wicenec]
 - Aligned all standard types to Python names. [Andreas Wicenec]
-- Categories are now DALiuGEApp and PyFuncApp. [Andreas Wicenec]
+- Categories are now DALiuGEApp and PythonFunction. [Andreas Wicenec]
 - Fixed linting issue. [Andreas Wicenec]
 - Added support for PythonFunction category. [Andreas Wicenec]
 

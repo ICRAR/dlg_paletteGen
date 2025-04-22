@@ -825,7 +825,7 @@ def populateFields(sig: Any, dd) -> dict:
 
 
 def constructNode(
-    category: str = "PyFuncApp",
+    category: str = "PythonFunction",
     categoryType: str = "Application",
     name: str = "example_function",
     description: str = "",
@@ -928,8 +928,8 @@ def populateDefaultFields(Node):  # pylint: disable=invalid-name
     n = "dropclass"
     dc = initializeField(n)
     dc[n]["name"] = n
-    dc[n]["value"] = "dlg.apps.pyfunc.PyFuncApp"
-    dc[n]["defaultValue"] = "dlg.apps.pyfunc.PyFuncApp"
+    dc[n]["value"] = "dlg.apps.pyfunc.PythonFunction"
+    dc[n]["defaultValue"] = "dlg.apps.pyfunc.PythonFunction"
     dc[n]["type"] = "str"
     dc[n]["description"] = "The python class that implements this application"
     dc[n]["readonly"] = True
