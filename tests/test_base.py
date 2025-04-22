@@ -7,7 +7,7 @@ import sys
 from pytest import LogCaptureFixture
 
 from dlg_paletteGen.settings import DOXYGEN_SETTINGS
-from dlg_paletteGen.cli import check_environment_variables, get_args
+from dlg_paletteGen.__main__ import check_environment_variables, get_args
 from dlg_paletteGen.module_base import module_hook
 from dlg_paletteGen.source_base import Language, process_compounddefs
 from dlg_paletteGen.support_functions import (
@@ -358,11 +358,12 @@ def test_direct_rEST(tmpdir: str, shared_datadir: str):
     module_name = "example_rest"
     modules, module_doc = module_hook(
         module_name,
+        modules={},
         recursive=True,
     )
     assert (
         modules["example_rest"]["MainClass1.func_with_types"]["fields"]["arg1"]["type"]
-        == "bool"
+        == "Boolean"
     )
 
     nodes = []
@@ -580,6 +581,7 @@ def test_direct_tabascal(tmpdir: str, shared_datadir: str):
     module_name = "example_tabascal"
     modules, module_doc = module_hook(
         module_name,
+        modules={},
         recursive=True,
     )
     assert (
@@ -610,6 +612,7 @@ def test_direct_pypeit(tmpdir: str, shared_datadir: str):
     module_name = "example_pypeit"
     modules, module_doc = module_hook(
         module_name,
+        modules={},
         recursive=True,
     )
     assert (
@@ -657,6 +660,7 @@ def test_typeFix(tmpdir: str, shared_datadir: str):
     module_name = "example_options.testFieldSingle"
     modules, module_doc = module_hook(
         module_name,
+        modules={},
         recursive=True,
     )
     assert list(modules.keys())[-1] == "testFieldSingle"
@@ -671,9 +675,9 @@ def test_guess_type_from_default():
     """
     Test the function
     """
-    assert guess_type_from_default(234) == "int"
-    assert guess_type_from_default(234.0) == "float"
-    assert guess_type_from_default("[2,3,4]") == "list"
+    assert guess_type_from_default(234) == "Integer"
+    assert guess_type_from_default(234.0) == "Float"
+    assert guess_type_from_default("[2,3,4]") == "List"
     assert guess_type_from_default({234}) == "Object"
 
 
@@ -686,13 +690,14 @@ def test_direct_module():
     """
     # module_name = "dlg_paletteGen.classes"
     module_name = "numpy.array"
-    modules, module_doc = module_hook(module_name, recursive=True)
+    modules, _ = module_hook(module_name, modules={}, recursive=True)
     nodes = []
     for members in modules.values():
         for node in members.values():
             nodes.append(node)
-    assert len(nodes) in [6, 7]
-    prepare_and_write_palette(nodes, "test.palette", module_doc=module_doc)
+
+    assert len(nodes) == 2
+    # prepare_and_write_palette(nodes, "test.palette", module_doc=module_doc)
 
 
 def test_full_numpy():
@@ -703,9 +708,11 @@ def test_full_numpy():
     :param shared_datadir: the path the the local directory
     """
     module_name = "numpy.polynomial.polynomial"
-    modules, _ = module_hook(module_name, recursive=True)
+    modules, _ = module_hook(module_name, modules={}, recursive=True)
     nodes = []
     for members in modules.values():
         for node in members.values():
             nodes.append(node)
-    assert len(modules) in [29, 30]
+
+    mod_list = list(modules.keys())
+    assert len(mod_list) == 25

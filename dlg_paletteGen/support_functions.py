@@ -30,7 +30,7 @@ from typing import Any, Union
 import numpy
 from blockdag import build_block_dag
 
-from .settings import (
+from dlg_paletteGen.settings import (
     BLOCKDAG_DATA_FIELDS,
     CVALUE_TYPES,
     DOXYGEN_SETTINGS,
@@ -182,11 +182,16 @@ def typeFix(value_type: Union[Any, None] = "", default_value: Any = None) -> str
     """
     path_ind = 0.0
     guess_type = "UNIDENTIFIED"
-    if value_type is None:
-        guess_type = "None"
-    elif hasattr(value_type, "__module__"):  # this path is for annotations
+    if value_type is None or value_type == inspect._empty:
+        return CVALUE_TYPES["NoneType"]
+    if value_type not in VALUE_TYPES and hasattr(
+        value_type, "__module__"
+    ):  # this path is for annotations
+        # if hasattr(value_type, "__module__"):  # this path is for annotations
         if value_type.__module__ in ["typing", "types"]:  # complex annotation
+            # guess_type = str(value_type).split(".", 1)[1]
             guess_type = str(value_type).replace("typing.", "")
+            guess_type = guess_type.replace("types", "")
             path_ind = 0.1
         elif value_type != inspect._empty and (
             value_type.__module__ == "builtins" or hasattr(value_type, "__name__")
@@ -194,6 +199,7 @@ def typeFix(value_type: Union[Any, None] = "", default_value: Any = None) -> str
             guess_type = value_type.__name__  # type: ignore
             path_ind = 0.2
         else:
+            guess_type = CVALUE_TYPES["inspect._empty"]
             path_ind = 0.3
     elif not value_type and default_value:
         try:  # first check for standard types
@@ -224,7 +230,7 @@ def typeFix(value_type: Union[Any, None] = "", default_value: Any = None) -> str
         guess_type = str(value_type)
         path_ind = 8
     else:
-        guess_type = "UNIDENTIFIED"
+        guess_type = str(value_type)
         path_ind = 9
     logger.debug(
         "Parameter type guessed from %s: %s, %3.1f", value_type, guess_type, path_ind
@@ -644,7 +650,7 @@ def import_using_name(mod_name: str, traverse: bool = False, err_log=True):
                             ) from e
             else:
                 logger.debug("Recursive import failed! %s", parts[0] in sys.modules)
-                return None
+                raise ModuleNotFoundError
     logger.debug("Loaded module: %s version: %s", mod_name, mod_version)
     return mod
 
@@ -668,14 +674,22 @@ def initializeField(
     fieldValue["id"] = get_next_id()
     fieldValue["encoding"] = ""
     fieldValue["name"] = name
-    fieldValue["value"] = value if value else ""
-    fieldValue["defaultValue"] = defaultValue if defaultValue else ""
+    if isinstance(value, numpy.ndarray):
+        fieldValue["value"] = value if len(value) > 0 else ""  # type: ignore
+    else:
+        fieldValue["value"] = value if value else ""
+    if isinstance(defaultValue, numpy.ndarray):
+        fieldValue["defaultValue"] = (
+            defaultValue if len(defaultValue) > 0 else ""  # type: ignore
+        )
+    else:
+        fieldValue["defaultValue"] = defaultValue if defaultValue else ""
     fieldValue["description"] = description
     fieldValue["type"] = vtype  # type:ignore
     fieldValue["parameterType"] = parameterType
     fieldValue["usage"] = usage
     fieldValue["readonly"] = readonly  # type:ignore
-    fieldValue["options"] = options if options else []  # type:ignore
+    fieldValue["options"] = options or []  # type:ignore
     fieldValue["precious"] = precious  # type:ignore
     fieldValue["positional"] = positional  # type:ignore
     field.__setitem__(name, fieldValue)
@@ -738,17 +752,54 @@ def get_value_type_from_default(default):
     return param_desc
 
 
+def identify_field_type(field: dict, value: Any, param_desc: dict, dd_p: dict) -> str:
+    """
+    Identify the field type based on the value.
+
+    :param field: the field dictionary
+    :param value: the value to be checked
+    :param param_desc: the description of the pparameter
+    :param dd_p: the value to be checked
+
+    :returns: str, the identified field type
+    """
+    # If there is a type annotation use that
+    if (
+        value.annotation
+        and value.annotation
+        not in [  # type from inspect is first choice.
+            None,
+            inspect._empty,
+        ]
+    ):
+        return typeFix(value.annotation)
+    # else we use the type from default value
+    if field["name"] == "args":
+        return "list"
+    if field["name"] == "kwargs":
+        return "dict"
+    if param_desc["type"] and param_desc["type"] != "None":
+        return param_desc["type"]
+    if dd_p and dd_p["type"]:
+        # type from docstring
+        return typeFix(dd_p["type"])
+
+    return CVALUE_TYPES["NoneType"]
+
+
 def populateFields(sig: Any, dd) -> dict:
-    """Populate a field from signature parameters and mixin documentation."""
+    """Populate a field from signature parameters and mixin documentation.
+
+    TODO: Re-factor this function.
+    """
     fields = {}
     descr_miss = []
-
     new_param = inspect.Parameter(
         "base_name", inspect._ParameterKind.POSITIONAL_OR_KEYWORD
     )
     items = list(sig.parameters.items()) + [(new_param.name, new_param)]
     for p, v in items:
-        field = initializeField(p)
+        field = initializeField(p, parameterType="ApplicationArgument")
 
         param_desc = get_value_type_from_default(v.default)
         # now merge with description from docstring, if available
@@ -766,32 +817,13 @@ def populateFields(sig: Any, dd) -> dict:
         field[p]["value"] = field[p]["defaultValue"] = param_desc["value"]
 
         # deal with the type
-        if v.annotation and v.annotation not in [  # type from inspect is first choice.
-            None,
-            inspect._empty,
-        ]:
-            field[p]["type"] = typeFix(v.annotation)
-            logger.debug("Parameter type from annotation: %s", field[p]["type"])
-        # else we use the type from default value
-        elif field[p]["name"] == "args":
-            field[p]["type"] = "list"
-        elif field[p]["name"] == "kwargs":
-            field[p]["type"] = "dict"
-        elif param_desc["type"] and param_desc["type"] != "None":
-            field[p]["type"] = param_desc["type"]
-        elif dd and p in dd.params and dd.params[p]["type"]:
-            # type from docstring
-            field[p]["type"] = typeFix(dd.params[p]["type"])
+        if dd and p in dd.params and dd.params[p]["type"]:
+            dd_p = dd.params[p]
         else:
-            field[p]["type"] = CVALUE_TYPES["NoneType"]
+            dd_p = None
+        field[p]["type"] = identify_field_type(field[p], v, param_desc, dd_p)
 
         field[p]["description"] = param_desc["desc"]
-        # if p in ["self", "class"]:
-        #     field[p]["parameterType"] = "ComponentParameter"
-        # else:
-        #     field[p]["parameterType"] = "ApplicationArgument"
-        field[p]["parameterType"] = "ApplicationArgument"
-        field[p]["options"] = []
         field[p]["positional"] = v.kind == inspect.Parameter.POSITIONAL_ONLY
         logger.debug("Final type of parameter %s: %s", p, field[p]["type"])
         if isinstance(field[p]["value"], numpy.ndarray):
@@ -803,8 +835,7 @@ def populateFields(sig: Any, dd) -> dict:
             field[p]["value"] = None
         if p != "base_name":
             fields.update(field)
-        # else:
-        #     bfield = field
+
     if hasattr(sig, "return_annotation"):
         field = initializeField("output")
         field["output"]["type"] = typeFix(sig.return_annotation)
@@ -818,11 +849,6 @@ def populateFields(sig: Any, dd) -> dict:
         logger.debug(
             "Identified type %s and assigned OutputPort.", field["output"]["type"]
         )
-    # fields.update(bfield)
-    # fields["base_name"]["parameterType"] = "ComponentParameter"
-    # fields["base_name"]["type"] = "String"
-    # fields["base_name"]["readonly"] = True
-    # fields["base_name"]["description"] = "The base class for this member function"
     return fields
 
 
@@ -847,16 +873,16 @@ def constructNode(
     function instead.
     """
     Node = {
-            "inputAppFields": [],
-            "inputApplicationDescription": "",
-            "inputApplicationId": None,
-            "inputApplicationName": "",
-            "inputApplicationType": "None",
-            "outputAppFields": [],
-            "outputApplicationDescription": "",
-            "outputApplicationId": None,
-            "outputApplicationName": "",
-            "outputApplicationType": "None",
+        "inputAppFields": [],
+        "inputApplicationDescription": "",
+        "inputApplicationId": None,
+        "inputApplicationName": "",
+        "inputApplicationType": "None",
+        "outputAppFields": [],
+        "outputApplicationDescription": "",
+        "outputApplicationId": None,
+        "outputApplicationName": "",
+        "outputApplicationType": "None",
     }
     Node["category"] = category
     Node["categoryType"] = categoryType
@@ -890,24 +916,10 @@ def populateDefaultFields(Node):  # pylint: disable=invalid-name
     fn[n]["name"] = n
     fn[n]["value"] = "my_func"
     fn[n]["defaultValue"] = "my_func"
-    fn[n]["type"] = "str"
+    fn[n]["type"] = "String"
     fn[n]["description"] = (
         "Complete import path of function or just a function"
         + " name which is also used in func_code below."
-    )
-    fn[n]["readonly"] = True
-    Node["fields"].update(fn)
-
-    n = "func_code"
-    fn = initializeField(name=n)
-    fn[n]["name"] = n
-    fn[n]["value"] = ""
-    fn[n]["defaultValue"] = ""
-    fn[n]["type"] = "str"
-    fn[n]["description"] = (
-        "Here you can define an in-line function in the following way: "
-        + "def my_func(a, b): return a+b NOTE: The name of the function has to "
-        + "match the func_name field above."
     )
     fn[n]["readonly"] = True
     Node["fields"].update(fn)
@@ -925,15 +937,14 @@ def populateDefaultFields(Node):  # pylint: disable=invalid-name
     )
     Node["fields"].update(dc)
 
-    n = "base_name"
-    fn = initializeField(name=n)
-    fn[n]["name"] = n
-    fn[n]["value"] = "dummy_base"
-    fn[n]["defaultValue"] = "dummy_base"
-    fn[n]["type"] = "str"
-    fn[n]["description"] = "The base class for this member function."
-    fn[n]["readonly"] = True
-    Node["fields"].update(fn)
+    n = "group_start"
+    gs = initializeField(n)
+    gs[n]["name"] = n
+    gs[n]["type"] = "Boolean"
+    gs[n]["value"] = "false"
+    gs[n]["default_value"] = "false"
+    gs[n]["description"] = "Is this node the start of a group?"
+    Node["fields"].update(gs)
 
     n = "dropclass"
     dc = initializeField(n)
@@ -945,14 +956,15 @@ def populateDefaultFields(Node):  # pylint: disable=invalid-name
     dc[n]["readonly"] = True
     Node["fields"].update(dc)
 
-    n = "group_start"
-    gs = initializeField(n)
-    gs[n]["name"] = n
-    gs[n]["type"] = "bool"
-    gs[n]["value"] = "false"
-    gs[n]["defaultValue"] = "false"
-    gs[n]["description"] = "Is this node the start of a group?"
-    Node["fields"].update(gs)
+    n = "base_name"
+    fn = initializeField(name=n)
+    fn[n]["name"] = n
+    fn[n]["value"] = "dummy_base"
+    fn[n]["defaultValue"] = "dummy_base"
+    fn[n]["type"] = "String"
+    fn[n]["description"] = "The base class for this member function."
+    fn[n]["readonly"] = True
+    Node["fields"].update(fn)
 
     n = "execution_time"
     et = initializeField(n)

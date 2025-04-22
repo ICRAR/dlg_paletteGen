@@ -8,8 +8,7 @@ from enum import Enum
 from typing import Any, Union
 
 from dlg_paletteGen.classes import Child, Language, logger
-
-from .support_functions import check_text_element, get_next_id
+from dlg_paletteGen.support_functions import check_text_element, get_next_id
 
 KNOWN_PARAM_DATA_TYPES = [
     "str",
@@ -111,7 +110,7 @@ def check_required_fields_for_category(message: str, fields: list, catg: str):
 
     :returns None
     """
-    if catg in [
+    if catg in {
         "DynlibApp",
         "DALiuGEApp",
         "PyFuncApp",
@@ -120,11 +119,11 @@ def check_required_fields_for_category(message: str, fields: list, catg: str):
         "BashShellApp",
         "Mpi",
         "Docker",
-    ]:
+    }:
         alert_if_missing(message, fields, "execution_time")
         alert_if_missing(message, fields, "num_cpus")
 
-    if catg in [
+    if catg in {
         "DynlibApp",
         "DALiuGEApp",
         "PyFuncApp",
@@ -132,13 +131,13 @@ def check_required_fields_for_category(message: str, fields: list, catg: str):
         "Branch",
         "BashShellApp",
         "Docker",
-    ]:
+    }:
         alert_if_missing(message, fields, "group_start")
 
     if catg == "DynlibApp":
         alert_if_missing(message, fields, "libpath")
 
-    if catg in [
+    if catg in {
         "File",
         "Memory",
         "PythonObject",
@@ -147,10 +146,10 @@ def check_required_fields_for_category(message: str, fields: list, catg: str):
         "Plasma",
         "PlasmaFlight",
         "S3",
-    ]:
+    }:
         alert_if_missing(message, fields, "data_volume")
 
-    if catg in [
+    if catg in {
         "File",
         "Memory",
         "PythonObject",
@@ -160,7 +159,7 @@ def check_required_fields_for_category(message: str, fields: list, catg: str):
         "PlasmaFlight",
         "S3",
         "Mpi",
-    ]:
+    }:
         alert_if_missing(message, fields, "group_end")
 
     if catg in ["BashShellApp", "Mpi", "Docker", "Singularity"]:
