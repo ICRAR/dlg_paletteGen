@@ -4,6 +4,12 @@ Changelog
 
 (unreleased)
 ------------
+- Reverted default types to uppercase. [Andreas Wicenec]
+
+
+0.5.0 (2025-04-22)
+------------------
+- Release: version 0.5.0 🚀 [Andreas Wicenec]
 - Deleted unused import. [Andreas Wicenec]
 - Merge branch 'DGEN-20' [Andreas Wicenec]
 - Suggestions implemented; tests fixed. [Andreas Wicenec]
