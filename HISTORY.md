@@ -4,8 +4,101 @@ Changelog
 
 (unreleased)
 ------------
+- Deleted unused import. [Andreas Wicenec]
+- Merge branch 'DGEN-20' [Andreas Wicenec]
+- Suggestions implemented; tests fixed. [Andreas Wicenec]
+- Applied sourcery corrections. [Andreas Wicenec]
+- Aligned palette output with what EAGLE expects. [Andreas Wicenec]
+- Release: version 0.4.7 🚀 [Andreas Wicenec]
+- Added log_level field to default fields. [Andreas Wicenec]
+- Release: version 0.4.6 🚀 [Andreas Wicenec]
+- Re-formatting. [Andreas Wicenec]
+- Aligned all standard types to Python names. [Andreas Wicenec]
+- Categories are now DALiuGEApp and PyFuncApp. [Andreas Wicenec]
+- Fixed linting issue. [Andreas Wicenec]
+- Added support for PythonFunction category. [Andreas Wicenec]
+- Fixes required after merge with master. [Andreas Wicenec]
+
+  Also fixed the make install to be compliant with pep517.
+- Re-align missed changes. [Andreas Wicenec]
+- Aligned palette output with what EAGLE expects. [Andreas Wicenec]
+- Release: version 0.4.7 🚀 [Andreas Wicenec]
+- Added log_level field to default fields. [Andreas Wicenec]
+- Release: version 0.4.6 🚀 [Andreas Wicenec]
+- Re-formatting. [Andreas Wicenec]
+- Aligned all standard types to Python names. [Andreas Wicenec]
+- Categories are now DALiuGEApp and PyFuncApp. [Andreas Wicenec]
+- Fixed linting issue. [Andreas Wicenec]
+- Added support for PythonFunction category. [Andreas Wicenec]
+- Revert merge. [Andreas Wicenec]
+- Merge wirh master. [Andreas Wicenec]
+- Re-formatting. [Andreas Wicenec]
+- Aligned all standard types to Python names. [Andreas Wicenec]
+- Categories are now DALiuGEApp and PyFuncApp. [Andreas Wicenec]
+- Fixed linting issue. [Andreas Wicenec]
+- Added support for PythonFunction category. [Andreas Wicenec]
+- Release: version 0.4.8 🚀 [Andreas Wicenec]
 - Fixed linting and test error. [Andreas Wicenec]
-- Fixed some edge cases on casa; made sure others are still working.
+- Fixed some edge cases on casa; made shure others are still working.
+  [Andreas Wicenec]
+- Fix linter issues. [Ryan Bunney]
+- Improve robustness of the load_name setting using dir(module). [Ryan
+  Bunney]
+
+  This ensures that the load_name is actually found in module.load_name, rather than
+  the previous approach which was more of a 'guess'.
+- Update naming management to address casa issue. [Ryan Bunney]
+
+  - Use empty string in _get_name() when not a class and doesn't have __name__
+  - Use member.__module__ if the name of the member is in the module, rather than appending a duplicate at the end (module.name.name).
+  - Use absolute over relative imports for modules.
+- Aligned palette output with what EAGLE expects. [Andreas Wicenec]
+- Release: version 0.4.7 🚀 [Andreas Wicenec]
+- Added log_level field to default fields. [Andreas Wicenec]
+- Fixed format issue. [Andreas Wicenec]
+- Changed PyFuncApp to PythonFunction. [Andreas Wicenec]
+- Merge branch 'casa_incorrect_name_fix' [Andreas Wicenec]
+- Suggestions implemented; tests fixed. [Andreas Wicenec]
+- Applied sourcery corrections. [Andreas Wicenec]
+- Aligned palette output with what EAGLE expects. [Andreas Wicenec]
+- Release: version 0.4.7 🚀 [Andreas Wicenec]
+- Added log_level field to default fields. [Andreas Wicenec]
+- Release: version 0.4.6 🚀 [Andreas Wicenec]
+- Re-formatting. [Andreas Wicenec]
+- Aligned all standard types to Python names. [Andreas Wicenec]
+- Categories are now DALiuGEApp and PyFuncApp. [Andreas Wicenec]
+- Fixed linting issue. [Andreas Wicenec]
+- Added support for PythonFunction category. [Andreas Wicenec]
+- Fixes required after merge with master. [Andreas Wicenec]
+
+  Also fixed the make install to be compliant with pep517.
+- Re-align missed changes. [Andreas Wicenec]
+- Aligned palette output with what EAGLE expects. [Andreas Wicenec]
+- Release: version 0.4.7 🚀 [Andreas Wicenec]
+- Added log_level field to default fields. [Andreas Wicenec]
+- Release: version 0.4.6 🚀 [Andreas Wicenec]
+- Re-formatting. [Andreas Wicenec]
+- Aligned all standard types to Python names. [Andreas Wicenec]
+- Categories are now DALiuGEApp and PyFuncApp. [Andreas Wicenec]
+- Fixed linting issue. [Andreas Wicenec]
+- Added support for PythonFunction category. [Andreas Wicenec]
+- Revert merge. [Andreas Wicenec]
+- Merge wirh master. [Andreas Wicenec]
+- Aligned palette output with what EAGLE expects. [Andreas Wicenec]
+- Added log_level field to default fields. [Andreas Wicenec]
+- Re-formatting. [Andreas Wicenec]
+- Aligned all standard types to Python names. [Andreas Wicenec]
+- Categories are now DALiuGEApp and PyFuncApp. [Andreas Wicenec]
+- Fixed linting issue. [Andreas Wicenec]
+- Added support for PythonFunction category. [Andreas Wicenec]
+- Aligned palette output with what EAGLE expects. [Andreas Wicenec]
+
+
+0.4.8 (2025-04-16)
+------------------
+- Release: version 0.4.8 🚀 [Andreas Wicenec]
+- Fixed linting and test error. [Andreas Wicenec]
+- Fixed some edge cases on casa; made shure others are still working.
   [Andreas Wicenec]
 - Fix linter issues. [Ryan Bunney]
 - Improve robustness of the load_name setting using dir(module). [Ryan
@@ -23,40 +116,6 @@ Changelog
 0.4.7 (2025-04-08)
 ------------------
 - Release: version 0.4.7 🚀 [Andreas Wicenec]
-- Added log_level field to default fields. [Andreas Wicenec]
-- Merge branch 'DGEN-20' [Andreas Wicenec]
-
-
-0.4.6 (2025-04-02)
-------------------
-- Release: version 0.4.6 🚀 [Andreas Wicenec]
-- Re-formatting. [Andreas Wicenec]
-- Aligned all standard types to Python names. [Andreas Wicenec]
-- Categories are now DALiuGEApp and PyFuncApp. [Andreas Wicenec]
-- Fixed linting issue. [Andreas Wicenec]
-- Added support for PythonFunction category. [Andreas Wicenec]
-
-
-0.4.5 (2025-03-30)
-------------------
-- Release: version 0.4.5 🚀 [Andreas Wicenec]
-- Added log_level field to default fields. [Andreas Wicenec]
-- Merge branch 'DGEN-20' [Andreas Wicenec]
-
-
-0.4.6 (2025-04-02)
-------------------
-- Release: version 0.4.6 🚀 [Andreas Wicenec]
-- Re-formatting. [Andreas Wicenec]
-- Aligned all standard types to Python names. [Andreas Wicenec]
-- Categories are now DALiuGEApp and PyFuncApp. [Andreas Wicenec]
-- Fixed linting issue. [Andreas Wicenec]
-- Added support for PythonFunction category. [Andreas Wicenec]
-
-
-0.4.5 (2025-03-30)
-------------------
-- Release: version 0.4.5 🚀 [Andreas Wicenec]
 - Added log_level field to default fields. [Andreas Wicenec]
 - Merge branch 'DGEN-20' [Andreas Wicenec]
 
