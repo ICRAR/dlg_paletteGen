@@ -256,11 +256,11 @@ def palettes_from_module(
     for i, m in enumerate(sub_modules):
         logger.debug("Extracting nodes from module: %s", m)
         if split:
-            recursive = False if i == 0 else True
+            recursive = i != 0
         nodes, module_doc = nodes_from_module(m, recursive=recursive)
         if len(nodes) == 0:
             continue
-        filename = outfile if not split else f"{outfile}{m.replace('.','_')}.palette"
+        filename = f"{outfile}{m.replace('.','_')}.palette" if split else outfile
         files[filename] = len(nodes)
         _ = prepare_and_write_palette(nodes, filename, module_doc=module_doc)
         logger.debug(
