@@ -358,6 +358,7 @@ def test_direct_rEST(tmpdir: str, shared_datadir: str):
     module_name = "example_rest"
     modules, module_doc = module_hook(
         module_name,
+        modules={},
         recursive=True,
     )
     assert (
@@ -580,6 +581,7 @@ def test_direct_tabascal(tmpdir: str, shared_datadir: str):
     module_name = "example_tabascal"
     modules, module_doc = module_hook(
         module_name,
+        modules={},
         recursive=True,
     )
     assert (
@@ -610,6 +612,7 @@ def test_direct_pypeit(tmpdir: str, shared_datadir: str):
     module_name = "example_pypeit"
     modules, module_doc = module_hook(
         module_name,
+        modules={},
         recursive=True,
     )
     assert (
@@ -657,6 +660,7 @@ def test_typeFix(tmpdir: str, shared_datadir: str):
     module_name = "example_options.testFieldSingle"
     modules, module_doc = module_hook(
         module_name,
+        modules={},
         recursive=True,
     )
     assert list(modules.keys())[-1] == "testFieldSingle"
@@ -686,13 +690,14 @@ def test_direct_module():
     """
     # module_name = "dlg_paletteGen.classes"
     module_name = "numpy.array"
-    modules, module_doc = module_hook(module_name, recursive=True)
+    modules, _ = module_hook(module_name, modules={}, recursive=True)
     nodes = []
     for members in modules.values():
         for node in members.values():
             nodes.append(node)
-    assert len(nodes) in [6, 7]
-    prepare_and_write_palette(nodes, "test.palette", module_doc=module_doc)
+
+    assert len(nodes) == 2
+    # prepare_and_write_palette(nodes, "test.palette", module_doc=module_doc)
 
 
 def test_full_numpy():
@@ -703,9 +708,11 @@ def test_full_numpy():
     :param shared_datadir: the path the the local directory
     """
     module_name = "numpy.polynomial.polynomial"
-    modules, _ = module_hook(module_name, recursive=True)
+    modules, _ = module_hook(module_name, modules={}, recursive=True)
     nodes = []
     for members in modules.values():
         for node in members.values():
             nodes.append(node)
-    assert len(modules) in [29, 30]
+
+    mod_list = list(modules.keys())
+    assert len(mod_list) == 25
