@@ -22,7 +22,6 @@ import subprocess
 import sys
 import tempfile
 import typing
-import uuid
 import xml.etree.ElementTree as ET
 from pkgutil import iter_modules
 from typing import Any, Union
