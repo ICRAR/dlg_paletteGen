@@ -11,11 +11,11 @@ from dlg_paletteGen.classes import Child, Language, logger
 from dlg_paletteGen.support_functions import check_text_element, get_next_id
 
 KNOWN_PARAM_DATA_TYPES = [
-    "str",
-    "int",
-    "float",
+    "String",
+    "Integer",
+    "Float",
     "Object",
-    "bool",
+    "Boolean",
     "Select",
     "Password",
     "Json",
@@ -265,7 +265,7 @@ def parse_value(component_name: str, field_name: str, value: str) -> tuple:
 
     # init attributes of the param
     default_value = ""
-    value_type: str = "str"
+    value_type: str = "String"
     field_type: str = FieldType.ComponentParameter
     field_usage: str = FieldUsage.NoPort
     access: str = FieldAccess.readwrite
@@ -761,7 +761,7 @@ def create_construct_node(node_type: str, node: dict) -> dict:
                 "defaultValue": "",
                 "description": "Application class",
                 "readonly": True,
-                "type": "str",
+                "type": "String",
                 "precious": False,
                 "options": [],
                 "positional": False,
@@ -776,7 +776,7 @@ def create_construct_node(node_type: str, node: dict) -> dict:
                 "defaultValue": "0",
                 "description": "Estimated execution time",
                 "readonly": False,
-                "type": "float",
+                "type": "Float",
                 "precious": False,
                 "options": [],
                 "positional": False,
@@ -791,7 +791,7 @@ def create_construct_node(node_type: str, node: dict) -> dict:
                 "defaultValue": "0",
                 "description": "Number of cores used",
                 "readonly": False,
-                "type": "int",
+                "type": "Integer",
                 "precious": False,
                 "options": [],
                 "positional": False,
@@ -806,7 +806,7 @@ def create_construct_node(node_type: str, node: dict) -> dict:
                 "defaultValue": "False",
                 "description": "Component is start of a group",
                 "readonly": False,
-                "type": "bool",
+                "type": "Boolean",
                 "precious": False,
                 "options": [],
                 "positional": False,
@@ -861,7 +861,7 @@ def create_construct_node(node_type: str, node: dict) -> dict:
             create_field(
                 "num_of_copies",
                 "4",
-                "int",
+                "Integer",
                 FieldType.ConstructParameter,
                 FieldUsage.NoPort,
                 FieldAccess.readwrite,
@@ -916,7 +916,7 @@ def create_construct_node(node_type: str, node: dict) -> dict:
             create_field(
                 "num_of_copies",
                 "4",
-                "int",
+                "Integer",
                 FieldType.ConstructParameter,
                 FieldUsage.NoPort,
                 FieldAccess.readwrite,
@@ -941,7 +941,7 @@ def create_construct_node(node_type: str, node: dict) -> dict:
                     "defaultValue": "",
                     "description": "",
                     "readonly": False,
-                    "type": "str",
+                    "type": "String",
                     "precious": False,
                     "options": [],
                     "positional": False,
@@ -956,7 +956,7 @@ def create_construct_node(node_type: str, node: dict) -> dict:
             create_field(
                 "num_of_inputs",
                 "4",
-                "int",
+                "Integer",
                 FieldType.ConstructParameter,
                 FieldUsage.NoPort,
                 FieldAccess.readwrite,

@@ -724,7 +724,7 @@ def get_value_type_from_default(default):
                     value = default.__repr__()
                 except TypeError as e:
                     if e.__repr__().find("numpy.bool_") > -1:
-                        value = "bool"
+                        value = "Boolean"
         except (ValueError, AttributeError):
             value = ptype = (
                 f"{type(default).__module__}"  # type: ignore
@@ -774,9 +774,9 @@ def identify_field_type(field: dict, value: Any, param_desc: dict, dd_p: dict) -
         return typeFix(value.annotation)
     # else we use the type from default value
     if field["name"] == "args":
-        return "list"
+        return "List"
     if field["name"] == "kwargs":
-        return "dict"
+        return "Dict"
     if param_desc["type"] and param_desc["type"] != "None":
         return param_desc["type"]
     if dd_p and dd_p["type"]:
@@ -950,7 +950,7 @@ def populateDefaultFields(Node):  # pylint: disable=invalid-name
     dc[n]["name"] = n
     dc[n]["value"] = "dlg.apps.pyfunc.PyFuncApp"
     dc[n]["defaultValue"] = "dlg.apps.pyfunc.PyFuncApp"
-    dc[n]["type"] = "str"
+    dc[n]["type"] = "String"
     dc[n]["description"] = "The python class that implements this application"
     dc[n]["readonly"] = True
     Node["fields"].update(dc)
@@ -970,7 +970,7 @@ def populateDefaultFields(Node):  # pylint: disable=invalid-name
     et[n]["name"] = n
     et[n]["value"] = "2"
     et[n]["defaultValue"] = "2"
-    et[n]["type"] = "int"
+    et[n]["type"] = "Integer"
     et[n]["description"] = "Estimate of execution time (in seconds) for this application."
     et[n]["parameterType"] = "ConstraintParameter"
     Node["fields"].update(et)
@@ -980,7 +980,7 @@ def populateDefaultFields(Node):  # pylint: disable=invalid-name
     ncpus[n]["name"] = n
     ncpus[n]["value"] = "1"
     ncpus[n]["defaultValue"] = "1"
-    ncpus[n]["type"] = "int"
+    ncpus[n]["type"] = "Integer"
     ncpus[n]["description"] = "Number of cores used."
     ncpus[n]["parameterType"] = "ConstraintParameter"
     Node["fields"].update(ncpus)

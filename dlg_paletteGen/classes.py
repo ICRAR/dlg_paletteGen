@@ -471,7 +471,7 @@ class GreatGrandChild:
             value_type = typeFix(value_type, default_value=default_value)
 
             # add the param
-            if str(value_type) == "str":
+            if str(value_type) in ["String", "str"]:
                 default_value = str(default_value).replace("'", "")
                 if default_value.find("/") >= 0:
                     default_value = f'"{default_value}"'
