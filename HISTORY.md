@@ -5,7 +5,7 @@ Changelog
 (unreleased)
 ------------
 - Fixed linting and test error. [Andreas Wicenec]
-- Fixed some edge cases on casa; made shure others are still working.
+- Fixed some edge cases on casa; made sure others are still working.
   [Andreas Wicenec]
 - Fix linter issues. [Ryan Bunney]
 - Improve robustness of the load_name setting using dir(module). [Ryan
