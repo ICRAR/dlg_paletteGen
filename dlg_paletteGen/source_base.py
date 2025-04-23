@@ -113,7 +113,7 @@ def check_required_fields_for_category(message: str, fields: list, catg: str):
     if catg in {
         "DynlibApp",
         "DALiuGEApp",
-        "PythonFunction",
+        "PyFuncApp",
         "PythonMemberFunction",
         "Branch",
         "BashShellApp",
@@ -126,7 +126,7 @@ def check_required_fields_for_category(message: str, fields: list, catg: str):
     if catg in {
         "DynlibApp",
         "DALiuGEApp",
-        "PythonFunction",
+        "PyFuncApp",
         "PythonMemberFunction",
         "Branch",
         "BashShellApp",
