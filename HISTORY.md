@@ -4,6 +4,12 @@ Changelog
 
 (unreleased)
 ------------
+- Removed inconsistency with PyFuncApp. [Andreas Wicenec]
+
+
+0.5.1 (2025-04-22)
+------------------
+- Release: version 0.5.1 🚀 [Andreas Wicenec]
 - Reverted default types to uppercase. [Andreas Wicenec]
 
 
