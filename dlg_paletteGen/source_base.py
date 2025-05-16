@@ -14,8 +14,8 @@ KNOWN_PARAM_DATA_TYPES = [
     "String",
     "Integer",
     "Float",
-    "Object",
     "Boolean",
+    "arraylike" "Object",
     "Select",
     "Password",
     "Json",
@@ -757,8 +757,8 @@ def create_construct_node(node_type: str, node: dict) -> dict:
         [
             {
                 "name": "dropclass",
-                "value": "",
-                "defaultValue": "",
+                "value": None,
+                "defaultValue": None,
                 "description": "Application class",
                 "readonly": True,
                 "type": "String",
@@ -827,11 +827,11 @@ def create_construct_node(node_type: str, node: dict) -> dict:
             [
                 {
                     "name": "array",
-                    "value": "",
-                    "defaultValue": "",
+                    "value": None,
+                    "defaultValue": None,
                     "description": "Input array",
                     "readonly": False,
-                    "type": "Object",
+                    "type": "arraylike",
                     "precious": False,
                     "options": [],
                     "positional": False,
@@ -842,11 +842,11 @@ def create_construct_node(node_type: str, node: dict) -> dict:
                 },
                 {
                     "name": "split_array",
-                    "value": "",
-                    "defaultValue": "",
+                    "value": None,
+                    "defaultValue": None,
                     "description": "",
                     "readonly": False,
-                    "type": "Object",
+                    "type": "arraylike",
                     "precious": False,
                     "options": [],
                     "positional": False,
@@ -882,8 +882,8 @@ def create_construct_node(node_type: str, node: dict) -> dict:
             [
                 {
                     "name": "array",
-                    "value": "",
-                    "defaultValue": "",
+                    "value": None,
+                    "defaultValue": None,
                     "description": "Input array",
                     "readonly": False,
                     "type": "Object",
@@ -897,8 +897,8 @@ def create_construct_node(node_type: str, node: dict) -> dict:
                 },
                 {
                     "name": "split_array",
-                    "value": "",
-                    "defaultValue": "",
+                    "value": None,
+                    "defaultValue": None,
                     "description": "",
                     "readonly": False,
                     "type": "Object",
@@ -937,8 +937,8 @@ def create_construct_node(node_type: str, node: dict) -> dict:
             [
                 {
                     "name": "content",
-                    "value": "",
-                    "defaultValue": "",
+                    "value": None,
+                    "defaultValue": None,
                     "description": "",
                     "readonly": False,
                     "type": "String",

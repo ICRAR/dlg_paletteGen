@@ -411,6 +411,7 @@ def write_palette_json(
     with open(output_filename, "w", encoding="utf-8") as outfile:
         try:
             json.dump(palette, outfile, indent=4)
+            logger.debug(">>>>> %s", json.dumps(palette))
             return palette
         except TypeError:
             logger.error("Problem serializing palette! Bailing out!!")
@@ -656,8 +657,8 @@ def import_using_name(mod_name: str, traverse: bool = False, err_log=True):
 
 def initializeField(
     name: str = "dummy",
-    value: Any = "",
-    defaultValue: Any = "",
+    value: Any = None,
+    defaultValue: Any = None,
     description: str = "no description found",
     vtype: Union[str, None] = None,
     parameterType: str = "ComponentParameter",
@@ -674,15 +675,17 @@ def initializeField(
     fieldValue["encoding"] = ""
     fieldValue["name"] = name
     if isinstance(value, numpy.ndarray):
-        fieldValue["value"] = value if len(value) > 0 else ""  # type: ignore
+        fieldValue["value"] = value if len(value) > 0 else None  # type: ignore
     else:
-        fieldValue["value"] = value if value else ""
+        fieldValue["value"] = value if value else None  # type: ignore
     if isinstance(defaultValue, numpy.ndarray):
         fieldValue["defaultValue"] = (
-            defaultValue if len(defaultValue) > 0 else ""  # type: ignore
+            defaultValue if len(defaultValue) > 0 else None  # type: ignore
         )
     else:
-        fieldValue["defaultValue"] = defaultValue if defaultValue else ""
+        fieldValue["defaultValue"] = (
+            defaultValue if defaultValue else None  # type: ignore
+        )
     fieldValue["description"] = description
     fieldValue["type"] = vtype  # type:ignore
     fieldValue["parameterType"] = parameterType
@@ -836,17 +839,20 @@ def populateFields(sig: Any, dd) -> dict:
             fields.update(field)
 
     if hasattr(sig, "return_annotation"):
-        field = initializeField("output")
-        field["output"]["type"] = typeFix(sig.return_annotation)
-        field["output"]["usage"] = "OutputPort"
-        field["output"]["encoding"] = "dill"
+        output_name = "output"
         if dd and dd.returns:
-            field["output"]["description"] = dd.returns.description
-            if field["output"]["type"] == "UNIDENTIFIED":
-                field["output"]["type"] = typeFix(dd.returns.type_name)
+            output_name = dd.returns.return_name or output_name
+        field = initializeField(output_name)
+        field[output_name]["type"] = typeFix(sig.return_annotation)
+        field[output_name]["usage"] = "OutputPort"
+        field[output_name]["encoding"] = "dill"
+        if dd and dd.returns:
+            field[output_name]["description"] = dd.returns.description
+            if field[output_name]["type"] == "UNIDENTIFIED":
+                field[output_name]["type"] = typeFix(dd.returns.type_name)
         fields.update(field)
         logger.debug(
-            "Identified type %s and assigned OutputPort.", field["output"]["type"]
+            "Identified output_port '%s' of type '%s'.", output_name, field[output_name]["type"]
         )
     return fields
 
@@ -940,8 +946,8 @@ def populateDefaultFields(Node):  # pylint: disable=invalid-name
     gs = initializeField(n)
     gs[n]["name"] = n
     gs[n]["type"] = "Boolean"
-    gs[n]["value"] = "false"
-    gs[n]["default_value"] = "false"
+    gs[n]["value"] = False
+    gs[n]["default_value"] = False
     gs[n]["description"] = "Is this node the start of a group?"
     Node["fields"].update(gs)
 
@@ -968,8 +974,8 @@ def populateDefaultFields(Node):  # pylint: disable=invalid-name
     n = "execution_time"
     et = initializeField(n)
     et[n]["name"] = n
-    et[n]["value"] = "2"
-    et[n]["defaultValue"] = "2"
+    et[n]["value"] = 2
+    et[n]["defaultValue"] = 2
     et[n]["type"] = "Integer"
     et[n]["description"] = "Estimate of execution time (in seconds) for this application."
     et[n]["parameterType"] = "ConstraintParameter"
@@ -978,8 +984,8 @@ def populateDefaultFields(Node):  # pylint: disable=invalid-name
     n = "num_cpus"
     ncpus = initializeField(n)
     ncpus[n]["name"] = n
-    ncpus[n]["value"] = "1"
-    ncpus[n]["defaultValue"] = "1"
+    ncpus[n]["value"] = 1
+    ncpus[n]["defaultValue"] = 1
     ncpus[n]["type"] = "Integer"
     ncpus[n]["description"] = "Number of cores used."
     ncpus[n]["parameterType"] = "ConstraintParameter"
