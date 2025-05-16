@@ -852,7 +852,9 @@ def populateFields(sig: Any, dd) -> dict:
                 field[output_name]["type"] = typeFix(dd.returns.type_name)
         fields.update(field)
         logger.debug(
-            "Identified output_port '%s' of type '%s'.", output_name, field[output_name]["type"]
+            "Identified output_port '%s' of type '%s'.",
+            output_name,
+            field[output_name]["type"],
         )
     return fields
 

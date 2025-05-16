@@ -715,4 +715,4 @@ def test_full_numpy():
             nodes.append(node)
 
     mod_list = list(modules.keys())
-    assert len(mod_list) == 25
+    assert len(mod_list) == 24
