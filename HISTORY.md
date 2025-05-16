@@ -4,6 +4,13 @@ Changelog
 
 (unreleased)
 ------------
+- Use return_name from description parser for output_name. [Andreas
+  Wicenec]
+
+
+0.5.2 (2025-04-23)
+------------------
+- Release: version 0.5.2 🚀 [Andreas Wicenec]
 - Removed inconsistency with PyFuncApp. [Andreas Wicenec]
 
 
