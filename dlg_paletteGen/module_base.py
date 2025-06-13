@@ -261,9 +261,9 @@ def construct_member_node(member, module=None, parent=None, name=None) -> dict:
         ind += 1
         if k == "self" and ind == 0:
             node["category"] = "PythonMemberFunction"
+            fields["self"]["parameterType"] = "ComponentParameter"
             if member.__name__ in ["__init__", "__cls__"]:
                 fields["self"]["usage"] = FieldUsage.OutputPort
-                fields["self"]["parameterType"] = "ComponentParameter"
             elif inspect.ismethoddescriptor(member):
                 fields["self"]["usage"] = "InputOutput"
             else:

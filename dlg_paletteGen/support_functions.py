@@ -743,10 +743,6 @@ def get_value_type_from_default(default):
             # this is a complex type
             logger.debug("Object not JSON serializable: %s", value)
             ptype = value = type(value).__name__
-        if not isinstance(value, (str, bool)) and (
-            ptype in ["Json"]
-        ):  # we want to carry these as strings
-            value = value.__name__()
     if repr(default) == "nan" and numpy.isnan(default):
         value = None
     param_desc["value"] = value
@@ -838,7 +834,7 @@ def populateFields(sig: Any, dd) -> dict:
         if p != "base_name":
             fields.update(field)
 
-    if hasattr(sig, "return_annotation"):
+    if hasattr(sig, "return_annotation") and sig.return_annotation != inspect._empty:
         output_name = "output"
         if dd and dd.returns:
             output_name = dd.returns.return_name or output_name

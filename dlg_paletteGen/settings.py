@@ -63,7 +63,6 @@ VALUE_TYPES = {
     bool: "Boolean",
     list: "List",
     dict: "Dict",
-    tuple: "Json",
 }
 
 SVALUE_TYPES = {k.__name__: v for k, v in VALUE_TYPES.items() if hasattr(k, "__name__")}
