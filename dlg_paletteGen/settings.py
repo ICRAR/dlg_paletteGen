@@ -53,6 +53,7 @@ logger.setLevel(logging.INFO)
 # logger = logging.getLogger()
 logger.addHandler(ch)
 logger.addHandler(ch2)
+# logger.addFilter(logging.Filter(logger.name))
 
 
 # these are our supported base types

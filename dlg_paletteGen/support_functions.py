@@ -16,6 +16,7 @@ import importlib.metadata
 import inspect
 import io
 import json
+import logging
 import os
 import re
 import subprocess
@@ -569,6 +570,18 @@ def get_submodules(module):
                 submods.append(get_mod_name(getattr(module, m[0])))
     return iter(submods), iter(module_vars)
 
+def silence_module_logger():
+    """
+    Silence loggers from imported modules
+    """
+    n_enabled = len(list(logging.Logger.manager.loggerDict.keys()))
+    for log_name, log_obj in logging.Logger.manager.loggerDict.items():
+        log_obj = logging.getLogger(log_name)
+        if log_name != logger.name and hasattr(log_obj, "propagate") and log_obj.propagate:
+            # logger.debug(f">>>>> disabling logger: {log_name}")
+            log_obj.propagate = False
+            n_enabled -= 1
+    return n_enabled
 
 def import_using_name(mod_name: str, traverse: bool = False, err_log=True):
     """
@@ -598,10 +611,12 @@ def import_using_name(mod_name: str, traverse: bool = False, err_log=True):
         return None
     try:  # direct import first
         mod = importlib.import_module(mod_name)
+        n_enabled = silence_module_logger()
     except ValueError:
         logger.error("Unable to import module: %s", mod_name)
         mod = None
     except ModuleNotFoundError:
+        n_enabled = silence_module_logger()
         mod_down = None
         if len(parts) >= 1:
             if parts[-1] in ["__init__", "__class__"]:
@@ -611,6 +626,7 @@ def import_using_name(mod_name: str, traverse: bool = False, err_log=True):
             if parts[0] and not exists:
                 try:
                     mod = importlib.import_module(parts[0])
+                    n_enabled = silence_module_logger()
                     if hasattr(mod, "__version__"):
                         mod_version = mod.__version__
                 except ImportError as e:
@@ -642,6 +658,7 @@ def import_using_name(mod_name: str, traverse: bool = False, err_log=True):
                                 ".".join(parts[:-1]),
                             )
                             mod = importlib.import_module(".".join(parts[:-1]))
+                            n_enabled = silence_module_logger()
                             break
                         except Exception as e:
                             raise ValueError(

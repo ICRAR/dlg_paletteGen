@@ -142,6 +142,10 @@ class DetailedDescription:
         logger.debug("Processing rEST style doc_strings")
         if not dd:
             dd = self.description
+        psplit = re.split(r"(\n\s*:param \w*:)", dd, 1)
+        if len(psplit) > 1 and psplit[1][0:2] !="\n\n":
+            # add blank line if not there
+            dd = psplit[0] + "\n\n" +  psplit[1] + psplit[2]
         dp = parse(dd)
         self.returns = dp.returns
         spds = dp.params
@@ -164,7 +168,7 @@ class DetailedDescription:
             raise
         logger.debug("rEST_style param dict %r", self.params)
         # extract return documentation
-        return self.description, self.params, self.returns
+        return dd, self.params, self.returns
 
     def _process_Numpy(self, dd: str) -> tuple:
         """
