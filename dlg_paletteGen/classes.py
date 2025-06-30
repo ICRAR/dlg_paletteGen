@@ -143,9 +143,9 @@ class DetailedDescription:
         if not dd:
             dd = self.description
         psplit = re.split(r"(\n\s*:param \w*:)", dd, 1)
-        if len(psplit) > 1 and psplit[1][0:2] !="\n\n":
+        if len(psplit) > 1 and psplit[1][0:2] != "\n\n":
             # add blank line if not there
-            dd = psplit[0] + "\n\n" +  psplit[1] + psplit[2]
+            dd = psplit[0] + "\n\n" + psplit[1] + psplit[2]
         dp = parse(dd)
         self.returns = dp.returns
         spds = dp.params

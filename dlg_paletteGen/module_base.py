@@ -157,8 +157,8 @@ def _get_docs(member, module, node) -> tuple:
             node["name"],
         )
         node["category"] = "PythonMemberFunction"
-        dd = DetailedDescription(inspect.getdoc(module), name=module.__name__)
-        node["description"] += f"\n{dd.description.strip()}"
+        dd_mod = DetailedDescription(inspect.getdoc(module), name=module.__name__)
+        node["description"] += f"\n{dd_mod.description.strip()}"
     if not dd:
         logger.debug("Entity '%s' has neither descr. nor __name__", node["name"])
 

@@ -296,10 +296,7 @@ def get_mod_name(mod) -> str:
     """Get a name from a module in all cases."""
     if isinstance(mod, numpy.ndarray):
         logger.debug("Trying to get module name: %s", mod)
-    """Get a name from a module in all cases."""
-    if isinstance(mod, numpy.ndarray):
-        logger.debug("Trying to get module name: %s", mod)
-    if not mod:
+    if mod is None:
         return ""
     if hasattr(mod, "__name__"):
         return mod.__name__
@@ -570,18 +567,22 @@ def get_submodules(module):
                 submods.append(get_mod_name(getattr(module, m[0])))
     return iter(submods), iter(module_vars)
 
+
 def silence_module_logger():
-    """
-    Silence loggers from imported modules
-    """
+    """Silence loggers from imported modules."""
     n_enabled = len(list(logging.Logger.manager.loggerDict.keys()))
     for log_name, log_obj in logging.Logger.manager.loggerDict.items():
         log_obj = logging.getLogger(log_name)
-        if log_name != logger.name and hasattr(log_obj, "propagate") and log_obj.propagate:
+        if (
+            log_name != logger.name
+            and hasattr(log_obj, "propagate")
+            and log_obj.propagate
+        ):
             # logger.debug(f">>>>> disabling logger: {log_name}")
             log_obj.propagate = False
             n_enabled -= 1
     return n_enabled
+
 
 def import_using_name(mod_name: str, traverse: bool = False, err_log=True):
     """
@@ -601,7 +602,10 @@ def import_using_name(mod_name: str, traverse: bool = False, err_log=True):
     :param traverse: Follow the tree even if module already loaded.
     :param err_log: Log import error
     """
-    logger.debug("Importing %s", mod_name)
+    # if mod_name in __builtins__:
+    #     logger.debug("Module %s is a built-in function.", mod_name)
+    #     return __builtins__[mod_name]
+    logger.debug("Trying to import %s", mod_name)
     if not re.match("^[_A-Z,a-z]", mod_name):
         return None
     parts = mod_name.split(".")
@@ -611,12 +615,11 @@ def import_using_name(mod_name: str, traverse: bool = False, err_log=True):
         return None
     try:  # direct import first
         mod = importlib.import_module(mod_name)
-        n_enabled = silence_module_logger()
     except ValueError:
         logger.error("Unable to import module: %s", mod_name)
         mod = None
     except ModuleNotFoundError:
-        n_enabled = silence_module_logger()
+        # _ = silence_module_logger()
         mod_down = None
         if len(parts) >= 1:
             if parts[-1] in ["__init__", "__class__"]:
@@ -626,7 +629,6 @@ def import_using_name(mod_name: str, traverse: bool = False, err_log=True):
             if parts[0] and not exists:
                 try:
                     mod = importlib.import_module(parts[0])
-                    n_enabled = silence_module_logger()
                     if hasattr(mod, "__version__"):
                         mod_version = mod.__version__
                 except ImportError as e:
@@ -638,6 +640,7 @@ def import_using_name(mod_name: str, traverse: bool = False, err_log=True):
                             mod_name,
                         )
                     return None
+                _ = silence_module_logger()
                 for m in parts[1:]:
                     try:
                         logger.debug("Getting attribute %s", m)
@@ -658,7 +661,7 @@ def import_using_name(mod_name: str, traverse: bool = False, err_log=True):
                                 ".".join(parts[:-1]),
                             )
                             mod = importlib.import_module(".".join(parts[:-1]))
-                            n_enabled = silence_module_logger()
+                            _ = silence_module_logger()
                             break
                         except Exception as e:
                             raise ValueError(
@@ -668,6 +671,7 @@ def import_using_name(mod_name: str, traverse: bool = False, err_log=True):
             else:
                 logger.debug("Recursive import failed! %s", parts[0] in sys.modules)
                 raise ModuleNotFoundError
+    _ = silence_module_logger()
     logger.debug("Loaded module: %s version: %s", mod_name, mod_version)
     return mod
 
@@ -716,7 +720,6 @@ def initializeField(
 
 
 def get_value_type_from_default(default):
-    """Extract value and type from default value."""
     """Extract value and type from default value."""
     param_desc = {
         "value": None,
@@ -841,6 +844,8 @@ def populateFields(sig: Any, dd) -> dict:
         field[p]["description"] = param_desc["desc"]
         field[p]["positional"] = v.kind == inspect.Parameter.POSITIONAL_ONLY
         logger.debug("Final type of parameter %s: %s", p, field[p]["type"])
+        logger.debug("Final desc of parameter %s: %s", p, dd.params[p]["desc"]) if p in dd.params else None
+
         if isinstance(field[p]["value"], numpy.ndarray):
             try:
                 field[p]["value"] = field[p]["defaultValue"] = field[p]["value"].tolist()
