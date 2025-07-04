@@ -48,7 +48,7 @@ ch2.setFormatter(CustomFormatter())
 
 root_logger = logging.getLogger()
 root_logger.setLevel(logging.INFO)
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("dlg_paletteGen")
 logger.setLevel(logging.INFO)
 # logger = logging.getLogger()
 logger.addHandler(ch)

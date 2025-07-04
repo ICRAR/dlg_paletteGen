@@ -844,7 +844,8 @@ def populateFields(sig: Any, dd) -> dict:
         field[p]["description"] = param_desc["desc"]
         field[p]["positional"] = v.kind == inspect.Parameter.POSITIONAL_ONLY
         logger.debug("Final type of parameter %s: %s", p, field[p]["type"])
-        logger.debug("Final desc of parameter %s: %s", p, dd.params[p]["desc"]) if p in dd.params else None
+        if dd and p in dd.params:
+            logger.debug("Final desc of parameter %s: %s", p, dd.params[p]["desc"])
 
         if isinstance(field[p]["value"], numpy.ndarray):
             try:
