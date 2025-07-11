@@ -4,6 +4,13 @@ Changelog
 
 (unreleased)
 ------------
+- Merge branch 'DGEN-25' [Andreas Wicenec]
+- Fixed formatting. [Andreas Wicenec]
+
+
+0.5.4 (2025-07-11)
+------------------
+- Release: version 0.5.4 🚀 [Andreas Wicenec]
 - Refactored import logic to handle module retrieval more robustly.
   [Andreas Wicenec]
 
