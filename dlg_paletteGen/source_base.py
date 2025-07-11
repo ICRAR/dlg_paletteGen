@@ -7,34 +7,12 @@ import xml.etree.ElementTree as ET
 from enum import Enum
 from typing import Any, Union
 
-from dlg_paletteGen.classes import Child, Language, logger
+from dlg_paletteGen.classes import Child, Language
 from dlg_paletteGen.support_functions import check_text_element, get_next_id
 
-KNOWN_PARAM_DATA_TYPES = [
-    "String",
-    "Integer",
-    "Float",
-    "Boolean",
-    "arraylike" "Object",
-    "Select",
-    "Password",
-    "Json",
-    "Python",
-]
-KNOWN_CONSTRUCT_TYPES = ["Scatter", "Gather"]
+from . import logger
 
-KNOWN_DATA_CATEGORIES = [
-    "File",
-    "Memory",
-    "PythonObject",
-    "SharedMemory",
-    "NGAS",
-    "S3",
-    "Plasma",
-    "PlasmaFlight",
-    "ParameterSet",
-    "EnvironmentVariables",
-]
+KNOWN_CONSTRUCT_TYPES = ["Scatter", "Gather"]
 
 
 class PGenEnum(str, Enum):
@@ -70,9 +48,10 @@ class FieldEncoding(PGenEnum):
     dill = "dill"
     pickle = "pickle"
     npy = "npy"
-    path = "path"
     utf8 = "utf-8"
+    json = "json"
     eval = "eval"
+    path = "path"
     dataurl = "dataurl"
     binary = "binary"
     raw = "raw"

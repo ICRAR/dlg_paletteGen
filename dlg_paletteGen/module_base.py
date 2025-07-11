@@ -14,12 +14,7 @@ import types
 import typing
 from typing import _SpecialForm
 
-from dlg_paletteGen.classes import (
-    DetailedDescription,
-    DummyParam,
-    DummySig,
-    logger,
-)
+from dlg_paletteGen.classes import DetailedDescription, DummyParam, DummySig
 from dlg_paletteGen.source_base import FieldUsage
 from dlg_paletteGen.support_functions import (
     constructNode,
@@ -29,6 +24,8 @@ from dlg_paletteGen.support_functions import (
     populateDefaultFields,
     populateFields,
 )
+
+from . import logger
 
 
 def get_class_members(cls, parent=None):
@@ -157,8 +154,8 @@ def _get_docs(member, module, node) -> tuple:
             node["name"],
         )
         node["category"] = "PythonMemberFunction"
-        dd = DetailedDescription(inspect.getdoc(module), name=module.__name__)
-        node["description"] += f"\n{dd.description.strip()}"
+        dd_mod = DetailedDescription(inspect.getdoc(module), name=module.__name__)
+        node["description"] += f"\n{dd_mod.description.strip()}"
     if not dd:
         logger.debug("Entity '%s' has neither descr. nor __name__", node["name"])
 
@@ -261,9 +258,9 @@ def construct_member_node(member, module=None, parent=None, name=None) -> dict:
         ind += 1
         if k == "self" and ind == 0:
             node["category"] = "PythonMemberFunction"
+            fields["self"]["parameterType"] = "ComponentParameter"
             if member.__name__ in ["__init__", "__cls__"]:
                 fields["self"]["usage"] = FieldUsage.OutputPort
-                fields["self"]["parameterType"] = "ComponentParameter"
             elif inspect.ismethoddescriptor(member):
                 fields["self"]["usage"] = "InputOutput"
             else:

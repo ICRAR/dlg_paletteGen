@@ -1,59 +1,9 @@
 """Set global values."""
 
 import inspect
-import logging
-import sys
 from enum import Enum
 
 import numpy
-
-
-class CustomFormatter(logging.Formatter):
-    """Format the logging."""
-
-    high = "\x1b[34;1m"
-    grey = "\x1b[38;20m"
-    yellow = "\x1b[33;20m"
-    red = "\x1b[31;20m"
-    bold_red = "\x1b[31;1m"
-    reset = "\x1b[0m"
-    base_format = (
-        "%(asctime)s - %(name)s - %(levelname)s - %(message)s "
-        + "(%(filename)s:%(lineno)d)"
-    )
-
-    FORMATS = {
-        logging.DEBUG: high + base_format + reset,
-        logging.INFO: grey + base_format + reset,
-        logging.WARNING: yellow + base_format + reset,
-        logging.ERROR: red + base_format + reset,
-        logging.CRITICAL: bold_red + base_format + reset,
-    }
-
-    def format(self, record):
-        """Define the format."""
-        log_fmt = self.FORMATS.get(record.levelno)
-        formatter = logging.Formatter(log_fmt, "%Y-%m-%dT%H:%M:%S")
-        return formatter.format(record)
-
-
-# create console handler with a higher log level
-ch = logging.StreamHandler(sys.stdout)
-ch.setLevel(logging.DEBUG)
-ch.setFormatter(CustomFormatter())
-
-ch2 = logging.StreamHandler(sys.stderr)
-ch2.setLevel(logging.ERROR)
-ch2.setFormatter(CustomFormatter())
-
-root_logger = logging.getLogger()
-root_logger.setLevel(logging.INFO)
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
-# logger = logging.getLogger()
-logger.addHandler(ch)
-logger.addHandler(ch2)
-
 
 # these are our supported base types
 VALUE_TYPES = {
@@ -63,7 +13,6 @@ VALUE_TYPES = {
     bool: "Boolean",
     list: "List",
     dict: "Dict",
-    tuple: "Json",
 }
 
 SVALUE_TYPES = {k.__name__: v for k, v in VALUE_TYPES.items() if hasattr(k, "__name__")}

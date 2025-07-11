@@ -38,8 +38,9 @@ from dlg_paletteGen.settings import (
     SVALUE_TYPES,
     VALUE_TYPES,
     Language,
-    logger,
 )
+
+from . import logger, silence_module_logger
 
 
 def read(*paths, **kwargs):
@@ -295,10 +296,7 @@ def get_mod_name(mod) -> str:
     """Get a name from a module in all cases."""
     if isinstance(mod, numpy.ndarray):
         logger.debug("Trying to get module name: %s", mod)
-    """Get a name from a module in all cases."""
-    if isinstance(mod, numpy.ndarray):
-        logger.debug("Trying to get module name: %s", mod)
-    if not mod:
+    if mod is None:
         return ""
     if hasattr(mod, "__name__"):
         return mod.__name__
@@ -570,27 +568,47 @@ def get_submodules(module):
     return iter(submods), iter(module_vars)
 
 
-def import_using_name(mod_name: str, traverse: bool = False, err_log=True):
+def _get_loaded_module(mod_name: str) -> Union[None, Any]:
     """
-    Import a module using its name.
+    Get a loaded module by its name.
 
-    Try hard to go up the hierarchy if direct import is not possible.
-    This only imports actual modules,
-    Import a module using its name.
+    :param mod_name: The name of the module to be retrieved.
+    :returns: The module if found, None otherwise.
+    """
+    # Try sys.modules, globals, locals, then builtins
+    main_module = sys.modules["__main__"].__dict__
+    if mod_name in sys.modules:
+        logger.debug("Module %s already loaded.", mod_name)
+        mod = sys.modules[mod_name]
+    elif mod_name in main_module:
+        mod = main_module[mod_name]
+    elif mod_name in globals():
+        mod = globals()[mod_name]
+    elif mod_name in globals():
+        mod = globals()[mod_name]
+    elif mod_name in locals():
+        mod = locals()[mod_name]
+    elif hasattr(__builtins__, mod_name):
+        mod = getattr(__builtins__, mod_name)
+    else:
+        mod = None
+        logger.debug(
+            "Module %s not found in sys.modules, locals, globals or builtins.", mod_name
+        )
+    return mod
 
-    Try hard to go up the hierarchy if direct import is not possible.
-    This only imports actual modules,
-    not classes, functions, or types. In those cases it will return the
-    lowest module in the hierarchy. As a final fallback it will return the
-    highest level module.
+
+def _import_module(
+    mod_name: str, traverse: bool = False, err_log=True
+) -> Union[None, Any]:
+    """
+    Import a module by its name.
 
     :param mod_name: The name of the module to be imported.
     :param traverse: Follow the tree even if module already loaded.
     :param err_log: Log import error
+    :returns: The imported module or None if not found.
     """
-    logger.debug("Importing %s", mod_name)
-    if not re.match("^[_A-Z,a-z]", mod_name):
-        return None
     parts = mod_name.split(".")
     exists = ".".join(parts[:-1]) in sys.modules if not traverse else False
     mod_version = "Unknown"
@@ -602,6 +620,7 @@ def import_using_name(mod_name: str, traverse: bool = False, err_log=True):
         logger.error("Unable to import module: %s", mod_name)
         mod = None
     except ModuleNotFoundError:
+        # _ = silence_module_logger()
         mod_down = None
         if len(parts) >= 1:
             if parts[-1] in ["__init__", "__class__"]:
@@ -622,6 +641,7 @@ def import_using_name(mod_name: str, traverse: bool = False, err_log=True):
                             mod_name,
                         )
                     return None
+                _ = silence_module_logger()
                 for m in parts[1:]:
                     try:
                         logger.debug("Getting attribute %s", m)
@@ -642,17 +662,45 @@ def import_using_name(mod_name: str, traverse: bool = False, err_log=True):
                                 ".".join(parts[:-1]),
                             )
                             mod = importlib.import_module(".".join(parts[:-1]))
+                            _ = silence_module_logger()
                             break
                         except Exception as e:
                             raise ValueError(
-                                f"Problem importing module {mod}, {e}"
                                 f"Problem importing module {mod}, {e}"
                             ) from e
             else:
                 logger.debug("Recursive import failed! %s", parts[0] in sys.modules)
                 raise ModuleNotFoundError
+    _ = silence_module_logger()
     logger.debug("Loaded module: %s version: %s", mod_name, mod_version)
     return mod
+
+
+def import_using_name(mod_name: str, traverse: bool = False, err_log=True):
+    """
+    Import a module using its name.
+
+    Try hard to go up the hierarchy if direct import is not possible.
+    This only imports actual modules,
+    Import a module using its name.
+
+    Try hard to go up the hierarchy if direct import is not possible.
+    This only imports actual modules,
+    not classes, functions, or types. In those cases it will return the
+    lowest module in the hierarchy. As a final fallback it will return the
+    highest level module.
+
+    :param mod_name: The name of the module to be imported.
+    :param traverse: Follow the tree even if module already loaded.
+    :param err_log: Log import error
+    """
+    # if mod_name in __builtins__:
+    #     logger.debug("Module %s is a built-in function.", mod_name)
+    #     return __builtins__[mod_name]
+    logger.debug("Trying to import %s", mod_name)
+    if not re.match("^[_A-Z,a-z]", mod_name):
+        return None
+    return _get_loaded_module(mod_name) or _import_module(mod_name, traverse, err_log)
 
 
 def initializeField(
@@ -700,7 +748,6 @@ def initializeField(
 
 def get_value_type_from_default(default):
     """Extract value and type from default value."""
-    """Extract value and type from default value."""
     param_desc = {
         "value": None,
         "desc": "",
@@ -743,10 +790,6 @@ def get_value_type_from_default(default):
             # this is a complex type
             logger.debug("Object not JSON serializable: %s", value)
             ptype = value = type(value).__name__
-        if not isinstance(value, (str, bool)) and (
-            ptype in ["Json"]
-        ):  # we want to carry these as strings
-            value = value.__name__()
     if repr(default) == "nan" and numpy.isnan(default):
         value = None
     param_desc["value"] = value
@@ -828,6 +871,9 @@ def populateFields(sig: Any, dd) -> dict:
         field[p]["description"] = param_desc["desc"]
         field[p]["positional"] = v.kind == inspect.Parameter.POSITIONAL_ONLY
         logger.debug("Final type of parameter %s: %s", p, field[p]["type"])
+        if dd and p in dd.params:
+            logger.debug("Final desc of parameter %s: %s", p, dd.params[p]["desc"])
+
         if isinstance(field[p]["value"], numpy.ndarray):
             try:
                 field[p]["value"] = field[p]["defaultValue"] = field[p]["value"].tolist()
@@ -838,7 +884,7 @@ def populateFields(sig: Any, dd) -> dict:
         if p != "base_name":
             fields.update(field)
 
-    if hasattr(sig, "return_annotation"):
+    if hasattr(sig, "return_annotation") and sig.return_annotation != inspect._empty:
         output_name = "output"
         if dd and dd.returns:
             output_name = dd.returns.return_name or output_name

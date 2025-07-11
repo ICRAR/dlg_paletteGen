@@ -1,3 +1,4 @@
+# pylint: disable=too-few-public-methods
 import json
 import logging
 import os
@@ -287,7 +288,7 @@ def test_direct_cli():
     Execute the cli directly to test the code itself.
     """
 
-    class args:
+    class CliArgs:
         """
         Arguments for CLI
         """
@@ -306,7 +307,7 @@ def test_direct_cli():
         def __len__(self):
             return 10
 
-    a = args()
+    a = CliArgs()
     res = get_args(args=a)
     assert res[:3] == (".", "", "dlg_paletteGen.palette")
 

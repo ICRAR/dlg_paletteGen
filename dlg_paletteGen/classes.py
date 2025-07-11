@@ -10,12 +10,14 @@ from typing import Optional, Union
 
 from docstring_parser import parse
 
-from dlg_paletteGen.settings import VALUE_TYPES, Language, logger
+from dlg_paletteGen.settings import VALUE_TYPES, Language
 from dlg_paletteGen.support_functions import (
     cleanString,
     guess_type_from_default,
     typeFix,
 )
+
+from . import logger
 
 
 class DummySig:
@@ -142,6 +144,10 @@ class DetailedDescription:
         logger.debug("Processing rEST style doc_strings")
         if not dd:
             dd = self.description
+        psplit = re.split(r"(\n\s*:param \w*:)", dd, 1)
+        if len(psplit) > 1 and psplit[1][0:2] != "\n\n":
+            # add blank line if not there
+            dd = psplit[0] + "\n\n" + psplit[1] + psplit[2]
         dp = parse(dd)
         self.returns = dp.returns
         spds = dp.params
@@ -164,7 +170,7 @@ class DetailedDescription:
             raise
         logger.debug("rEST_style param dict %r", self.params)
         # extract return documentation
-        return self.description, self.params, self.returns
+        return dd, self.params, self.returns
 
     def _process_Numpy(self, dd: str) -> tuple:
         """
@@ -701,7 +707,7 @@ class Child:
                     }
                 )
             elif language == Language.PYTHON:
-                member["params"].update({"category": "DALiuGEApp"})
+                member["params"].update({"category": "PyFuncApp"})
                 member["params"].update(
                     {
                         "dropclass": "dlg.apps.pyfunc.PyFuncApp/"

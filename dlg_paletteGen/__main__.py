@@ -37,7 +37,7 @@ import tempfile
 from typing import Any, Tuple
 
 from dlg_paletteGen.module_base import module_hook
-from dlg_paletteGen.settings import DOXYGEN_SETTINGS, Language, logger
+from dlg_paletteGen.settings import DOXYGEN_SETTINGS, Language
 from dlg_paletteGen.source_base import process_compounddefs
 from dlg_paletteGen.support_functions import (
     NAME,
@@ -48,6 +48,8 @@ from dlg_paletteGen.support_functions import (
     process_doxygen,
     process_xml,
 )
+
+from . import logger
 
 
 def get_args(args=None):
@@ -260,7 +262,7 @@ def palettes_from_module(
         nodes, module_doc = nodes_from_module(m, recursive=recursive)
         if len(nodes) == 0:
             continue
-        filename = f"{outfile}{m.replace('.','_')}.palette" if split else outfile
+        filename = f"{outfile}{m.replace('.','_')}.palette" if not outfile else outfile
         files[filename] = len(nodes)
         _ = prepare_and_write_palette(nodes, filename, module_doc=module_doc)
         logger.debug(
