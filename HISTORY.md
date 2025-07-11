@@ -4,6 +4,24 @@ Changelog
 
 (unreleased)
 ------------
+- Refactored import logic to handle module retrieval more robustly.
+  [Andreas Wicenec]
+
+  Enabled ability to analyze modules and functions
+  directly in the interpreter or from an external
+  script.
+- Fixed final test. [Andreas Wicenec]
+- Fixed treating of __init__ descriptions. [Andreas Wicenec]
+- Work-around for missing blank line in docstrings. [Andreas Wicenec]
+- Fixed self output port. [Andreas Wicenec]
+- Numpy seems to have a different number of components on Linux than on
+  Mac... [Andreas Wicenec]
+- Reformatting to fix linter error. [Andreas Wicenec]
+
+
+0.5.3 (2025-05-16)
+------------------
+- Release: version 0.5.3 🚀 [Andreas Wicenec]
 - Use return_name from description parser for output_name. [Andreas
   Wicenec]
 
