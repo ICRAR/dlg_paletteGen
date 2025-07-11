@@ -37,7 +37,7 @@ import tempfile
 from typing import Any, Tuple
 
 from dlg_paletteGen.module_base import module_hook
-from dlg_paletteGen.settings import DOXYGEN_SETTINGS, Language, logger
+from dlg_paletteGen.settings import DOXYGEN_SETTINGS, Language
 from dlg_paletteGen.source_base import process_compounddefs
 from dlg_paletteGen.support_functions import (
     NAME,
@@ -48,6 +48,7 @@ from dlg_paletteGen.support_functions import (
     process_doxygen,
     process_xml,
 )
+from . import logger
 
 
 def get_args(args=None):

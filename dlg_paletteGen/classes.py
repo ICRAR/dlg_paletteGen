@@ -10,12 +10,13 @@ from typing import Optional, Union
 
 from docstring_parser import parse
 
-from dlg_paletteGen.settings import VALUE_TYPES, Language, logger
+from dlg_paletteGen.settings import VALUE_TYPES, Language
 from dlg_paletteGen.support_functions import (
     cleanString,
     guess_type_from_default,
     typeFix,
 )
+from . import logger
 
 
 class DummySig:

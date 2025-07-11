@@ -6,9 +6,9 @@ import uuid
 import xml.etree.ElementTree as ET
 from enum import Enum
 from typing import Any, Union
-
-from dlg_paletteGen.classes import Child, Language, logger
+from dlg_paletteGen.classes import Child, Language
 from dlg_paletteGen.support_functions import check_text_element, get_next_id
+from . import logger
 
 KNOWN_CONSTRUCT_TYPES = ["Scatter", "Gather"]
 

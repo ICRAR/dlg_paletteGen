@@ -18,7 +18,6 @@ from dlg_paletteGen.classes import (
     DetailedDescription,
     DummyParam,
     DummySig,
-    logger,
 )
 from dlg_paletteGen.source_base import FieldUsage
 from dlg_paletteGen.support_functions import (
@@ -30,6 +29,7 @@ from dlg_paletteGen.support_functions import (
     populateFields,
 )
 
+from . import logger
 
 def get_class_members(cls, parent=None):
     """Inspect members of a class."""

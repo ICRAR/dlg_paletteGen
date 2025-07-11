@@ -30,6 +30,7 @@ from typing import Any, Union
 import numpy
 from blockdag import build_block_dag
 
+
 from dlg_paletteGen.settings import (
     BLOCKDAG_DATA_FIELDS,
     CVALUE_TYPES,
@@ -39,8 +40,8 @@ from dlg_paletteGen.settings import (
     SVALUE_TYPES,
     VALUE_TYPES,
     Language,
-    logger,
 )
+from . import logger, silence_module_logger
 
 
 def read(*paths, **kwargs):
@@ -567,47 +568,42 @@ def get_submodules(module):
                 submods.append(get_mod_name(getattr(module, m[0])))
     return iter(submods), iter(module_vars)
 
-
-def silence_module_logger():
-    """Silence loggers from imported modules."""
-    n_enabled = len(list(logging.Logger.manager.loggerDict.keys()))
-    for log_name, log_obj in logging.Logger.manager.loggerDict.items():
-        log_obj = logging.getLogger(log_name)
-        if (
-            log_name != logger.name
-            and hasattr(log_obj, "propagate")
-            and log_obj.propagate
-        ):
-            # logger.debug(f">>>>> disabling logger: {log_name}")
-            log_obj.propagate = False
-            n_enabled -= 1
-    return n_enabled
-
-
-def import_using_name(mod_name: str, traverse: bool = False, err_log=True):
+def _get_loaded_module(mod_name: str) -> Union[None, Any]:
     """
-    Import a module using its name.
+    Get a loaded module by its name.
 
-    Try hard to go up the hierarchy if direct import is not possible.
-    This only imports actual modules,
-    Import a module using its name.
+    :param mod_name: The name of the module to be retrieved.
+    :returns: The module if found, None otherwise.
+    """
+    # Try sys.modules, globals, locals, then builtins
+    main_module = sys.modules["__main__"].__dict__
+    if mod_name in sys.modules:
+        logger.debug("Module %s already loaded.", mod_name)
+        mod = sys.modules[mod_name]
+    elif mod_name in main_module:
+        mod = main_module[mod_name]
+    elif mod_name in globals():
+        mod = globals()[mod_name]
+    elif mod_name in globals():
+        mod = globals()[mod_name]
+    elif mod_name in locals():
+        mod = locals()[mod_name]
+    elif hasattr(__builtins__, mod_name):
+        mod = getattr(__builtins__, mod_name)
+    else:
+        mod = None
+        logger.debug("Module %s not found in sys.modules, locals, globals or builtins.", mod_name)
+    return mod
 
-    Try hard to go up the hierarchy if direct import is not possible.
-    This only imports actual modules,
-    not classes, functions, or types. In those cases it will return the
-    lowest module in the hierarchy. As a final fallback it will return the
-    highest level module.
+def _import_module(mod_name: str, traverse: bool = False, err_log=True) -> Union[None, Any]:
+    """
+    Import a module by its name.
 
     :param mod_name: The name of the module to be imported.
     :param traverse: Follow the tree even if module already loaded.
     :param err_log: Log import error
+    :returns: The imported module or None if not found.
     """
-    # if mod_name in __builtins__:
-    #     logger.debug("Module %s is a built-in function.", mod_name)
-    #     return __builtins__[mod_name]
-    logger.debug("Trying to import %s", mod_name)
-    if not re.match("^[_A-Z,a-z]", mod_name):
-        return None
     parts = mod_name.split(".")
     exists = ".".join(parts[:-1]) in sys.modules if not traverse else False
     mod_version = "Unknown"
@@ -666,7 +662,6 @@ def import_using_name(mod_name: str, traverse: bool = False, err_log=True):
                         except Exception as e:
                             raise ValueError(
                                 f"Problem importing module {mod}, {e}"
-                                f"Problem importing module {mod}, {e}"
                             ) from e
             else:
                 logger.debug("Recursive import failed! %s", parts[0] in sys.modules)
@@ -675,6 +670,31 @@ def import_using_name(mod_name: str, traverse: bool = False, err_log=True):
     logger.debug("Loaded module: %s version: %s", mod_name, mod_version)
     return mod
 
+def import_using_name(mod_name: str, traverse: bool = False, err_log=True):
+    """
+    Import a module using its name.
+
+    Try hard to go up the hierarchy if direct import is not possible.
+    This only imports actual modules,
+    Import a module using its name.
+
+    Try hard to go up the hierarchy if direct import is not possible.
+    This only imports actual modules,
+    not classes, functions, or types. In those cases it will return the
+    lowest module in the hierarchy. As a final fallback it will return the
+    highest level module.
+
+    :param mod_name: The name of the module to be imported.
+    :param traverse: Follow the tree even if module already loaded.
+    :param err_log: Log import error
+    """
+    # if mod_name in __builtins__:
+    #     logger.debug("Module %s is a built-in function.", mod_name)
+    #     return __builtins__[mod_name]
+    logger.debug("Trying to import %s", mod_name)
+    if not re.match("^[_A-Z,a-z]", mod_name):
+        return None
+    return _get_loaded_module(mod_name) or _import_module(mod_name, traverse, err_log)
 
 def initializeField(
     name: str = "dummy",
