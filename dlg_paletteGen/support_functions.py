@@ -16,7 +16,6 @@ import importlib.metadata
 import inspect
 import io
 import json
-import logging
 import os
 import re
 import subprocess
@@ -30,7 +29,6 @@ from typing import Any, Union
 import numpy
 from blockdag import build_block_dag
 
-
 from dlg_paletteGen.settings import (
     BLOCKDAG_DATA_FIELDS,
     CVALUE_TYPES,
@@ -41,6 +39,7 @@ from dlg_paletteGen.settings import (
     VALUE_TYPES,
     Language,
 )
+
 from . import logger, silence_module_logger
 
 
@@ -568,6 +567,7 @@ def get_submodules(module):
                 submods.append(get_mod_name(getattr(module, m[0])))
     return iter(submods), iter(module_vars)
 
+
 def _get_loaded_module(mod_name: str) -> Union[None, Any]:
     """
     Get a loaded module by its name.
@@ -592,10 +592,15 @@ def _get_loaded_module(mod_name: str) -> Union[None, Any]:
         mod = getattr(__builtins__, mod_name)
     else:
         mod = None
-        logger.debug("Module %s not found in sys.modules, locals, globals or builtins.", mod_name)
+        logger.debug(
+            "Module %s not found in sys.modules, locals, globals or builtins.", mod_name
+        )
     return mod
 
-def _import_module(mod_name: str, traverse: bool = False, err_log=True) -> Union[None, Any]:
+
+def _import_module(
+    mod_name: str, traverse: bool = False, err_log=True
+) -> Union[None, Any]:
     """
     Import a module by its name.
 
@@ -670,6 +675,7 @@ def _import_module(mod_name: str, traverse: bool = False, err_log=True) -> Union
     logger.debug("Loaded module: %s version: %s", mod_name, mod_version)
     return mod
 
+
 def import_using_name(mod_name: str, traverse: bool = False, err_log=True):
     """
     Import a module using its name.
@@ -695,6 +701,7 @@ def import_using_name(mod_name: str, traverse: bool = False, err_log=True):
     if not re.match("^[_A-Z,a-z]", mod_name):
         return None
     return _get_loaded_module(mod_name) or _import_module(mod_name, traverse, err_log)
+
 
 def initializeField(
     name: str = "dummy",

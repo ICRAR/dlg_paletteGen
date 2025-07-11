@@ -1,6 +1,8 @@
 """Package inspects Python modules and extracts complete descriptions of code."""
+
 import logging
 import sys
+
 
 def silence_module_logger():
     """Silence loggers from imported modules."""
@@ -16,6 +18,7 @@ def silence_module_logger():
             log_obj.propagate = False
             n_enabled -= 1
     return n_enabled
+
 
 class CustomFormatter(logging.Formatter):
     """Format the logging."""
@@ -59,4 +62,3 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 logger.addHandler(ch)
 logger.addHandler(ch2)
-

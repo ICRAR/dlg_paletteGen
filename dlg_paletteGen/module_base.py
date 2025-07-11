@@ -14,11 +14,7 @@ import types
 import typing
 from typing import _SpecialForm
 
-from dlg_paletteGen.classes import (
-    DetailedDescription,
-    DummyParam,
-    DummySig,
-)
+from dlg_paletteGen.classes import DetailedDescription, DummyParam, DummySig
 from dlg_paletteGen.source_base import FieldUsage
 from dlg_paletteGen.support_functions import (
     constructNode,
@@ -30,6 +26,7 @@ from dlg_paletteGen.support_functions import (
 )
 
 from . import logger
+
 
 def get_class_members(cls, parent=None):
     """Inspect members of a class."""

@@ -16,6 +16,7 @@ from dlg_paletteGen.support_functions import (
     guess_type_from_default,
     typeFix,
 )
+
 from . import logger
 
 

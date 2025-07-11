@@ -48,6 +48,7 @@ from dlg_paletteGen.support_functions import (
     process_doxygen,
     process_xml,
 )
+
 from . import logger
 
 
@@ -261,7 +262,7 @@ def palettes_from_module(
         nodes, module_doc = nodes_from_module(m, recursive=recursive)
         if len(nodes) == 0:
             continue
-        filename = f"{outfile}{m.replace('.','_')}.palette" if split else outfile
+        filename = f"{outfile}{m.replace('.','_')}.palette" if not outfile else outfile
         files[filename] = len(nodes)
         _ = prepare_and_write_palette(nodes, filename, module_doc=module_doc)
         logger.debug(
