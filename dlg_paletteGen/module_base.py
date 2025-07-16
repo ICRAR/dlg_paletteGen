@@ -48,12 +48,15 @@ def get_class_members(cls, parent=None):
     # Very bad style, but used in astropy.coordinates.SkyCoord
     if isinstance(cls, type):
         if sys.version_info.major == 3 and sys.version_info.minor > 9:
-            ann = inspect.get_annotations(
-                cls,
-                globals=globals(),
-                locals=sys.modules[cls.__module__].__dict__,
-                eval_str=True,
-            )
+            try:
+                ann = inspect.get_annotations(
+                    cls,
+                    globals=globals(),
+                    locals=sys.modules[cls.__module__].__dict__,
+                    eval_str=True,
+                )
+            except NameError:
+                ann = cls.__dict__.get("__annotations__", None)
         else:
             ann = cls.__dict__.get("__annotations__", None)
     else:
@@ -495,6 +498,7 @@ def palettes_from_module(
             module_path,
             sub_modules,
         )
+    tot_nodes = 0
     for i, sub_mod in enumerate(sub_modules):
         logger.info("Extracting nodes from sub-module: %s, %d", sub_mod, i)
         if split:
@@ -507,13 +511,18 @@ def palettes_from_module(
         )
         files[filename] = len(nodes)
         _ = prepare_and_write_palette(nodes, filename, module_doc=module_doc)
+        tot_nodes += len(nodes)
         logger.info(
-            "%s palette file written with %s components\n%s",
+            "%s palette file written with %s components",
             filename,
             len(nodes),
-            sub_mod,
         )
     logger.info(
         "\n\n>>>>>>> Extraction summary <<<<<<<<\n%s\n",
         "\n".join([f"Wrote {k} with {v} components" for k, v in files.items()]),
+    )
+    logger.info(
+        "Total of %d components extracted from %d sub-modules",
+        tot_nodes,
+        len(sub_modules),
     )

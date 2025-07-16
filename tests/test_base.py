@@ -690,8 +690,8 @@ def test_direct_module():
     :param tmpdir: the path to the temp directory to use
     :param shared_datadir: the path the the local directory
     """
-    # module_name = "astropy.utils"
-    module_name = "numpy.array"
+    module_name = "astropy.coordinates"
+    # module_name = "numpy.array"
     nodes = nodes_from_module(module_name, recursive=True)
 
     assert len(nodes) == 2
