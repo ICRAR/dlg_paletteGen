@@ -2,8 +2,9 @@ Changelog
 =========
 
 
-(unreleased)
-------------
+0.6.0 (2025-07-16)
+------------------
+- Release: version 0.6.0 🚀 [Andreas Wicenec]
 - Fixed issue with annotation extraction. [Andreas Wicenec]
 - Major refactoring to improve code structure. [Andreas Wicenec]
 
