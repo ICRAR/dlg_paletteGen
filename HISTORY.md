@@ -4,6 +4,16 @@ Changelog
 
 (unreleased)
 ------------
+- Fixed issue with annotation extraction. [Andreas Wicenec]
+- Major refactoring to improve code structure. [Andreas Wicenec]
+
+  Also support for additional packages, which caused
+  issues.
+
+
+0.5.5 (2025-07-11)
+------------------
+- Release: version 0.5.5 🚀 [Andreas Wicenec]
 - Merge branch 'DGEN-25' [Andreas Wicenec]
 - Fixed formatting. [Andreas Wicenec]
 
