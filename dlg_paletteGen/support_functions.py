@@ -298,10 +298,14 @@ def get_mod_name(mod) -> str:
         logger.debug("Trying to get module name: %s", mod)
     if mod is None:
         return ""
+    if hasattr(mod, "__name__") and inspect.isclass(mod):
+        return f"{mod.__module__}.{mod.__name__}"
     if hasattr(mod, "__name__"):
         return mod.__name__
     if hasattr(mod, "__class__"):
         return getattr(mod, "__class__").__name__
+    if inspect.isclass(mod):
+        return mod.__module__
     for n, m in globals().items():
         if m == mod:
             return n
@@ -348,7 +352,10 @@ def process_xml() -> str:
     """
     Run xsltproc on the output produced by doxygen.
 
-    :returns: str, output_xml_filename
+    Returns:
+    --------
+    str
+        output_xml_filename
     """
     # run xsltproc
     outdir = DOXYGEN_SETTINGS["OUTPUT_DIRECTORY"]
@@ -371,7 +378,7 @@ def process_xml() -> str:
     return output_xml_filename
 
 
-def write_palette_json(
+def nodes2json(
     output_filename: str,
     module_doc: Union[str, None],
     nodes: list,
@@ -380,14 +387,27 @@ def write_palette_json(
     block_dag: list,
 ):
     """
-    Construct palette header and Write nodes to the output file.
+    Construct palette header and converts nodes to json.
 
-    :param output_filename: str, the name of the output file
-    :param module_doc: module level docstring
-    :param nodes: list of nodes
-    :param git_repo: str, the git repository URL
-    :param version: str, version string to be used
-    :param block_dag: list, the reproducibility information
+    Parameters
+    ----------
+    output_filename : str
+        The name of the output file.
+    module_doc : str or None
+        Module-level docstring.
+    nodes : list
+        List of nodes to write.
+    git_repo : str or None
+        The git repository URL.
+    version : str or None
+        Version string to be used.
+    block_dag : list
+        The reproducibility information.
+
+    Returns
+    -------
+    str
+        JSON string representation of the nodes.
     """
     if not module_doc:
         module_doc = ""
@@ -401,19 +421,53 @@ def write_palette_json(
     palette["modelData"]["signature"] = block_dag["signature"]  # type: ignore
     palette["modelData"]["lastModifiedDatetime"] = datetime.datetime.now().timestamp()
     palette["modelData"]["numLGNodes"] = len(nodes)
-
     palette["nodeDataArray"] = nodes
 
-    # write palette to file
-    # logger.debug(">>> palette: %s", palette)
+    try:
+        json_palette = json.dumps(palette, indent=4)
+        return json_palette
+    except TypeError:
+        logger.error("Problem serializing palette! Bailing out!!")
+        return None
+
+
+def write_palette_json(
+    output_filename: str,
+    module_doc: Union[str, None],
+    nodes: list,
+    git_repo: Union[str, None],
+    version: Union[str, None],
+    block_dag: list,
+):
+    """
+    Construct palette header and write nodes to the output file.
+
+    Parameters
+    ----------
+    output_filename : str
+        The name of the output file.
+    module_doc : str or None
+        Module-level docstring.
+    nodes : list
+        List of nodes to write.
+    git_repo : str or None
+        The git repository URL.
+    version : str or None
+        Version string to be used.
+    block_dag : list
+        The reproducibility information.
+
+    Returns
+    -------
+    dict
+        The palette dictionary that was written to the output
+    """
     with open(output_filename, "w", encoding="utf-8") as outfile:
-        try:
-            json.dump(palette, outfile, indent=4)
-            logger.debug(">>>>> %s", json.dumps(palette))
-            return palette
-        except TypeError:
-            logger.error("Problem serializing palette! Bailing out!!")
-            return palette
+        palette_json = nodes2json(
+            output_filename, module_doc, nodes, git_repo, version, block_dag
+        )
+        outfile.write(palette_json)
+    return json.loads(palette_json)
 
 
 def get_field_by_name(name: str, node, value_key: str = "") -> dict:
@@ -496,7 +550,7 @@ def get_submodules(module):
     submods = []
     module_vars = {}  # store module level variables
     module_name = get_mod_name(module)
-    if hasattr(module, "__all__"):
+    if hasattr(module, "__all__") and len(module.__all__) > 0:
         for mod in module.__all__:
             try:
                 type_mod = getattr(module, mod)
@@ -536,24 +590,21 @@ def get_submodules(module):
             logger.debug("Trying to import %s", submod)
             traverse = submod not in submods
             m = import_using_name(f"{module_name}.{mod}", traverse=traverse)
-            if (
-                not get_mod_name(m)
-                == get_mod_name(module)  # prevent loading module itself
-                # and inspect.ismodule(m)
-                # or inspect.isfunction(m)
-                # or inspect.ismethod(m)
-                # or inspect.isbuiltin(m)
+            if not get_mod_name(m) == get_mod_name(
+                module
+            ) and inspect.ismodule(  # prevent loading module itself
+                m
             ):
                 logger.debug(">>> submodule %s of type: %s", submod, type(m))
                 submods.append(f"{submod}")
         logger.debug("Found submodules of %s in __all__: %s", module_name, submods)
-    elif hasattr(module, "__path__"):
+    elif hasattr(module, "__package__") and hasattr(module, "__path__"):
         sub_modules = iter_modules(module.__path__)
         submods = [
             f"{module_name}.{x[1]}"
             for x in sub_modules
-            if (x[1][0] != "_" and x[1][:4] != "test")
-        ]  # get the names; ignore test modules
+            if (x[1][0] != "_" and x[1] not in ["test", "tests", "src", "setup_package"])
+        ]  # get the names; ignore test and src modules
         logger.debug("sub-modules found: %s", submods)
     else:
         for m in inspect.getmembers(module, lambda x: inspect.ismodule(x)):
@@ -565,7 +616,7 @@ def get_submodules(module):
             ):
                 logger.debug("Trying to import submodule: %s", get_mod_name(m[1]))
                 submods.append(get_mod_name(getattr(module, m[0])))
-    return iter(submods), iter(module_vars)
+    return submods, iter(module_vars)
 
 
 def _get_loaded_module(mod_name: str) -> Union[None, Any]:
@@ -612,7 +663,7 @@ def _import_module(
     parts = mod_name.split(".")
     exists = ".".join(parts[:-1]) in sys.modules if not traverse else False
     mod_version = "Unknown"
-    if parts[-1].startswith("_"):
+    if parts[-1].startswith("_") and parts[-1] not in ["__init__", "__class__"]:
         return None
     try:  # direct import first
         mod = importlib.import_module(mod_name)
@@ -680,27 +731,97 @@ def import_using_name(mod_name: str, traverse: bool = False, err_log=True):
     """
     Import a module using its name.
 
-    Try hard to go up the hierarchy if direct import is not possible.
-    This only imports actual modules,
-    Import a module using its name.
+    Attempts to import a module, class, or function by its name. If direct import is
+    not possible, it tries to traverse up the hierarchy. This function can import
+    modules, classes, functions, as well as already loaded functions and builtins.
+    NOTE: Need to keep all the import code in one function, else loading is done in
+    a different namespace.
 
-    Try hard to go up the hierarchy if direct import is not possible.
-    This only imports actual modules,
-    not classes, functions, or types. In those cases it will return the
-    lowest module in the hierarchy. As a final fallback it will return the
-    highest level module.
+    Parameters
+    ----------
+    mod_name : str
+        The name of the module, class, or function to be imported.
+    traverse : bool, optional
+        If True, follow the hierarchy even if the module is already loaded. Default is
+        False.
+    err_log : bool, optional
+        If True, log import errors. Default is True.
 
-    :param mod_name: The name of the module to be imported.
-    :param traverse: Follow the tree even if module already loaded.
-    :param err_log: Log import error
+    Returns
+    -------
+    object or None
+        The imported module, class, function, or None if not found.
     """
-    # if mod_name in __builtins__:
-    #     logger.debug("Module %s is a built-in function.", mod_name)
-    #     return __builtins__[mod_name]
     logger.debug("Trying to import %s", mod_name)
     if not re.match("^[_A-Z,a-z]", mod_name):
         return None
-    return _get_loaded_module(mod_name) or _import_module(mod_name, traverse, err_log)
+    if _get_loaded_module(mod_name):
+        return _get_loaded_module(mod_name)
+    parts = mod_name.split(".")
+    exists = ".".join(parts[:-1]) in sys.modules if not traverse else False
+    mod_version = "Unknown"
+    if parts[-1].startswith("_") and parts[-1] not in ["__init__", "__class__"]:
+        return None
+    try:  # direct import first
+        mod = importlib.import_module(mod_name)
+    except ValueError:
+        logger.error("Unable to import module: %s", mod_name)
+        mod = None
+    except ModuleNotFoundError:
+        # _ = silence_module_logger()
+        mod_down = None
+        if len(parts) >= 1:
+            if parts[-1] in ["__init__", "__class__"]:
+                parts = parts[:-1]
+            logger.debug("Recursive import: %s", parts)
+            # import top-level first
+            if parts[0] and not exists:
+                try:
+                    mod = importlib.import_module(parts[0])
+                    if hasattr(mod, "__version__"):
+                        mod_version = mod.__version__
+                except ImportError as e:
+                    if err_log:
+                        logger.error(
+                            "Error when loading module %s: %s %s",
+                            parts[0],
+                            str(e),
+                            mod_name,
+                        )
+                    return None
+                _ = silence_module_logger()
+                for m in parts[1:]:
+                    try:
+                        logger.debug("Getting attribute %s", m)
+                        # Make sure this is a module
+                        if hasattr(mod, m):
+                            mod_down = getattr(mod, m)
+                        else:
+                            logger.debug(
+                                "Problem getting attribute '%s' from '%s'",
+                                m,
+                                mod,
+                            )
+                        mod = mod_down
+                    except AttributeError:
+                        try:
+                            logger.debug(
+                                "Trying to load backwards: %s",
+                                ".".join(parts[:-1]),
+                            )
+                            mod = importlib.import_module(".".join(parts[:-1]))
+                            _ = silence_module_logger()
+                            break
+                        except Exception as e:
+                            raise ValueError(
+                                f"Problem importing module {mod}, {e}"
+                            ) from e
+            else:
+                logger.debug("Recursive import failed! %s", parts[0] in sys.modules)
+                raise ModuleNotFoundError
+    _ = silence_module_logger()
+    logger.debug("Loaded module: %s version: %s", mod_name, mod_version)
+    return mod
 
 
 def initializeField(
@@ -716,7 +837,40 @@ def initializeField(
     precious: bool = False,
     positional: bool = False,
 ):
-    """Construct a dummy field."""
+    """
+    Construct a dictionary representing a field with specified properties.
+
+    Parameters
+    ----------
+    name : str, optional
+        The name of the field. Default is "dummy".
+    value : Any, optional
+        The value assigned to the field. Default is None.
+    defaultValue : Any, optional
+        The default value for the field. Default is None.
+    description : str, optional
+        A description of the field. Default is "no description found".
+    vtype : str or None, optional
+        The type of the field. Default is None.
+    parameterType : str, optional
+        The parameter type of the field. Default is "ComponentParameter".
+    usage : str, optional
+        The usage type of the field. Default is "NoPort".
+    options : list, optional
+        List of options for the field. Default is an empty list.
+    readonly : bool, optional
+        Whether the field is read-only. Default is False.
+    precious : bool, optional
+        Whether the field is marked as precious. Default is False.
+    positional : bool, optional
+        Whether the field is positional. Default is False.
+
+    Returns
+    -------
+    dict
+        A dictionary containing the field name as the key and a dictionary of field
+        properties as the value.
+    """
     field = {}  # type: ignore
     fieldValue = {}
     fieldValue["id"] = get_next_id()
@@ -747,7 +901,29 @@ def initializeField(
 
 
 def get_value_type_from_default(default):
-    """Extract value and type from default value."""
+    """
+    Extract the value and type information from a given default value.
+
+    This function analyzes the provided default value, determines its type,
+    and prepares a dictionary containing the value, a description (empty by default),
+    and a string representation of the type. It handles special cases such as None,
+    infinity, NaN, and non-JSON-serializable objects. For objects with a 'dtype'
+    attribute (e.g., numpy arrays), it attempts to use their string representation.
+    If the value is not JSON serializable, the type and value are set to the type's name.
+
+    Parameters
+    ----------
+    default : Any
+        The default value to analyze.
+
+    Returns
+    -------
+    dict
+        A dictionary with the following keys:
+            - "value": The extracted value or its string representation.
+            - "desc": An empty string (reserved for description).
+            - "type": A string representing the type of the value.
+    """
     param_desc = {
         "value": None,
         "desc": "",
@@ -801,12 +977,21 @@ def identify_field_type(field: dict, value: Any, param_desc: dict, dd_p: dict) -
     """
     Identify the field type based on the value.
 
-    :param field: the field dictionary
-    :param value: the value to be checked
-    :param param_desc: the description of the pparameter
-    :param dd_p: the value to be checked
+    Parameters
+    ----------
+    field : dict
+        The field dictionary.
+    value : Any
+        The value to be checked.
+    param_desc : dict
+        The description of the parameter.
+    dd_p : dict
+        Additional parameter information, typically from docstring parsing.
 
-    :returns: str, the identified field type
+    Returns
+    -------
+    str
+        The identified field type.
     """
     # If there is a type annotation use that
     if (
@@ -916,16 +1101,36 @@ def constructNode(
     dataHash: str = "",
 ):
     """
-    Construct a palette node using default parameters if not specified otherwise.
+    Construct a palette node dictionary with specified or default parameters.
 
-    For some reason sub-classing benedict did not work here, thus we use a
-    function instead.
-    Construct a palette node using default parameters if not specified otherwise.
+    Note: For some reason using Benedict did not work here.
 
-    For some reason sub-classing benedict did not work here, thus we use a
-    function instead.
+    Parameters:
+    -----------
+        category: str
+            The category of the node. Defaults to "PyFuncApp".
+        categoryType: str
+            The type of the category. Defaults to "Application".
+        name: str
+            The name of the node. Defaults to "example_function".
+        description: str
+            A description for the node. Defaults to an empty string.
+        repositoryUrl: str
+            The repository URL associated with the node. Defaults to
+            "dlg_paletteGen.generated".
+        commitHash: str
+            The commit hash or version identifier. Defaults to "0.1".
+        paletteDownlaodUrl: str
+            The URL to download the palette. Defaults to an empty string.
+        dataHash: str
+            The hash of the data associated with the node. Defaults to an empty string.
+
+    Returns:
+    --------
+        dict: A dictionary representing the constructed palette node with the provided
+        or default values.
     """
-    Node = {
+    Node: dict = {
         "inputAppFields": [],
         "inputApplicationDescription": "",
         "inputApplicationId": None,

@@ -720,7 +720,7 @@ def create_construct_node(node_type: str, node: dict) -> dict:
         logger.info("Known types are: %s", KNOWN_CONSTRUCT_TYPES)
         pass
 
-    construct_params = {
+    construct_params: dict = {
         "inputAppFields": [],
         "outputAppFields": [],
         "inputApplicationName": "GenericScatterApp",

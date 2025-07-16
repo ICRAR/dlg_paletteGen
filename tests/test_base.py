@@ -9,7 +9,7 @@ from pytest import LogCaptureFixture
 
 from dlg_paletteGen.settings import DOXYGEN_SETTINGS
 from dlg_paletteGen.__main__ import check_environment_variables, get_args
-from dlg_paletteGen.module_base import module_hook
+from dlg_paletteGen.module_base import module_hook, nodes_from_module
 from dlg_paletteGen.source_base import Language, process_compounddefs
 from dlg_paletteGen.support_functions import (
     guess_type_from_default,
@@ -363,7 +363,9 @@ def test_direct_rEST(tmpdir: str, shared_datadir: str):
         recursive=True,
     )
     assert (
-        modules["example_rest"]["MainClass1.func_with_types"]["fields"]["arg1"]["type"]
+        modules["example_rest"]["example_rest.MainClass1.func_with_types"]["fields"][
+            "arg1"
+        ]["type"]
         == "Boolean"
     )
 
@@ -371,7 +373,6 @@ def test_direct_rEST(tmpdir: str, shared_datadir: str):
     for members in modules.values():
         for node in members.values():
             nodes.append(node)
-    prepare_and_write_palette(nodes, output_file, module_doc=module_doc)
 
 
 def test_direct_google(tmpdir: str, shared_datadir: str):
@@ -689,16 +690,11 @@ def test_direct_module():
     :param tmpdir: the path to the temp directory to use
     :param shared_datadir: the path the the local directory
     """
-    # module_name = "dlg_paletteGen.classes"
+    # module_name = "astropy.utils"
     module_name = "numpy.array"
-    modules, _ = module_hook(module_name, modules={}, recursive=True)
-    nodes = []
-    for members in modules.values():
-        for node in members.values():
-            nodes.append(node)
+    nodes = nodes_from_module(module_name, recursive=True)
 
     assert len(nodes) == 2
-    # prepare_and_write_palette(nodes, "test.palette", module_doc=module_doc)
 
 
 def test_full_numpy():
@@ -709,11 +705,5 @@ def test_full_numpy():
     :param shared_datadir: the path the the local directory
     """
     module_name = "numpy.polynomial.polynomial"
-    modules, _ = module_hook(module_name, modules={}, recursive=True)
-    nodes = []
-    for members in modules.values():
-        for node in members.values():
-            nodes.append(node)
-
-    mod_list = list(modules.keys())
-    assert len(mod_list) in [24, 25]
+    nodes = nodes_from_module(module_name, recursive=True)
+    assert len(nodes[0]) == 43
