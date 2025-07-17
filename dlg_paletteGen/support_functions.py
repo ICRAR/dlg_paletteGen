@@ -112,7 +112,7 @@ def convert_type_str(input_type: str = "") -> str:
     """
     Convert the string provided into a supported type string.
 
-    :param value_type: str, type string to be converted
+    :param input_type: str, type string to be converted
 
     :returns: str, supported type string
     """
@@ -239,13 +239,14 @@ def typeFix(value_type: Union[Any, None] = "", default_value: Any = None) -> str
 
 
 def check_text_element(xml_element: ET.Element, sub_element: str):
-    """
-    Check a xml_element for the first occurance of sub_elements.
+    """Check if the xml element has a text value and return it.
 
-    Return the joined text content of them.
-    Check a xml_element for the first occurance of sub_elements.
+    Args:
+        xml_element (ET.Element): The xml element to be checked.
+        sub_element (str): The name of the sub-element to be searched for.
 
-    Return the joined text content of them.
+    Returns:
+        str: The text value of the sub-element, or "Unknown" if not found.
     """
     text = ""
     sub = xml_element.find(sub_element)
@@ -293,7 +294,20 @@ def get_next_id() -> str:
 
 
 def get_mod_name(mod) -> str:
-    """Get a name from a module in all cases."""
+    """
+    Get a name from a module, class, or object in all cases.
+
+    This function attempts to extract a meaningful name from the given argument `mod`.
+    It handles various types, including modules, classes, objects, and numpy arrays.
+    The function checks for common attributes such as `__name__` and `__class__`, and
+    also searches the global namespace for a matching reference.
+
+    Args:
+        mod: The module, class, or object to extract the name from.
+
+    Returns:
+        str: The extracted name, or an empty string if no name could be determined.
+    """
     if isinstance(mod, numpy.ndarray):
         logger.debug("Trying to get module name: %s", mod)
     if mod is None:
@@ -378,107 +392,84 @@ def process_xml() -> str:
     return output_xml_filename
 
 
-def nodes2json(
+def nodes2palette(
     output_filename: str,
-    module_doc: Union[str, None],
-    nodes: list,
+    nodes_tuple: tuple,
     git_repo: Union[str, None],
     version: Union[str, None],
-    block_dag: list,
-):
+) -> Union[str, None]:
     """
     Construct palette header and converts nodes to json.
+
+    The function does not write the output to a file, but returns a JSON string.
 
     Parameters
     ----------
     output_filename : str
         The name of the output file.
-    module_doc : str or None
-        Module-level docstring.
-    nodes : list
-        List of nodes to write.
+    nodes_tuple : tuple
+        A tuple containing the signature hash, the module docstring and a list of nodes.
     git_repo : str or None
         The git repository URL.
     version : str or None
         Version string to be used.
-    block_dag : list
-        The reproducibility information.
+    signature : str
+        Signature for the palette, usually a hash or unique identifier.
 
     Returns
     -------
     str
         JSON string representation of the nodes.
     """
-    if not module_doc:
-        module_doc = ""
-    for i in range(len(nodes)):
-        nodes[i]["dataHash"] = block_dag[i]["data_hash"]
-    palette = constructPalette()
-    palette["modelData"]["detailedDescription"] = module_doc.strip()
-    palette["modelData"]["filePath"] = output_filename
-    palette["modelData"]["repositoryUrl"] = git_repo
-    palette["modelData"]["commitHash"] = version
-    palette["modelData"]["signature"] = block_dag["signature"]  # type: ignore
-    palette["modelData"]["lastModifiedDatetime"] = datetime.datetime.now().timestamp()
-    palette["modelData"]["numLGNodes"] = len(nodes)
-    palette["nodeDataArray"] = nodes
-
+    signature, module_doc, nodes = nodes_tuple
+    palette = constructPalette(
+        module_doc=module_doc,
+        output_filename=output_filename,
+        nodes=nodes,
+        git_repo=git_repo,
+        version=version,
+        signature=signature,
+    )
     try:
         json_palette = json.dumps(palette, indent=4)
         return json_palette
-    except TypeError:
-        logger.error("Problem serializing palette! Bailing out!!")
+    except (TypeError, ValueError) as e:
+        logger.error("Problem serializing palette! Bailing out!! %s", e)
         return None
 
 
-def write_palette_json(
+def write_palette(
+    palette: str,
     output_filename: str,
-    module_doc: Union[str, None],
-    nodes: list,
-    git_repo: Union[str, None],
-    version: Union[str, None],
-    block_dag: list,
 ):
     """
-    Construct palette header and write nodes to the output file.
+    Write palette to the output file specified.
 
     Parameters
     ----------
+    palette : str
+        The palette to be written
     output_filename : str
         The name of the output file.
-    module_doc : str or None
-        Module-level docstring.
-    nodes : list
-        List of nodes to write.
-    git_repo : str or None
-        The git repository URL.
-    version : str or None
-        Version string to be used.
-    block_dag : list
-        The reproducibility information.
-
-    Returns
-    -------
-    dict
-        The palette dictionary that was written to the output
     """
-    with open(output_filename, "w", encoding="utf-8") as outfile:
-        palette_json = nodes2json(
-            output_filename, module_doc, nodes, git_repo, version, block_dag
-        )
-        outfile.write(palette_json)
-    return json.loads(palette_json)
+    try:
+        with open(output_filename, "w", encoding="utf-8") as outfile:
+            outfile.write(palette)
+    except Exception:
+        logger.critical("Palette not created %s", output_filename)
+    return None
 
 
 def get_field_by_name(name: str, node, value_key: str = "") -> dict:
-    """
-    Get field dictionary from node providing a name.
+    """Given the name of a field and a node, return the field's value.
 
-    :param name: the name of the field to retrieve
-    :param node: the node data structure
-    :value_key: the key of the attribute of the field to return
+    Args:
+        name: The name of the field to retrieve
+        node: A dictionary representing an element in a JSON object
+        value_key: If present, the key used to access the desired value. Defaults to "".
 
-    :returns the field dictionary or empty dict
+    Returns:
+        dict: The field's value.
     """
     try:
         field = [f for f in node["fields"] if f["name"] == name][0]
@@ -489,6 +480,29 @@ def get_field_by_name(name: str, node, value_key: str = "") -> dict:
         return {}
 
 
+def add_repro_hashes(nodes_tuple: tuple) -> tuple:
+    """
+    Add data hashes to the nodes based on the block_dag.
+
+    Parameters
+    ----------
+    nodes_tuple : tuple
+        Tuple containing the nodes and the module_doc to be processed.
+
+    Returns
+    -------
+    tuple
+        A tuple containing the signature hash, the module_doc and the updated nodes.
+    """
+    nodes, module_doc = nodes_tuple
+    logger.debug(">>>>> %s", module_doc)
+    vertices = {index: value for index, value in enumerate(nodes)}
+    block_dag = build_block_dag(vertices, [], data_fields=BLOCKDAG_DATA_FIELDS)
+    for i, node in enumerate(nodes):
+        node["dataHash"] = block_dag[i]["data_hash"]
+    return block_dag["signature"], module_doc, nodes
+
+
 def prepare_and_write_palette(nodes: list, output_filename: str, module_doc: str = ""):
     """
     Prepare and write the palette in JSON format.
@@ -496,44 +510,29 @@ def prepare_and_write_palette(nodes: list, output_filename: str, module_doc: str
     :param nodes: the list of nodes
     :param output_filename: the filename of the output
     :param module_doc: module level docstring
+
+    :returns: int, 1 if successful, 0 if not
     """
     # add signature for whole palette using BlockDAG
-    vertices = {}
-    v_ind = -1
     GITREPO = os.environ.get("GIT_REPO")
     VERSION = os.environ.get("PROJECT_VERSION")
-
-    funcs = []
-    f_nodes = []
-    for i in range(len(nodes)):
-        func_name = get_field_by_name("func_name", nodes[i], value_key="value")
-        if func_name and func_name not in funcs:
-            # mod_name = func_name.split(".", 1)[0]
-            # if mod_name not in bi.keys():
-            funcs.append(func_name)
-            f_nodes.append(nodes[i])
-            v_ind += 1
-            vertices[v_ind] = nodes[i]
-            logger.debug("Added function %s: %s", func_name, v_ind)
-        elif func_name and func_name in funcs:
-            logger.debug("Removing duplicate function: %s", func_name)
-        elif not func_name:
-            v_ind += 1
-            f_nodes.append(nodes[i])
-            vertices[v_ind] = nodes[i]
-    block_dag = build_block_dag(vertices, [], data_fields=BLOCKDAG_DATA_FIELDS)
+    nodes_doc = add_repro_hashes((nodes, module_doc))
 
     # write the output json file
-    palette = write_palette_json(
+    palette = nodes2palette(
         output_filename,
-        module_doc,
-        f_nodes,
+        nodes_doc,
         GITREPO,
         VERSION,
-        block_dag,
     )
-    logger.debug("Wrote %s components to %s", len(nodes), output_filename)
-    return palette
+    if palette:
+        _ = write_palette(
+            palette,
+            output_filename,
+        )
+        logger.debug("Wrote %s components to %s", len(nodes), output_filename)
+        return 1
+    return 0
 
 
 def get_submodules(module):
@@ -543,7 +542,7 @@ def get_submodules(module):
     This will also return sub-packages. Third tuple
     item is a flag ispkg indicating that.
 
-    :param: module, module object to be searched
+    :param: module: module object to be searched
 
     :returns: iterator[tuple]
     """
@@ -1018,9 +1017,15 @@ def identify_field_type(field: dict, value: Any, param_desc: dict, dd_p: dict) -
 
 
 def populateFields(sig: Any, dd) -> dict:
-    """Populate a field from signature parameters and mixin documentation.
+    """
+    Use signature and docstring to populate field definitions for function parameters.
 
-    TODO: Re-factor this function.
+    Args:
+        sig: Function signature object (typically from inspect.signature).
+        dd: Docstring descriptor with parameter and return descriptions.
+
+    Returns:
+        dict: Dictionary of field definitions for parameters and output.
     """
     fields = {}
     descr_miss = []
@@ -1105,29 +1110,29 @@ def constructNode(
 
     Note: For some reason using Benedict did not work here.
 
-    Parameters:
-    -----------
-        category: str
+    Parameters
+    ----------
+        category : str
             The category of the node. Defaults to "PyFuncApp".
-        categoryType: str
+        categoryType : str
             The type of the category. Defaults to "Application".
-        name: str
+        name : str
             The name of the node. Defaults to "example_function".
-        description: str
+        description : str
             A description for the node. Defaults to an empty string.
-        repositoryUrl: str
+        repositoryUrl : str
             The repository URL associated with the node. Defaults to
             "dlg_paletteGen.generated".
-        commitHash: str
+        commitHash : str
             The commit hash or version identifier. Defaults to "0.1".
-        paletteDownlaodUrl: str
+        paletteDownlaodUrl : str
             The URL to download the palette. Defaults to an empty string.
-        dataHash: str
+        dataHash : str
             The hash of the data associated with the node. Defaults to an empty string.
 
     Returns:
     --------
-        dict: A dictionary representing the constructed palette node with the provided
+        dict : A dictionary representing the constructed palette node with the provided
         or default values.
     """
     Node: dict = {
@@ -1247,9 +1252,38 @@ def populateDefaultFields(Node):  # pylint: disable=invalid-name
     return Node
 
 
-def constructPalette():
-    """Construct the structure of a palette."""
-    palette = {
+def constructPalette(
+    output_filename: str,
+    module_doc: Union[str, None],
+    nodes: list,
+    git_repo: Union[str, None],
+    version: Union[str, None],
+    signature: str = "",
+) -> dict[Any, Any]:
+    """
+    Construct the structure of a palette.
+
+    Parameters
+    ----------
+    output_filename : str
+        The name of the output file.
+    module_doc : str or None
+        Module-level docstring.
+    nodes : list
+        List of nodes to write.
+    git_repo : str or None
+        The git repository URL.
+    version : str or None
+        Version string to be used.
+    signature : str
+        Signature for the palette, usually a hash or unique identifier.
+
+    Returns
+    -------
+    dict
+        A dictionary representing the palette structure with default values.
+    """
+    palette: dict = {
         "modelData": {
             "filePath": "",
             "fileType": "Palette",
@@ -1275,4 +1309,15 @@ def constructPalette():
         "nodeDataArray": [],
         "linkDataArray": [],
     }
+    if not module_doc:
+        module_doc = ""
+    palette["modelData"]["detailedDescription"] = module_doc.strip()
+    palette["modelData"]["filePath"] = output_filename
+    palette["modelData"]["repositoryUrl"] = git_repo
+    palette["modelData"]["commitHash"] = version
+    palette["modelData"]["signature"] = signature
+    palette["modelData"]["lastModifiedDatetime"] = datetime.datetime.now().timestamp()
+    palette["modelData"]["numLGNodes"] = len(nodes)
+    palette["nodeDataArray"] = nodes
+
     return palette

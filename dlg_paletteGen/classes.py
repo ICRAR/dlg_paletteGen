@@ -587,11 +587,14 @@ class Child:
         """
         Process a child element.
 
-        Parameters:
-        -----------
-        child: dict, the parsed child element from XML
-        language: Language, Python or C
-        parent: Child, parent object or None
+        Parameters
+        ----------
+        child: dict
+            the parsed child element from XML
+        language: Language
+            Python or C
+        parent: Child
+            parent object or None
         """
         members = []
         self.type = "generic"

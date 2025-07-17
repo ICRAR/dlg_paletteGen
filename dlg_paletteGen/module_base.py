@@ -30,7 +30,23 @@ from . import logger
 
 
 def get_class_members(cls, parent=None):
-    """Inspect members of a class."""
+    """
+    Retrieve member functions and callable annotations from a given class.
+
+    Inspects the class to collect its functions, methods, builtins, and method
+    descriptors. Also handles callables defined as annotations, including those using
+    typing.Callable and unions. Filters out members not matching naming conventions or
+    lacking qualified names.
+    Returns a dictionary mapping member names to their constructed node representations.
+
+    Args:
+        cls (type): The class to inspect for member functions and callables.
+        parent (optional): An optional parent node for constructing member nodes.
+
+    Returns:
+        dict: A dictionary of member names mapped to their constructed node
+            representations.
+    """
     try:
         content = inspect.getmembers(
             cls,
@@ -109,7 +125,23 @@ def get_class_members(cls, parent=None):
 
 
 def _get_name(name: str, member, module=None, parent=None) -> str:
-    """Get a name and a qualified name for various cases."""
+    """
+    Generate a name for a member, considering its module, parent, and provided name.
+
+    Args:
+        name (str): The base name to use if other name resolution fails.
+        member: The member object whose name is to be resolved.
+        module (optional): The module or class containing the member.
+        parent (optional): The parent object, if any.
+
+    Returns:
+        str: The resolved name string for the member, possibly qualified by its module.
+
+    Notes:
+        - Handles special cases for PyCapsule and object.__init__.
+        - Uses get_mod_name to extract names from member and module.
+        - Falls back to the provided name if resolution fails.
+    """
     member_name = get_mod_name(member)
     module_name = get_mod_name(module)
     if inspect.isclass(module):
@@ -130,7 +162,32 @@ def _get_name(name: str, member, module=None, parent=None) -> str:
 
 
 def _get_docs(member, module, node) -> tuple:
-    """Extract the main documentation and the parameter docs if available."""
+    """
+    Extract and processes documentation and signature information for a given member.
+
+    Parameters
+    ----------
+    member : object
+        The Python object (function, method, or class member) to extract documentation
+        and signature from.
+    module : object
+        The module or class containing the member.
+    node : dict
+        Dictionary representing the member, containing metadata such as its name and
+        description.
+
+    Returns
+    -------
+    tuple
+        A tuple containing the signature (or dummy signature) and a DetailedDescription
+        object with parsed documentation.
+
+    Notes
+    -----
+    Handles special cases for PyBind11 and builtin members by generating dummy
+    signatures when necessary. Also augments member documentation with class-level
+    documentation for constructors.
+    """
     dd = dd_mod = None
     doc = inspect.getdoc(member)
     if (
@@ -200,17 +257,14 @@ def _get_docs(member, module, node) -> tuple:
 
 def construct_func_name(load_name: str, module_name: str) -> str:
     """
-    Construct the function name of a member of a module or a class.
+    Construct a function name by combining module and load names.
 
-    Parameters:
-    -----------
-    load_name: str, the string used to import the module, class or function
-    module_name: str, the name of the module or the class
-    parent_name: str, the name of the parent
-
-    Returns:
-    --------
-    str, the function_name of the member
+    :param load_name: Name to load, possibly a function or attribute.
+    :type load_name: str
+    :param module_name: Name of the module to prefix.
+    :type module_name: str
+    :return: Combined function name or 'test' if inputs are invalid.
+    :rtype: str
     """
     if load_name and module_name and load_name.startswith(module_name):
         return load_name
@@ -222,7 +276,29 @@ def construct_func_name(load_name: str, module_name: str) -> str:
 
 
 def construct_member_node(member, obj=None, parent=None, name=None) -> dict:
-    """Inspect a member function or method and construct a node for the palette."""
+    """
+    Construct a node dictionary representing a Python member.
+
+    The member can be a function, method, or attribute with metadata and field
+    information.
+
+    Args:
+        member: The Python member to inspect (function, method, or attribute).
+        obj (optional): The object instance associated with the member, if any.
+        parent (optional): The parent name or identifier for the member.
+        name (optional): The explicit name for the member node.
+
+    Returns:
+        dict: A dictionary containing metadata and fields describing the member,
+            including its name, category, parameters, and documentation.
+
+    Notes:
+        - The function attempts to resolve and import the member if not already present.
+        - Custom fields are populated based on the member's signature and documentation.
+        - Default fields are added for function name and base name.
+        - Special handling is performed for 'self' parameters and certain member types.
+        - Logging is used for debugging and error reporting during node construction.
+    """
     node = constructNode()
     if parent and name and parent != name and parent != name.rsplit(".", 1)[0]:
         name = f"{parent}.{name}"
@@ -280,11 +356,24 @@ def construct_member_node(member, obj=None, parent=None, name=None) -> dict:
 
 def get_members(obj: types.ModuleType, modules={}, parent=None):
     """
-    Get members of an object.
+    Extract and returns a dictionary of callable members from a module or object.
 
-    :param obj: the imported module
-    :param parent: the parent module
-    :param member: filter the content of mod for this member
+    The function analyzes the provided object, filtering out private members,
+    modules, and non-callable attributes. If the object is a function, it returns
+    it directly. For modules and classes, it inspects their members, optionally
+    restricting to those listed in the `__all__` attribute if present. For classes,
+    it recursively extracts their callable members using `get_class_members`.
+
+    Parameters
+    ----------
+        obj (types.ModuleType): The module or object to analyze.
+        modules (dict, optional): A dictionary of already processed members
+        parent (Any, optional): The parent object, used for recursive member extraction.
+
+    Returns
+    -------
+        dict: A dictionary mapping short member names to their corresponding member
+            node representations.
     """
     if obj is None:
         return {}
@@ -347,10 +436,14 @@ def get_members(obj: types.ModuleType, modules={}, parent=None):
             }
 
         for name, node in nodes.items():
-            if name in modules.keys():
-                logger.debug("!!!!! found duplicate: %s", name)
+            # we only use the last two parts of the name
+            # to avoid long names in the palette
+            short_name = ".".join(node["name"].rsplit(".", 2)[-2:])
+            if short_name in modules.keys():
+                logger.debug("!!!!! found duplicate: %s", short_name)
             else:
-                members.update({name: node})
+                node["name"] = short_name
+                members.update({short_name: node})
 
                 if hasattr(member, "__members__"):
                     # this takes care of enum types, but needs some
@@ -369,15 +462,40 @@ def get_members(obj: types.ModuleType, modules={}, parent=None):
 
 def module_hook(import_name: str, modules: dict = {}, recursive: bool = True) -> tuple:
     """
-    Import an object and analyse it recursively, if requested.
+    Dynamically loads a Python object or module by its import name.
 
-    The import_name can point to any object that can be imported.
+    This function attempts to load the specified object or module using `eval`
+    first, and if that fails, it tries to import it using a custom import
+    function. It gathers the members of the loaded object/module and updates the
+    provided `modules` dictionary with the results. If `recursive` is True, it
+    will also traverse and process submodules, updating the dictionary
+    accordingly.
 
-    :param import_name: str, the name of the object to be analysed
-    :param modules: dictionary of modules
-    :param recursive: bool, treat sub-modules [True]
+    Special handling is included to avoid cyclic references when running on the
+    `dlg_paletteGen.module_base` module.
 
-    :returns: dict of modules processed
+    Args:
+        import_name (str): The dotted import path of the object or module to
+            load (e.g., 'os.path').
+        modules (dict, optional): A dictionary to store discovered members and
+            submodules. Defaults to an empty dict.
+        recursive (bool, optional): Whether to recursively process submodules.
+            Defaults to True.
+
+    Returns:
+        tuple: A tuple containing:
+            - modules (dict): The updated dictionary of discovered members and
+                submodules.
+            - doc (str or None): The docstring of the loaded object/module, if
+                available.
+
+    Raises:
+        ImportError: If the module or object cannot be imported.
+        NameError: If the object name cannot be resolved.
+
+    Logging:
+        Uses the `logger` to provide debug and info messages about the loading
+        process and discovered members.
     """
     obj_name = obj = None
     try:
@@ -425,17 +543,37 @@ def module_hook(import_name: str, modules: dict = {}, recursive: bool = True) ->
         except (ImportError, NameError):
             logger.error("Module %s can't be loaded!", obj_name)
             return ({}, None)
+
+        # If we run paletteGen over paletteGen we would produce a cyclic reference
+        # here and the next few lines just fix that.
+        if obj_name == "dlg_paletteGen.module_base":
+            modules[obj_name]["module_base.module_hook"]["fields"]["modules"][
+                "value"
+            ] = None
+            modules[obj_name]["module_base.module_hook"]["fields"]["modules"][
+                "defaultValue"
+            ] = None
     return modules, obj.__doc__
 
 
-def nodes_from_module(module_path, recursive=True) -> Tuple[list, Any]:
+def nodes_from_module(module_path: str, recursive: bool = True) -> Tuple[list, Any]:
     """
-    Extract nodes from specified module.
+    Extract and processes node information from a given module path.
 
-    :param modules: modules dict as extracted by module_hook
-    :param recursive: flag indicating wether to recurse down the hierarchy
+    This function uses `module_hook` to retrieve modules and their documentation from
+    the specified `module_path`. It then iterates through the members of each module,
+    filtering and transforming nodes based on the structure of their 'fields'
+    attribute. Nodes with 'fields' as a dictionary are converted to a list of field
+    values. Nodes with 'fields' as a list or missing/invalid nodes are skipped.
 
-    :returns: list of nodes (for now)
+    Args:
+        module_path (str): The path to the module to process.
+        recursive (bool, optional): Whether to process modules recursively.
+
+    Returns:
+        Tuple[list, Any]: A tuple containing:
+            - A list of processed node dictionaries.
+            - The documentation object for the module.
     """
     modules, module_doc = module_hook(module_path, recursive=recursive)
     logger.debug(
@@ -455,7 +593,6 @@ def nodes_from_module(module_path, recursive=True) -> Tuple[list, Any]:
             try:
                 if isinstance(node["fields"], list):
                     continue
-                node["name"] = ".".join(node["name"].rsplit(".", 2)[-2:])
                 node["fields"] = list(node["fields"].values())
                 nodes.append(node)
             except TypeError:
@@ -474,17 +611,26 @@ def palettes_from_module(
     recursive: bool = True,
 ) -> None:
     """
-    Generate one or more palette files from the module specified.
+    Extract node components from a Python module and writes them to palette files.
 
-    :param module_path: dot delimited module path
-    :param outfile: name of palette file, if left blank the module name will be
-                     used. If split is True and a name is specified it will be
-                     prepended to the module name(s).
-    :param split: If True (default False), the module will be split into
-                  palettes one for each sub-module.
-    :param recursive: flag indicating wether to recurse down the hierarchy
+    Args:
+        module_path (str): Import path of the module to extract nodes from.
 
-    returns: None
+        outfile (str, optional): Base filename for output palette file(s). If empty,
+            filenames are generated based on module names. Defaults to "".
+
+        split (bool, optional): If True, splits the module into sub-modules and
+            generates separate palette files for each. Defaults to False.
+
+        recursive (bool, optional): If True, recursively extracts nodes from
+            submodules. Defaults to True.
+
+    Returns:
+        None
+
+    Side Effects:
+        Writes palette files containing extracted node components and logs extraction
+        details.
     """
     module_doc = ""
     files = {}
@@ -509,14 +655,15 @@ def palettes_from_module(
         filename = (
             f"{outfile}{sub_mod.replace('.','_')}.palette" if not outfile else outfile
         )
-        files[filename] = len(nodes)
-        _ = prepare_and_write_palette(nodes, filename, module_doc=module_doc)
-        tot_nodes += len(nodes)
-        logger.info(
-            "%s palette file written with %s components",
-            filename,
-            len(nodes),
-        )
+        status = prepare_and_write_palette(nodes, filename, module_doc=module_doc)
+        if status:
+            files[filename] = len(nodes)
+            tot_nodes += len(nodes)
+            logger.info(
+                "%s palette file written with %s components",
+                filename,
+                len(nodes),
+            )
     logger.info(
         "\n\n>>>>>>> Extraction summary <<<<<<<<\n%s\n",
         "\n".join([f"Wrote {k} with {v} components" for k, v in files.items()]),

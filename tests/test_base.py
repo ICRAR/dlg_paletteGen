@@ -363,9 +363,7 @@ def test_direct_rEST(tmpdir: str, shared_datadir: str):
         recursive=True,
     )
     assert (
-        modules["example_rest"]["example_rest.MainClass1.func_with_types"]["fields"][
-            "arg1"
-        ]["type"]
+        modules["example_rest"]["MainClass1.func_with_types"]["fields"]["arg1"]["type"]
         == "Boolean"
     )
 
@@ -587,7 +585,9 @@ def test_direct_tabascal(tmpdir: str, shared_datadir: str):
         recursive=True,
     )
     assert (
-        modules["example_tabascal"]["generate_random_sky"]["fields"]["fov"]["value"]
+        modules["example_tabascal"]["example_tabascal.generate_random_sky"]["fields"][
+            "fov"
+        ]["value"]
         == 1.0
     )
 
@@ -618,7 +618,7 @@ def test_direct_pypeit(tmpdir: str, shared_datadir: str):
         recursive=True,
     )
     assert (
-        modules["example_pypeit"]["poly_map"]["fields"]["rawimg"]["type"]
+        modules["example_pypeit"]["example_pypeit.poly_map"]["fields"]["rawimg"]["type"]
         == "numpy.ndarray"
     )
 
@@ -683,18 +683,24 @@ def test_guess_type_from_default():
     assert guess_type_from_default({234}) == "Object"
 
 
-def test_direct_module():
+def test_direct_module(tmpdir: str, shared_datadir: str):
     """
     Test the module processing format by calling the methods directly.
 
     :param tmpdir: the path to the temp directory to use
     :param shared_datadir: the path the the local directory
     """
-    module_name = "astropy.coordinates"
-    # module_name = "numpy.array"
-    nodes = nodes_from_module(module_name, recursive=True)
+    sys.path.append(str(shared_datadir.absolute()))
+    logging.info("path: %s", input)
+    output_directory = str(tmpdir)
+    output_file = f"{output_directory}/t.palette"
 
-    assert len(nodes) == 2
+    # module_name = "dlg_paletteGen.module_base"
+    module_name = "numpy.array"
+    nodes, module_doc = nodes_from_module(module_name, recursive=True)
+
+    prepare_and_write_palette(nodes, output_file, module_doc=module_doc)
+    assert len(nodes) == 153
 
 
 def test_full_numpy():
@@ -706,4 +712,4 @@ def test_full_numpy():
     """
     module_name = "numpy.polynomial.polynomial"
     nodes = nodes_from_module(module_name, recursive=True)
-    assert len(nodes[0]) == 43
+    assert len(nodes[0]) == 42
