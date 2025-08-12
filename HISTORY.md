@@ -4,6 +4,13 @@ Changelog
 
 (unreleased)
 ------------
+- Added prevent_cycle import option and fixed some tests. [Andreas
+  Wicenec]
+
+
+0.6.1 (2025-08-12)
+------------------
+- Release: version 0.6.1 🚀 [Andreas Wicenec]
 - Fixed issues with tensorflow and jax. [Andreas Wicenec]
 - Enable running paletteGen on itself and use in graph. [Andreas
   Wicenec]
