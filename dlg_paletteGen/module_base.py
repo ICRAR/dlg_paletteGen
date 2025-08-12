@@ -12,7 +12,7 @@ import re
 import sys
 import types
 import typing
-from typing import Any, Tuple, _SpecialForm
+from typing import Any, Tuple, Union, _SpecialForm
 
 from dlg_paletteGen.classes import DetailedDescription, DummyParam, DummySig
 from dlg_paletteGen.source_base import FieldUsage
@@ -350,11 +350,18 @@ def construct_member_node(member, obj=None, parent=None, name=None) -> dict:
     node["fields"]["base_name"]["defaultValue"] = node["fields"]["base_name"]["value"]
     if hasattr(sig, "ret"):
         logger.debug("Return type: %s", sig.ret)
-    logger.debug("Constructed node for member %s: %s", node["name"], node)
+    logger.debug("Constructed node for member %s", node["name"])
+    # logger.debug("Constructed node for member %s: %s", node["name"], node)
     return node
 
 
-def get_members(obj: types.ModuleType, modules={}, parent=None):
+def get_members(
+    obj: Union[
+        types.ModuleType, types.MethodType, types.FunctionType, types.BuiltinFunctionType
+    ],
+    modules={},
+    parent=None,
+):
     """
     Extract and returns a dictionary of callable members from a module or object.
 
@@ -379,8 +386,8 @@ def get_members(obj: types.ModuleType, modules={}, parent=None):
         return {}
     module_name = get_mod_name(obj)
     logger.debug(">>>>>>>>> Analysing members for module: %s", module_name)
-    if inspect.isfunction(obj):
-        content = [[get_mod_name(obj), obj]]
+    if inspect.isfunction(obj) or inspect.ismethod(obj) or inspect.isbuiltin(obj):
+        content: list[tuple[str, Any]] = [(get_mod_name(obj), obj)]
     else:
         try:
             content = inspect.getmembers(obj)
@@ -415,7 +422,9 @@ def get_members(obj: types.ModuleType, modules={}, parent=None):
         if name[0] == "_" and name not in ["__init__", "__call__"]:
             # NOTE: PyBind11 classes can have multiple constructors
             continue
-        if not inspect.isfunction(obj):
+        if not (
+            inspect.isfunction(obj) or inspect.ismethod(obj) or inspect.isbuiltin(obj)
+        ):
             member = getattr(obj, name)
         if not callable(member) or isinstance(member, _SpecialForm):
             # logger.warning("Member %s is not callable", member)
@@ -515,31 +524,30 @@ def module_hook(import_name: str, modules: dict = {}, recursive: bool = True) ->
                 # the specified item is a function or method
                 obj_name = obj_name.rsplit(".", 1)[0]
                 members = {obj_name: obj}
-            members = get_members(
-                obj,
-                parent=import_name.rsplit(".", 1)[0],
-                modules=modules,
-            )
-            modules.update({obj_name: members})
-            logger.debug("Found %d members in %s", len(members), obj_name)
-            sub_modules, _ = get_submodules(obj)
-            if sub_modules:
-                logger.info("Found %d sub-modules in %s", len(sub_modules), obj_name)
-            if sub_modules and recursive and obj and obj_name not in sub_modules:
-                logger.debug("Iterating over sub_modules of %s", obj_name)
-                for sub_mod in sub_modules:
-                    logger.info("Treating sub-module: %s of %s", sub_mod, obj_name)
-                    submod_dict, _ = module_hook(
-                        sub_mod, modules=modules, recursive=recursive
-                    )
-                    mods_len = len(modules)
-                    modules.update(submod_dict)
-                    logger.debug(
-                        "Added %d additional objects from sub-module %s, %d",
-                        len(modules) - mods_len,
-                        sub_mod,
-                        len(modules),
-                    )
+                members = get_members(
+                    obj,
+                    parent=import_name.rsplit(".", 1)[0],
+                    modules=modules,
+                )
+                modules.update({obj_name: members})
+            else:
+                members = get_members(
+                    obj,
+                    parent=import_name.rsplit(".", 1)[0],
+                    modules=modules,
+                )
+                modules.update({obj_name: members})
+                logger.debug("Found %d members in %s", len(members), obj_name)
+                sub_modules, _ = get_submodules(obj)
+                if sub_modules:
+                    logger.info("Found %d sub-modules in %s", len(sub_modules), obj_name)
+                if sub_modules and recursive and obj and obj_name not in modules:
+                    logger.debug("Iterating over sub_modules of %s", obj_name)
+                    for sub_mod in sub_modules:
+                        logger.debug("Treating sub-module: %s of %s", sub_mod, obj_name)
+                        submod_dict, _ = module_hook(
+                            sub_mod, modules=modules, recursive=recursive
+                        )
         except (ImportError, NameError):
             logger.error("Module %s can't be loaded!", obj_name)
             return ({}, None)
@@ -579,17 +587,22 @@ def nodes_from_module(module_path: str, recursive: bool = True) -> Tuple[list, A
     logger.debug(
         ">>>>> Number of modules/members processed for %s: %d", module_path, len(modules)
     )
-    logger.debug(
-        "Modules/members found: %s",
-        # modules
-        {m: list(v.keys()) for m, v in modules.items() if v},
-    )
+    # logger.debug(
+    #     "Modules/members found: %s",
+    #     # modules
+    #     {m: list(v.keys()) for m, v in modules.items() if v},
+    # )
     nodes = []
+    node_names = set()
     for members in modules.values():
         for member, node in members.items():
             # TODO: remove once EAGLE can deal with dict fields pylint: disable=fixme
             if node is None or not node:
                 continue
+            node_name = node["name"].rsplit(".", 1)[-1]
+            if node_name in node_names:
+                continue
+            node_names.add(node_name)
             try:
                 if isinstance(node["fields"], list):
                     continue
@@ -646,7 +659,7 @@ def palettes_from_module(
         )
     tot_nodes = 0
     for i, sub_mod in enumerate(sub_modules):
-        logger.info("Extracting nodes from sub-module: %s, %d", sub_mod, i)
+        logger.debug("Extracting nodes from sub-module: %s, %d", sub_mod, i)
         if split:
             recursive = i != 0
         nodes, module_doc = nodes_from_module(sub_mod, recursive=recursive)
@@ -660,7 +673,7 @@ def palettes_from_module(
             files[filename] = len(nodes)
             tot_nodes += len(nodes)
             logger.info(
-                "%s palette file written with %s components",
+                ">>>>>>>> %s palette file written with %s components",
                 filename,
                 len(nodes),
             )

@@ -133,7 +133,8 @@ def get_args(args=None):
             print("\x1b[31;20mInsufficient number of arguments provided!!!\n\x1b[0m")
             parser.print_help(sys.stderr)
             sys.exit(1)
-        args = parser.parse_args()
+        args, _ = parser.parse_known_args(args)
+        # args = parser.parse_args(args)
     logger.setLevel(logging.INFO)
     if args.quiet:
         logger.setLevel(logging.CRITICAL)
@@ -228,6 +229,7 @@ def main():  # pragma: no cover
 
     if len(module_path) > 0:
         outputfile = "" if outputfile == "." else outputfile
+        sys.argv = [sys.argv[0]]  # reset sys.argv to avoid issues with the module import
         palettes_from_module(
             module_path, outfile=outputfile, recursive=recursive, split=split
         )
@@ -250,3 +252,12 @@ def main():  # pragma: no cover
         _ = prepare_and_write_palette(nodes, outputfile)
     # cleanup the output directory
     output_directory.cleanup()
+
+
+# rc = 1
+# try:
+#     main()
+#     rc = 0
+# except Exception as e:
+#     print('Error: %s' % e, file=sys.stderr)
+# sys.exit(rc)

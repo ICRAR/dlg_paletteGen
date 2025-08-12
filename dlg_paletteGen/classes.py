@@ -223,24 +223,28 @@ class DetailedDescription:
         logger.debug("Processing Google style doc_strings")
         if dd:
             self.description = dd
-        dp = parse(dd)
-        self.returns = dp.returns
-        spds = dp.params
         try:
-            self.params = {}
-            for item in spds:
-                vtype = item.type_name
-                if vtype:
-                    vtype = re.sub(r"^:", "", vtype)
-                    vtype = re.sub(r"[`^~]", "", vtype)
-                    vtype = re.sub(r"[_$]", "", vtype)
-                else:
-                    vtype = ""
-                self.params[item.arg_name] = {"type": vtype, "desc": item.description}
+            dp = parse(dd)
+            self.returns = dp.returns
+            spds = dp.params
+            try:
+                self.params = {}
+                for item in spds:
+                    vtype = item.type_name
+                    if vtype:
+                        vtype = re.sub(r"^:", "", vtype)
+                        vtype = re.sub(r"[`^~]", "", vtype)
+                        vtype = re.sub(r"[_$]", "", vtype)
+                    else:
+                        vtype = ""
+                    self.params[item.arg_name] = {"type": vtype, "desc": item.description}
 
-        except IndexError:
-            logger.debug(">>> spds matching failed %s:", spds)
-            raise
+            except IndexError:
+                logger.debug(">>> spds matching failed %s:", spds)
+                raise
+        except Exception:
+            logger.warning("Unable to parse documentation %s", self.name)
+            self.returns = self.params = {}
         if self.returns and self.returns.description and not self.returns.type_name:
             try:
                 (

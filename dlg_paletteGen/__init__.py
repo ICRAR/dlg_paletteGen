@@ -62,3 +62,4 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 logger.addHandler(ch)
 logger.addHandler(ch2)
+logger.name = "dlg_paletteGen"

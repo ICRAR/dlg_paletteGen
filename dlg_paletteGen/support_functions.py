@@ -182,8 +182,6 @@ def typeFix(value_type: Union[Any, None] = "", default_value: Any = None) -> str
     """
     path_ind = 0.0
     guess_type = "UNIDENTIFIED"
-    if value_type is None or value_type == inspect._empty:
-        return CVALUE_TYPES["NoneType"]
     if value_type not in VALUE_TYPES and hasattr(
         value_type, "__module__"
     ):  # this path is for annotations
@@ -216,6 +214,8 @@ def typeFix(value_type: Union[Any, None] = "", default_value: Any = None) -> str
     elif value_type in VALUE_TYPES:
         guess_type = VALUE_TYPES[value_type]
         path_ind = 4
+    elif value_type is None or value_type == inspect._empty:
+        return CVALUE_TYPES["NoneType"]
     elif not isinstance(value_type, str):
         mod = value_type.__module__ if hasattr(value_type, "__module__") else ""
         guess_type = f"{mod}.{value_type.__name__}"  # type: ignore[union-attr]
@@ -495,7 +495,7 @@ def add_repro_hashes(nodes_tuple: tuple) -> tuple:
         A tuple containing the signature hash, the module_doc and the updated nodes.
     """
     nodes, module_doc = nodes_tuple
-    logger.debug(">>>>> %s", module_doc)
+    # logger.debug(">>>>> %s", module_doc)
     vertices = {index: value for index, value in enumerate(nodes)}
     block_dag = build_block_dag(vertices, [], data_fields=BLOCKDAG_DATA_FIELDS)
     for i, node in enumerate(nodes):
@@ -598,14 +598,28 @@ def get_submodules(module):
                 submods.append(f"{submod}")
         logger.debug("Found submodules of %s in __all__: %s", module_name, submods)
     elif hasattr(module, "__package__") and hasattr(module, "__path__"):
-        sub_modules = iter_modules(module.__path__)
-        submods = [
-            f"{module_name}.{x[1]}"
-            for x in sub_modules
-            if (x[1][0] != "_" and x[1] not in ["test", "tests", "src", "setup_package"])
-        ]  # get the names; ignore test and src modules
-        logger.debug("sub-modules found: %s", submods)
-    else:
+        sub_packages = iter_modules(module.__path__)
+        for pkg in sub_packages:
+            if pkg[1][0] != "_" and pkg[1] not in [
+                "test",
+                "tests",
+                "src",
+                "setup_package",
+            ]:
+                try:
+                    mod = import_using_name(f"{module_name}.{pkg[1]}")
+                except ImportError:
+                    logger.warning(
+                        "Unable to import sub-package %s from %s", pkg[1], module_name
+                    )
+                    continue
+                submods.append(f"{module_name}.{pkg[1]}")
+        logger.debug("sub-packages found: %s", submods)
+    elif not (
+        inspect.isfunction(module)
+        or inspect.ismethod(module)
+        or inspect.isbuiltin(module)
+    ):
         for m in inspect.getmembers(module, lambda x: inspect.ismodule(x)):
             if (
                 inspect.ismodule(m[1])
@@ -626,7 +640,12 @@ def _get_loaded_module(mod_name: str) -> Union[None, Any]:
     :returns: The module if found, None otherwise.
     """
     # Try sys.modules, globals, locals, then builtins
+    mod = None
     main_module = sys.modules["__main__"].__dict__
+    if not isinstance(main_module["__builtins__"], dict):
+        builtins_dict = main_module["__builtins__"].__dict__
+    else:
+        builtins_dict = main_module["__builtins__"]
     if mod_name in sys.modules:
         logger.debug("Module %s already loaded.", mod_name)
         mod = sys.modules[mod_name]
@@ -638,13 +657,8 @@ def _get_loaded_module(mod_name: str) -> Union[None, Any]:
         mod = globals()[mod_name]
     elif mod_name in locals():
         mod = locals()[mod_name]
-    elif hasattr(__builtins__, mod_name):
-        mod = getattr(__builtins__, mod_name)
-    else:
-        mod = None
-        logger.debug(
-            "Module %s not found in sys.modules, locals, globals or builtins.", mod_name
-        )
+    elif mod_name in builtins_dict:
+        mod = builtins_dict[mod_name]
     return mod
 
 
@@ -876,13 +890,21 @@ def initializeField(
     fieldValue["encoding"] = ""
     fieldValue["name"] = name
     if isinstance(value, numpy.ndarray):
-        fieldValue["value"] = value if len(value) > 0 else None  # type: ignore
+        try:
+            fieldValue["value"] = value if len(value) > 0 else None  # type: ignore
+        except Exception:
+            fieldValue["value"] = None  # type: ignore
     else:
         fieldValue["value"] = value if value else None  # type: ignore
     if isinstance(defaultValue, numpy.ndarray):
-        fieldValue["defaultValue"] = (
-            defaultValue if len(defaultValue) > 0 else None  # type: ignore
-        )
+        try:
+            fieldValue["defaultValue"] = (
+                defaultValue
+                if defaultValue and len(defaultValue) > 0
+                else None  # type: ignore
+            )
+        except Exception:
+            fieldValue["defaultValue"] = ""
     else:
         fieldValue["defaultValue"] = (
             defaultValue if defaultValue else None  # type: ignore

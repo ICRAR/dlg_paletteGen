@@ -1,6 +1,5 @@
 """Set global values."""
 
-import inspect
 from enum import Enum
 
 import numpy
@@ -13,6 +12,8 @@ VALUE_TYPES = {
     bool: "Boolean",
     list: "List",
     dict: "Dict",
+    numpy.array: "numpy.array",
+    numpy.ndarray: "numpy.array",
 }
 
 SVALUE_TYPES = {k.__name__: v for k, v in VALUE_TYPES.items() if hasattr(k, "__name__")}
@@ -22,7 +23,7 @@ CVALUE_TYPES = {
     "arraylike": "numpy.array",
     numpy.ndarray.__name__: "numpy.array",
     numpy._globals._NoValueType.__name__: "Object",  # type: ignore
-    inspect._empty: "None",
+    "inspect._empty": "None",
     "type": "Object",
     "any": "Object",
     "NoneType": "None",

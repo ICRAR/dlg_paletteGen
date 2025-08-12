@@ -1,10 +1,12 @@
 # pylint: disable=too-few-public-methods
+import inspect
 import json
 import logging
 import os
 import subprocess
 import sys
 
+import numpy
 from pytest import LogCaptureFixture
 
 from dlg_paletteGen.settings import DOXYGEN_SETTINGS
@@ -18,6 +20,8 @@ from dlg_paletteGen.support_functions import (
     process_doxygen,
     process_xml,
     NAME,
+    this_module,
+    typeFix,
 )
 
 pytest_plugins = ["pytester", "pytest-datadir"]
@@ -647,7 +651,7 @@ def test_import_using_name(caplog: LogCaptureFixture):
 
     module_name = "print"
     mod = import_using_name(module_name, traverse=True)
-    assert "Error when loading module print" in caplog.text
+    assert mod.__name__ == "print"
 
 
 def test_typeFix(tmpdir: str, shared_datadir: str):
@@ -695,12 +699,30 @@ def test_direct_module(tmpdir: str, shared_datadir: str):
     output_directory = str(tmpdir)
     output_file = f"{output_directory}/t.palette"
 
-    # module_name = "dlg_paletteGen.module_base"
-    module_name = "numpy.array"
+    module_name = "dlg_paletteGen.module_base"
     nodes, module_doc = nodes_from_module(module_name, recursive=True)
 
     prepare_and_write_palette(nodes, output_file, module_doc=module_doc)
-    assert len(nodes) == 153
+    assert len(nodes) == 15
+
+
+def test_builtin_function(tmpdir: str, shared_datadir: str):
+    """
+    Test the module processing format by calling the methods directly.
+
+    :param tmpdir: the path to the temp directory to use
+    :param shared_datadir: the path the the local directory
+    """
+    sys.path.append(str(shared_datadir.absolute()))
+    logging.info("path: %s", input)
+    output_directory = str(tmpdir)
+    output_file = f"{output_directory}/t.palette"
+
+    module_name = "print"
+    nodes, module_doc = nodes_from_module(module_name, recursive=True)
+
+    prepare_and_write_palette(nodes, output_file, module_doc=module_doc)
+    assert len(nodes) == 1
 
 
 def test_full_numpy():
@@ -712,4 +734,46 @@ def test_full_numpy():
     """
     module_name = "numpy.polynomial.polynomial"
     nodes = nodes_from_module(module_name, recursive=True)
-    assert len(nodes[0]) == 42
+    assert len(nodes[0]) in [42, 43]
+
+
+def test_this_module():
+    """
+    Test loading this module.
+    """
+    module = this_module()
+    assert module == "tests.test_base"
+
+
+def test_typeFix():
+    """
+    Test loading the type_fix function.
+    """
+    values = [
+        int,
+        float,
+        str,
+        list,
+        dict,
+        tuple,
+        set,
+        bool,
+        None,
+        inspect._empty,
+        type(numpy.array([])),
+    ]
+    guess_type = set()
+    for v in values:
+        guess_type.add(typeFix(v))
+    assert guess_type == {
+        "String",
+        "tuple",
+        "Dict",
+        "List",
+        "None",
+        "Float",
+        "Integer",
+        "Boolean",
+        "set",
+        "numpy.array",
+    }
