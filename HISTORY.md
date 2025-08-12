@@ -2,6 +2,14 @@ Changelog
 =========
 
 
+(unreleased)
+------------
+- Fixed issues with tensorflow and jax. [Andreas Wicenec]
+- Enable running paletteGen on itself and use in graph. [Andreas
+  Wicenec]
+- Release: version 0.6.0 🚀 [Andreas Wicenec]
+
+
 0.6.0 (2025-07-16)
 ------------------
 - Release: version 0.6.0 🚀 [Andreas Wicenec]
