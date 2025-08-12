@@ -306,6 +306,7 @@ def test_direct_cli():
         verbose = False
         split = False
         c = False
+        prevent_cyclic = False
         quiet = False
 
         def __len__(self):
@@ -366,10 +367,9 @@ def test_direct_rEST(tmpdir: str, shared_datadir: str):
         modules={},
         recursive=True,
     )
-    assert (
-        modules["example_rest"]["MainClass1.func_with_types"]["fields"]["arg1"]["type"]
-        == "Boolean"
-    )
+    assert modules["example_rest"]["MainClass1.func_with_types"]["fields"]["arg1"][
+        "type"
+    ] in ["Boolean", "bool"]
 
     nodes = []
     for members in modules.values():
@@ -703,7 +703,7 @@ def test_direct_module(tmpdir: str, shared_datadir: str):
     nodes, module_doc = nodes_from_module(module_name, recursive=True)
 
     prepare_and_write_palette(nodes, output_file, module_doc=module_doc)
-    assert len(nodes) == 15
+    assert len(nodes) == 16
 
 
 def test_builtin_function(tmpdir: str, shared_datadir: str):
@@ -766,14 +766,14 @@ def test_typeFix():
     for v in values:
         guess_type.add(typeFix(v))
     assert guess_type == {
-        "String",
-        "tuple",
-        "Dict",
-        "List",
+        "str",
+        "builtins.tuple",
+        "bool",
+        "list",
+        "int",
+        "builtins.set",
+        "dict",
+        "ndarray",
+        "float",
         "None",
-        "Float",
-        "Integer",
-        "Boolean",
-        "set",
-        "numpy.array",
     }

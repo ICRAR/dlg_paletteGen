@@ -62,6 +62,7 @@ def get_args(args=None):
                 args.module:str,
                 args.recursive:bool,
                 args.split:bool,
+                args.prevent_cyclic:bool,
                 language)
     """
     # inputdir, tag, outputfile, allow_missing_eagle_start, module_path,
@@ -128,6 +129,13 @@ def get_args(args=None):
         help="Only critical logging",
         action="store_true",
     )
+    parser.add_argument(
+        "-p",
+        "--prevent-cyclic",
+        help="Prevent cyclic imports in module mode (should be off for most modules)",
+        action="store_true",
+        default=False,
+    )
     if not args:
         if len(sys.argv) == 1:
             print("\x1b[31;20mInsufficient number of arguments provided!!!\n\x1b[0m")
@@ -157,6 +165,10 @@ def get_args(args=None):
         logger.info("Split flag ON")
     else:
         args.split = False
+    if args.prevent_cyclic:
+        logger.info("Prevent_cyclic flag ON")
+    else:
+        args.prevent_cyclic = False
     return (
         args.idir,
         args.tag,
@@ -165,6 +177,7 @@ def get_args(args=None):
         args.module,
         args.recursive,
         args.split,
+        args.prevent_cyclic,
         language,
     )
 
@@ -212,6 +225,7 @@ def main():  # pragma: no cover
         module_path,
         recursive,
         split,
+        prevent_cyclic,
         language,
     ) = get_args()
     logger.info("PROJECT_NAME: %s", os.environ.get("PROJECT_NAME"))
@@ -231,7 +245,11 @@ def main():  # pragma: no cover
         outputfile = "" if outputfile == "." else outputfile
         sys.argv = [sys.argv[0]]  # reset sys.argv to avoid issues with the module import
         palettes_from_module(
-            module_path, outfile=outputfile, recursive=recursive, split=split
+            module_path,
+            outfile=outputfile,
+            recursive=recursive,
+            split=split,
+            prevent_cyclic=prevent_cyclic,
         )
     else:
         # add extra doxygen setting for input and output locations

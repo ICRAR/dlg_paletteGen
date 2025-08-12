@@ -26,7 +26,7 @@ from dlg_paletteGen.support_functions import (
     prepare_and_write_palette,
 )
 
-from . import logger
+from . import logger, silence_module_logger
 
 
 def get_class_members(cls, parent=None):
@@ -417,6 +417,7 @@ def get_members(
             )
             logger.debug("Module members: %s", modules.keys())
             continue
+        logger.debug("Number of enabled loggers: %d", silence_module_logger())
         logger.debug("Analysing member: %s", name)
         # if not member or (member and name == member):
         if name[0] == "_" and name not in ["__init__", "__call__"]:
@@ -469,7 +470,12 @@ def get_members(
     return members
 
 
-def module_hook(import_name: str, modules: dict = {}, recursive: bool = True) -> tuple:
+def module_hook(
+    import_name: str,
+    modules: dict = {},
+    recursive: bool = True,
+    prevent_cyclic: bool = False,
+) -> tuple:
     """
     Dynamically loads a Python object or module by its import name.
 
@@ -490,6 +496,8 @@ def module_hook(import_name: str, modules: dict = {}, recursive: bool = True) ->
             submodules. Defaults to an empty dict.
         recursive (bool, optional): Whether to recursively process submodules.
             Defaults to True.
+        prebent_cyclic (bool, optional): Some modules have a structure, which.
+            causes a cyclic import. Should usually be off. Defaults to False.
 
     Returns:
         tuple: A tuple containing:
@@ -541,13 +549,24 @@ def module_hook(import_name: str, modules: dict = {}, recursive: bool = True) ->
                 sub_modules, _ = get_submodules(obj)
                 if sub_modules:
                     logger.info("Found %d sub-modules in %s", len(sub_modules), obj_name)
-                if sub_modules and recursive and obj and obj_name not in modules:
-                    logger.debug("Iterating over sub_modules of %s", obj_name)
-                    for sub_mod in sub_modules:
-                        logger.debug("Treating sub-module: %s of %s", sub_mod, obj_name)
-                        submod_dict, _ = module_hook(
-                            sub_mod, modules=modules, recursive=recursive
-                        )
+                if sub_modules and recursive:
+                    # !switch to the next line if you want to process tensorflow!
+                    if (
+                        len(modules) == 1
+                        or not prevent_cyclic
+                        or (obj and obj_name not in modules)
+                    ):
+                        logger.debug("Iterating over sub_modules of %s", obj_name)
+                        for sub_mod in sub_modules:
+                            logger.debug(
+                                "Treating sub-module: %s of %s", sub_mod, obj_name
+                            )
+                            submod_dict, _ = module_hook(
+                                sub_mod,
+                                modules=modules,
+                                recursive=recursive,
+                                prevent_cyclic=prevent_cyclic,
+                            )
         except (ImportError, NameError):
             logger.error("Module %s can't be loaded!", obj_name)
             return ({}, None)
@@ -564,7 +583,9 @@ def module_hook(import_name: str, modules: dict = {}, recursive: bool = True) ->
     return modules, obj.__doc__
 
 
-def nodes_from_module(module_path: str, recursive: bool = True) -> Tuple[list, Any]:
+def nodes_from_module(
+    module_path: str, recursive: bool = True, prevent_cyclic: bool = False
+) -> Tuple[list, Any]:
     """
     Extract and processes node information from a given module path.
 
@@ -577,13 +598,17 @@ def nodes_from_module(module_path: str, recursive: bool = True) -> Tuple[list, A
     Args:
         module_path (str): The path to the module to process.
         recursive (bool, optional): Whether to process modules recursively.
+        prevent_cyclic (bool, optional): If True, prevents cyclic imports in module
+            mode. Defaults to False.
 
     Returns:
         Tuple[list, Any]: A tuple containing:
             - A list of processed node dictionaries.
             - The documentation object for the module.
     """
-    modules, module_doc = module_hook(module_path, recursive=recursive)
+    modules, module_doc = module_hook(
+        module_path, recursive=recursive, prevent_cyclic=prevent_cyclic
+    )
     logger.debug(
         ">>>>> Number of modules/members processed for %s: %d", module_path, len(modules)
     )
@@ -622,6 +647,7 @@ def palettes_from_module(
     outfile: str = "",
     split: bool = False,
     recursive: bool = True,
+    prevent_cyclic: bool = False,
 ) -> None:
     """
     Extract node components from a Python module and writes them to palette files.
@@ -637,6 +663,9 @@ def palettes_from_module(
 
         recursive (bool, optional): If True, recursively extracts nodes from
             submodules. Defaults to True.
+
+        prevent_cyclic (bool, optional): If True, prevents cyclic imports in module
+            mode. This should usually be off for most modules. Defaults to False.
 
     Returns:
         None
@@ -662,7 +691,9 @@ def palettes_from_module(
         logger.debug("Extracting nodes from sub-module: %s, %d", sub_mod, i)
         if split:
             recursive = i != 0
-        nodes, module_doc = nodes_from_module(sub_mod, recursive=recursive)
+        nodes, module_doc = nodes_from_module(
+            sub_mod, recursive=recursive, prevent_cyclic=prevent_cyclic
+        )
         if len(nodes) == 0:
             continue
         filename = (

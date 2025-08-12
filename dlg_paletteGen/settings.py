@@ -4,6 +4,10 @@ from enum import Enum
 
 import numpy
 
+from . import logger, silence_module_logger
+
+logger.debug("Number of enabled loggers: %d", silence_module_logger())
+
 # these are our supported base types
 VALUE_TYPES = {
     str: "String",

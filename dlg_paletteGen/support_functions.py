@@ -42,6 +42,8 @@ from dlg_paletteGen.settings import (
 
 from . import logger, silence_module_logger
 
+logger.debug("Number of enabled loggers: %d", silence_module_logger())
+
 
 def read(*paths, **kwargs):
     """
@@ -182,10 +184,11 @@ def typeFix(value_type: Union[Any, None] = "", default_value: Any = None) -> str
     """
     path_ind = 0.0
     guess_type = "UNIDENTIFIED"
-    if value_type not in VALUE_TYPES and hasattr(
-        value_type, "__module__"
-    ):  # this path is for annotations
-        # if hasattr(value_type, "__module__"):  # this path is for annotations
+    try:
+        knownType = value_type in VALUE_TYPES
+    except Exception:
+        knownType = False
+    if knownType and hasattr(value_type, "__module__"):
         if value_type.__module__ in ["typing", "types"]:  # complex annotation
             # guess_type = str(value_type).split(".", 1)[1]
             guess_type = str(value_type).replace("typing.", "")
@@ -211,14 +214,15 @@ def typeFix(value_type: Union[Any, None] = "", default_value: Any = None) -> str
     elif isinstance(value_type, str) and value_type in SVALUE_TYPES:
         guess_type = SVALUE_TYPES[value_type]
         path_ind = 3
-    elif value_type in VALUE_TYPES:
+    elif knownType:
         guess_type = VALUE_TYPES[value_type]
         path_ind = 4
     elif value_type is None or value_type == inspect._empty:
         return CVALUE_TYPES["NoneType"]
     elif not isinstance(value_type, str):
+        vt_name = getattr(value_type, "__name__", f"{value_type}")
         mod = value_type.__module__ if hasattr(value_type, "__module__") else ""
-        guess_type = f"{mod}.{value_type.__name__}"  # type: ignore[union-attr]
+        guess_type = f"{mod}.{vt_name}"  # type: ignore[union-attr]
         path_ind = 5
     elif isinstance(value_type, str) and value_type in CVALUE_TYPES:
         guess_type = CVALUE_TYPES[value_type]
@@ -597,23 +601,23 @@ def get_submodules(module):
                 logger.debug(">>> submodule %s of type: %s", submod, type(m))
                 submods.append(f"{submod}")
         logger.debug("Found submodules of %s in __all__: %s", module_name, submods)
-    elif hasattr(module, "__package__") and hasattr(module, "__path__"):
+    if hasattr(module, "__package__") and hasattr(module, "__path__"):
         sub_packages = iter_modules(module.__path__)
         for pkg in sub_packages:
-            if pkg[1][0] != "_" and pkg[1] not in [
+            if pkg.name[0] != "_" and pkg.name not in [
                 "test",
                 "tests",
                 "src",
                 "setup_package",
             ]:
                 try:
-                    mod = import_using_name(f"{module_name}.{pkg[1]}")
+                    mod = import_using_name(f"{module_name}.{pkg.name}")
                 except ImportError:
                     logger.warning(
-                        "Unable to import sub-package %s from %s", pkg[1], module_name
+                        "Unable to import sub-package %s from %s", pkg.name, module_name
                     )
                     continue
-                submods.append(f"{module_name}.{pkg[1]}")
+                submods.append(f"{module_name}.{pkg.name}")
         logger.debug("sub-packages found: %s", submods)
     elif not (
         inspect.isfunction(module)
@@ -777,7 +781,7 @@ def import_using_name(mod_name: str, traverse: bool = False, err_log=True):
         return None
     try:  # direct import first
         mod = importlib.import_module(mod_name)
-    except ValueError:
+    except (ValueError, TypeError):
         logger.error("Unable to import module: %s", mod_name)
         mod = None
     except ModuleNotFoundError:
