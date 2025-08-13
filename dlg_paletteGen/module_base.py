@@ -399,8 +399,7 @@ def get_members(
                 c
                 for c in content
                 if not inspect.ismodule(c[1])
-                and c[0] not in ["__init__", "__class__"]
-                and not c[0].startswith("_")
+                and (c[0] not in ["__init__", "__class__"] or not c[0].startswith("_"))
             ]
         except:  # noqa: E722
             content = []
@@ -624,7 +623,7 @@ def nodes_from_module(
             # TODO: remove once EAGLE can deal with dict fields pylint: disable=fixme
             if node is None or not node:
                 continue
-            node_name = node["name"].rsplit(".", 1)[-1]
+            node_name = ".".join(node["name"].rsplit(".", 2)[-2:])
             if node_name in node_names:
                 continue
             node_names.add(node_name)
