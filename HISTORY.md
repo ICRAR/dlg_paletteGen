@@ -2,6 +2,16 @@ Changelog
 =========
 
 
+(unreleased)
+------------
+- Fix method filtering. [Andreas Wicenec]
+
+
+0.6.3 (2025-08-13)
+------------------
+- Release: version 0.6.3 🚀 [Andreas Wicenec]
+
+
 0.6.2 (2025-08-12)
 ------------------
 - Release: version 0.6.2 🚀 [Andreas Wicenec]
