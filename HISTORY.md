@@ -2,8 +2,9 @@ Changelog
 =========
 
 
-(unreleased)
-------------
+0.6.2 (2025-08-12)
+------------------
+- Release: version 0.6.2 🚀 [Andreas Wicenec]
 - Added prevent_cycle import option and fixed some tests. [Andreas
   Wicenec]
 
