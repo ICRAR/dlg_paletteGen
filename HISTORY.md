@@ -4,6 +4,8 @@ Changelog
 
 (unreleased)
 ------------
+- Return full description for casa nodes. [Andreas Wicenec]
+- Release: version 0.6.3 🚀 [Andreas Wicenec]
 - Fix method filtering. [Andreas Wicenec]
 
 
