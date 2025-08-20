@@ -208,7 +208,7 @@ class DetailedDescription:
         # extract return documentation
         return self.description, self.params, self.returns
 
-    def _process_Google(self, dd: str):
+    def _process_Google(self, dd: str=""):
         """
         Process the Google-style docstring.
 
@@ -258,7 +258,7 @@ class DetailedDescription:
                 pass
         return self.description, self.params, self.returns
 
-    def _process_casa(self, dd: str):
+    def _process_casa(self, dd: str=""):
         """
         Parse the special docstring for casatasks.
 
@@ -315,7 +315,8 @@ class DetailedDescription:
             k: {"type": None, "desc": v} for k, v in zip(paramNames, paramDocs)
         }
         self.description = "\n".join(
-            dList[: start_ind - 1]
+            dList
+            # dList[: start_ind - 1]
         )  # return main description as well
         logger.debug(">>> CASA: finished processing of descr: %s", self.params)
         self.returns = ""  # placeholder

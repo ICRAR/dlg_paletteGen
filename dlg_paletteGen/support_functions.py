@@ -198,6 +198,7 @@ def typeFix(value_type: Union[Any, None] = "", default_value: Any = None) -> str
             value_type.__module__ == "builtins" or hasattr(value_type, "__name__")
         ):
             guess_type = value_type.__name__  # type: ignore
+            guess_type = "Boolean" if guess_type == "bool" else guess_type
             path_ind = 0.2
         else:
             guess_type = CVALUE_TYPES["inspect._empty"]
