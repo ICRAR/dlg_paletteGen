@@ -4,6 +4,15 @@ Changelog
 
 (unreleased)
 ------------
+- Return source code if no documentation is found. [Andreas Wicenec]
+
+  The source code is formatted as a description and
+  added to the palette.
+
+
+0.6.4 (2025-08-20)
+------------------
+- Release: version 0.6.4 🚀 [Andreas Wicenec]
 - Return full description for casa nodes. [Andreas Wicenec]
 - Release: version 0.6.3 🚀 [Andreas Wicenec]
 - Fix method filtering. [Andreas Wicenec]
