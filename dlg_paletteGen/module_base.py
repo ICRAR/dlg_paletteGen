@@ -161,6 +161,32 @@ def _get_name(name: str, member, module=None, parent=None) -> str:
     return mname
 
 
+def _format_src_as_doc(member: Any) -> str:
+    """
+    Format the source code of a member as a documentation string.
+
+    Args:
+        member (Any): The member object whose source code is to be formatted.
+
+    Returns:
+        str: A formatted documentation string containing the source code of the member.
+    """
+    src = inspect.getsource(member)
+    if src[:4] != "    ":
+        # src = src.replace("\n", "\n    ")  # indent the source code
+        src = f"```python\n{src}\n```"
+
+    else:
+        src = f"```python\n{src[4:]}```"
+        src = src.replace("\n    ", "\n")  # indent the source code
+    doc = (
+        '<span style="color:red;">_No in-line documentation available!_</span><br>'
+        "_NOTE: That also means that argument fields have no documentation!_<br><br>"
+        "Source code provided as description:<hr>\n\n{src}"
+    )
+    return doc.format(src=src)
+
+
 def _get_docs(member, module, node) -> tuple:
     """
     Extract and processes documentation and signature information for a given member.
@@ -221,6 +247,13 @@ def _get_docs(member, module, node) -> tuple:
         dd = dd_mod
     elif not dd and not dd_mod:
         logger.debug("Entity '%s' has neither descr. nor __name__", node["name"])
+        try:
+            doc = _format_src_as_doc(member)
+            logger.debug("Using source of %s as description!!", node["name"])
+            node["description"] += doc
+            dd = DetailedDescription(node["description"])
+        except Exception:
+            logger.debug("Unable to get source of %s: %s", node["name"], type(member))
 
     if type(member).__name__ in [
         "pybind11_type",
@@ -250,7 +283,7 @@ def _get_docs(member, module, node) -> tuple:
             if dsig.docstring:
                 node["description"] = dsig.docstring
             if not getattr(dsig, "parameters") and dd and len(dd.params) > 0:
-                for p in dd.params.kyes():
+                for p in dd.params.keys():
                     dsig.parameters[p] = DummyParam()
             return (dsig, dd)
 
@@ -314,7 +347,7 @@ def construct_member_node(member, obj=None, parent=None, name=None) -> dict:
 
     sig, dd = _get_docs(member, obj, node)
     # fill custom ApplicationArguments first
-    fields = populateFields(sig, dd)
+    fields = populateFields(sig, "" if isinstance(dd, str) else dd)
     ind = -1
     load_name = node["name"]
 

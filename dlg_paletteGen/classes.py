@@ -170,7 +170,8 @@ class DetailedDescription:
             raise
         logger.debug("rEST_style param dict %r", self.params)
         # extract return documentation
-        return dd, self.params, self.returns
+        self.description = dd
+        return self.description, self.params, self.returns
 
     def _process_Numpy(self, dd: str) -> tuple:
         """
@@ -208,7 +209,7 @@ class DetailedDescription:
         # extract return documentation
         return self.description, self.params, self.returns
 
-    def _process_Google(self, dd: str=""):
+    def _process_Google(self, dd: str = ""):
         """
         Process the Google-style docstring.
 
@@ -258,7 +259,7 @@ class DetailedDescription:
                 pass
         return self.description, self.params, self.returns
 
-    def _process_casa(self, dd: str=""):
+    def _process_casa(self, dd: str = ""):
         """
         Parse the special docstring for casatasks.
 

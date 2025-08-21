@@ -768,7 +768,7 @@ def test_typeFix():
     assert guess_type == {
         "str",
         "builtins.tuple",
-        "bool",
+        "Boolean",
         "list",
         "int",
         "builtins.set",
