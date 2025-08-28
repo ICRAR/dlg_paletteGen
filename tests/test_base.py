@@ -703,7 +703,7 @@ def test_direct_module(tmpdir: str, shared_datadir: str):
     nodes, module_doc = nodes_from_module(module_name, recursive=True)
 
     prepare_and_write_palette(nodes, output_file, module_doc=module_doc)
-    assert len(nodes) == 16
+    assert len(nodes) == 17
 
 
 def test_builtin_function(tmpdir: str, shared_datadir: str):

@@ -28,6 +28,7 @@ from typing import Any, Union
 
 import numpy
 from blockdag import build_block_dag
+from google import genai
 
 from dlg_paletteGen.settings import (
     BLOCKDAG_DATA_FIELDS,
@@ -43,6 +44,55 @@ from dlg_paletteGen.settings import (
 from . import logger, silence_module_logger
 
 logger.debug("Number of enabled loggers: %d", silence_module_logger())
+
+
+def get_api_key(key_name: str = "GEMINI_API_KEY") -> Union[str, None]:
+    """
+    Retrieves an API key from environment variables.
+
+    Args:
+        key_name: The name of the environment variable holding the API key.
+
+    Returns:
+        The API key string.
+
+    Raises:
+        ValueError: If the environment variable is not set.
+    """
+    api_key = os.getenv(key_name)
+    if api_key is None:
+        logger.warning(
+            f"Environment variable '{key_name}' not found. Please set {key_name}"
+            "to your API key in order to use LLM docstring generation."
+        )
+    return api_key
+
+
+GEMINI_API_KEY = get_api_key()
+
+
+def generate_google_docstring(func_source, model="gemini-2.0-flash"):
+    """
+    Generate a Google-style docstring for a given function using Gemini.
+
+    Args:
+        func (callable): The function object to document.
+        model (str, optional): The OpenAI model to use. Defaults to "gemini-2.0-flash".
+
+    Returns:
+        str: The generated Google-style docstring.
+    """
+    prompt = (
+        "Produce the Google-style Python docstring for the function:\n\n"
+        f"{func_source}\n\nReturn parameter descriptions with types."
+        "Return only the docstring without any quotes. "
+        "Wrap lines at 90 characters"
+    )
+    # As long as GEMINI_API_KEY is set, we can use the API
+    client = genai.Client()
+    response = client.models.generate_content(model=model, contents=prompt)
+    doc = response.text.replace('"""', "")
+    return doc
 
 
 def read(*paths, **kwargs):
