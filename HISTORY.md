@@ -4,6 +4,12 @@ Changelog
 
 (unreleased)
 ------------
+- Enables LLM docstring generation. [Andreas Wicenec]
+
+
+0.6.5 (2025-08-21)
+------------------
+- Release: version 0.6.5 🚀 [Andreas Wicenec]
 - Return source code if no documentation is found. [Andreas Wicenec]
 
   The source code is formatted as a description and
