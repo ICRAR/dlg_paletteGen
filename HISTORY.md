@@ -4,6 +4,14 @@ Changelog
 
 (unreleased)
 ------------
+- Fixed null output type_name. [Andreas Wicenec]
+- Another small log-message change. [Andreas Wicenec]
+- Updated logging. [Andreas Wicenec]
+
+
+0.6.6 (2025-08-28)
+------------------
+- Release: version 0.6.6 🚀 [Andreas Wicenec]
 - Enables LLM docstring generation. [Andreas Wicenec]
 
 
