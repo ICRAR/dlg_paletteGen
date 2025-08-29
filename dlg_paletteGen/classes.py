@@ -247,6 +247,12 @@ class DetailedDescription:
             logger.warning("Unable to parse documentation %s", self.name)
             self.returns = self.params = {}
         if self.returns and self.returns.description and not self.returns.type_name:
+            logger.debug(
+                "Returns name/description/type_name: %s / %s / %s",
+                self.returns.return_name,
+                self.returns.description,
+                self.returns.type_name,
+            )  # type: ignore
             try:
                 (
                     _,
@@ -256,7 +262,7 @@ class DetailedDescription:
                 ) = re.split(r"([\w_]+) +\((\w+)\): ", self.returns.description)
             except ValueError:
                 # if we can't get anything out of the description we just ignore that
-                pass
+                logger.debug("Unable to split return description: %s", self.returns)
         return self.description, self.params, self.returns
 
     def _process_casa(self, dd: str = ""):

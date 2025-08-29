@@ -159,7 +159,6 @@ def _get_name(name: str, member, module=None, parent=None) -> str:
         mname = f"{member_name}" if hasattr(member, "__name__") else ""
     if name and not mname or name.rsplit(".", 1)[-1] == mname:
         mname = name
-    logger.debug(">>>>> mname: %s, %s, %s", mname, parent, module_name)
     return mname
 
 
@@ -262,8 +261,11 @@ def _get_docs(member, module, node) -> tuple:
     if not dd and dd_mod:
         dd = dd_mod
     elif not dd and not dd_mod:
-        logger.info("Entity '%s' has no in-line documentation. "
-                    "Trying to generate or using source.", node["name"])
+        logger.info(
+            "Entity '%s' has no in-line documentation. "
+            "Trying to generate or using source.",
+            node["name"],
+        )
         try:
             description, doc = _format_src_as_doc(member)
             node["description"] += description

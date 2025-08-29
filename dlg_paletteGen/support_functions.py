@@ -1151,21 +1151,20 @@ def populateFields(sig: Any, dd) -> dict:
         if p != "base_name":
             fields.update(field)
 
-    if hasattr(sig, "return_annotation") and sig.return_annotation != inspect._empty:
+    if dd and dd.returns:
         output_name = "output"
-        if dd and dd.returns:
-            output_name = dd.returns.return_name or output_name
+        output_name = dd.returns.return_name or output_name
         field = initializeField(output_name)
-        field[output_name]["type"] = typeFix(sig.return_annotation)
+        field[output_name]["type"] = "Object"
+        if hasattr(sig, "return_annotation") and sig.return_annotation != inspect._empty:
+            field[output_name]["type"] = typeFix(sig.return_annotation) or "Object"
         field[output_name]["usage"] = "OutputPort"
         field[output_name]["encoding"] = "dill"
-        if dd and dd.returns:
-            field[output_name]["description"] = dd.returns.description
-            if field[output_name]["type"] == "UNIDENTIFIED":
-                field[output_name]["type"] = typeFix(dd.returns.type_name)
+        field[output_name]["description"] = dd.returns.description
+        field[output_name]["type"] = dd.returns.type_name or field[output_name]["type"]
         fields.update(field)
         logger.debug(
-            "Identified output_port '%s' of type '%s'.",
+            "Identified output_port '%s' of type '%s'",
             output_name,
             field[output_name]["type"],
         )
