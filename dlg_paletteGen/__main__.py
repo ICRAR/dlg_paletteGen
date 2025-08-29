@@ -247,8 +247,8 @@ def main():  # pragma: no cover
     logger.info("Module Path: %s", module_path)
     if os.environ.get("GEMINI_API_KEY"):
         logger.info(
-            "GEMINI_API_KEY: provided, LLM docstring generation will be used for\
-            un-documented methods!"
+            "GEMINI_API_KEY: provided, LLM docstring generation will be used for"
+            "un-documented methods!"
         )
     else:
         logger.info(
