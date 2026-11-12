@@ -161,7 +161,7 @@ def get_args(args=None):
         args.idir = "."  # ignore whatever is provided as idir
         args.parse_all = True  # in module mode parse everything
     if args.module and not args.split and args.ofile == ".":
-        args.ofile = f"{args.module.replace('.','_')}.palette"
+        args.ofile = f"{args.module.replace('.', '_')}.palette"
     if args.recursive:
         DOXYGEN_SETTINGS.update({"RECURSIVE": "YES"})
         logger.info("Recursive flag ON")

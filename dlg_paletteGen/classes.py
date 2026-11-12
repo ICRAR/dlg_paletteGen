@@ -435,9 +435,9 @@ class GreatGrandChild:
                 dd = ggchild[0][0].text
                 ddO = DetailedDescription(dd)
                 if ddO.format:
-                    (desc, params) = (ddO.main_descr, ddO.params)
+                    desc, params = (ddO.main_descr, ddO.params)
                 else:
-                    (desc, params) = dd, {}
+                    desc, params = dd, {}
 
                 # use the params above
                 for p_key, p_value in params.items():
@@ -466,20 +466,20 @@ class GreatGrandChild:
 
             for gggchild in ggchild:
                 if gggchild.tag == "type":
-                    value_type = gggchild.text  # type:ignore
+                    value_type = gggchild.text  # type: ignore
                     # Not sure whether we should do this:
                     # if value_type not in VALUE_TYPES.values():
                     #     value_type = f"Object.{value_type}"
                     # also look at children with ref tag
                     for ggggchild in gggchild:
                         if ggggchild.tag == "ref":
-                            value_type = ggggchild.text  # type:ignore
+                            value_type = ggggchild.text  # type: ignore
                 if gggchild.tag == "declname":
-                    name = gggchild.text  # type:ignore
+                    name = gggchild.text  # type: ignore
                 if gggchild.tag == "defname":
-                    name = gggchild.text  # type:ignore
+                    name = gggchild.text  # type: ignore
                 if gggchild.tag == "defval":
-                    default_value = gggchild.text  # type:ignore
+                    default_value = gggchild.text  # type: ignore
             name = str(name)
             value_type = typeFix(value_type, default_value=default_value)
 
@@ -539,7 +539,7 @@ class GreatGrandChild:
                 self.is_init = True
                 if parent_member and not parent_member.casa_mode:
                     self.func_title = (
-                        f"{self.func_path.rsplit('.',1)[-1]}.{self.func_name}"
+                        f"{self.func_path.rsplit('.', 1)[-1]}.{self.func_name}"
                     )
                 else:
                     self.func_title = self.func_path.rsplit("._", 1)[-1]
@@ -554,7 +554,7 @@ class GreatGrandChild:
                 logger.debug("Skipping %s.%s", self.func_path, self.func_name)
                 self.member = None  # type: ignore
             else:
-                self.func_title = f"{self.func_path.rsplit('.',1)[-1]}.{self.func_name}"
+                self.func_title = f"{self.func_path.rsplit('.', 1)[-1]}.{self.func_name}"
                 self.func_name = f"{self.func_path}.{self.func_name}"
             if self.member:
                 self.return_type = (

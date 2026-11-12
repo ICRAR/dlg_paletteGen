@@ -162,7 +162,7 @@ def _get_name(name: str, member, module=None, parent=None) -> str:
     return mname
 
 
-def _format_src_as_doc(member: Any) -> tuple[str, str]:
+def _format_src_as_doc(member: Any) -> tuple[str, DetailedDescription]:
     """
     Format the source code of a member as a documentation string.
 
@@ -754,7 +754,7 @@ def palettes_from_module(
         if len(nodes) == 0:
             continue
         filename = (
-            f"{outfile}{sub_mod.replace('.','_')}.palette" if not outfile else outfile
+            f"{outfile}{sub_mod.replace('.', '_')}.palette" if not outfile else outfile
         )
         status = prepare_and_write_palette(nodes, filename, module_doc=module_doc)
         if status:

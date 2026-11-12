@@ -20,6 +20,7 @@
 #    MA 02111-1307  USA
 #
 """Applications used as examples, for testing, or in simple situations"""
+
 import _pickle
 from numbers import Number
 import pickle
@@ -48,7 +49,6 @@ from dlg.meta import (
     dlg_streaming_input,
 )
 from dlg.exceptions import DaliugeException
-
 
 logger = logging.getLogger(__name__)
 
@@ -744,10 +744,8 @@ class GenericNpyScatterApp(BarrierAppDROP):
                  got {len(self.outputs)}"
             )
         if len(self.inputs) != len(self.scatter_axes):
-            raise DaliugeException(
-                f"expected {len(self.inputs)} axes,\
-                 got {len(self.scatter_axes)}, {self.scatter_axes}"
-            )
+            raise DaliugeException(f"expected {len(self.inputs)} axes,\
+                 got {len(self.scatter_axes)}, {self.scatter_axes}")
 
         # split it as many times as we have outputs
         self.num_of_copies = self.num_of_copies

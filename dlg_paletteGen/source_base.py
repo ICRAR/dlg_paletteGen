@@ -763,7 +763,7 @@ def create_construct_node(node_type: str, node: dict) -> dict:
                 "encoding": "pickle",
                 "id": str(uuid.uuid4()),
                 "parameterType": "ComponentParameter",
-                "usage": "NoPort"
+                "usage": "NoPort",
             },
             {
                 "name": "execution_time",
@@ -814,24 +814,20 @@ def create_construct_node(node_type: str, node: dict) -> dict:
                 "name": "log-level",
                 "value": "NOTSET",
                 "defaultValue": "NOTSET",
-                "description": "Log-level to be used for this appplication. If empty or NOTSET, the global setting will be used.",
+                "description": (
+                    "Log-level to be used for this appplication."
+                    " If empty or NOTSET, the global setting will be used."
+                ),
                 "readonly": False,
                 "type": "Select",
                 "precious": False,
-                "options": [
-                    "NOTSET",
-                    "DEBUG",
-                    "INFO",
-                    "WARNING",
-                    "ERROR",
-                    "CRITICAL"
-                ],
+                "options": ["NOTSET", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
                 "positional": False,
                 "changeable": False,
                 "keyAttribute": False,
                 "id": str(uuid.uuid4()),
                 "parameterType": "ComponentParameter",
-                "usage": "NoPort"
+                "usage": "NoPort",
             },
         ]
     )
@@ -951,20 +947,26 @@ def create_construct_node(node_type: str, node: dict) -> dict:
         construct_params["inputAppFields"][0][  # type: ignore
             "value"
         ] = f"dlg.apps.simple.{node['text']}"
-        construct_params["inputAppFields"].insert(0, create_field(
-            "num_of_inputs",
-            4,
-            "Integer",
-            FieldType.ConstructParameter,
-            FieldUsage.NoPort,
-            FieldAccess.readwrite,
-            [],
-            False,
-            False,
-            "The number of inputs the gather construct will merge. "
-            "If it is less than the available number of inputs, the translator will automatically "
-            "generate additional gathers.",
-        ))
+        construct_params["inputAppFields"].insert(
+            0,
+            create_field(
+                "num_of_inputs",
+                "4",
+                "Integer",
+                FieldType.ConstructParameter,
+                FieldUsage.NoPort,
+                FieldAccess.readwrite,
+                [],
+                False,
+                False,
+                (
+                    "The number of inputs the gather construct will merge. "
+                    "If it is less than the available number of inputs,"
+                    "the translator will automatically "
+                    "generate additional gathers."
+                ),
+            ),
+        )
         construct_params["inputAppFields"].extend(  # type: ignore
             [
                 {
@@ -1001,7 +1003,10 @@ def create_construct_node(node_type: str, node: dict) -> dict:
                     "name": "n_effective_inputs",
                     "value": -1,
                     "defaultValue": -1,
-                    "description": "Minimum number of inputs to reach completed state (-1 means all)",
+                    "description": (
+                        "Minimum number of inputs to reach "
+                        "completed state (-1 means all)"
+                    ),
                     "readonly": False,
                     "type": "Integer",
                     "precious": False,
@@ -1011,7 +1016,7 @@ def create_construct_node(node_type: str, node: dict) -> dict:
                     "id": str(uuid.uuid4()),
                     "parameterType": FieldType.ApplicationArgument,
                     "usage": FieldUsage.NoPort,
-                }
+                },
             ]
         )
         add_fields = [

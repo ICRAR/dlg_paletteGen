@@ -965,13 +965,13 @@ def initializeField(
             defaultValue if defaultValue else None  # type: ignore
         )
     fieldValue["description"] = description
-    fieldValue["type"] = vtype  # type:ignore
+    fieldValue["type"] = vtype  # type: ignore
     fieldValue["parameterType"] = parameterType
     fieldValue["usage"] = usage
-    fieldValue["readonly"] = readonly  # type:ignore
-    fieldValue["options"] = options or []  # type:ignore
-    fieldValue["precious"] = precious  # type:ignore
-    fieldValue["positional"] = positional  # type:ignore
+    fieldValue["readonly"] = readonly  # type: ignore
+    fieldValue["options"] = options or []  # type: ignore
+    fieldValue["precious"] = precious  # type: ignore
+    fieldValue["positional"] = positional  # type: ignore
     field.__setitem__(name, fieldValue)
     return field
 
@@ -1070,14 +1070,10 @@ def identify_field_type(field: dict, value: Any, param_desc: dict, dd_p: dict) -
         The identified field type.
     """
     # If there is a type annotation use that
-    if (
-        value.annotation
-        and value.annotation
-        not in [  # type from inspect is first choice.
-            None,
-            inspect._empty,
-        ]
-    ):
+    if value.annotation and value.annotation not in [  # type from inspect is first choice
+        None,
+        inspect._empty,
+    ]:
         return typeFix(value.annotation)
     # else we use the type from default value
     if field["name"] == "args":
@@ -1232,7 +1228,7 @@ def constructNode(
     Node["commitHash"] = commitHash
     Node["paletteDownloadUrl"] = paletteDownlaodUrl
     Node["dataHash"] = dataHash
-    Node["fields"] = {}  # type:ignore
+    Node["fields"] = {}  # type: ignore
     return Node
 
 
