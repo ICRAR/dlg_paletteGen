@@ -4,6 +4,16 @@ Changelog
 
 (unreleased)
 ------------
+- FMT and LINT issues fixed. [Andreas Wicenec]
+- Added num_of_inputs field to Gather construct. [Andreas Wicenec]
+- Added ID to construct nodes. Added full set of InputApp arguments.
+  [Andreas Wicenec]
+- Added LLM generation. [Andreas Wicenec]
+
+
+0.6.7 (2025-08-29)
+------------------
+- Release: version 0.6.7 🚀 [Andreas Wicenec]
 - Fixed null output type_name. [Andreas Wicenec]
 - Another small log-message change. [Andreas Wicenec]
 - Updated logging. [Andreas Wicenec]
