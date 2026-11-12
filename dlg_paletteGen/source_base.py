@@ -951,6 +951,20 @@ def create_construct_node(node_type: str, node: dict) -> dict:
         construct_params["inputAppFields"][0][  # type: ignore
             "value"
         ] = f"dlg.apps.simple.{node['text']}"
+        construct_params["inputAppFields"].insert(0, create_field(
+            "num_of_inputs",
+            4,
+            "Integer",
+            FieldType.ConstructParameter,
+            FieldUsage.NoPort,
+            FieldAccess.readwrite,
+            [],
+            False,
+            False,
+            "The number of inputs the gather construct will merge. "
+            "If it is less than the available number of inputs, the translator will automatically "
+            "generate additional gathers.",
+        ))
         construct_params["inputAppFields"].extend(  # type: ignore
             [
                 {
@@ -965,7 +979,7 @@ def create_construct_node(node_type: str, node: dict) -> dict:
                     "positional": False,
                     "keyAttribute": False,
                     "id": str(uuid.uuid4()),
-                    "parameterType": "ApplicationArgument",
+                    "parameterType": FieldType.ApplicationArgument,
                     "usage": FieldUsage.InputPort,
                 },
                 {
@@ -980,7 +994,7 @@ def create_construct_node(node_type: str, node: dict) -> dict:
                     "positional": False,
                     "keyAttribute": False,
                     "id": str(uuid.uuid4()),
-                    "parameterType": "ApplicationArgument",
+                    "parameterType": FieldType.ApplicationArgument,
                     "usage": FieldUsage.OutputPort,
                 },
                 {
@@ -995,7 +1009,7 @@ def create_construct_node(node_type: str, node: dict) -> dict:
                     "positional": False,
                     "keyAttribute": False,
                     "id": str(uuid.uuid4()),
-                    "parameterType": "ApplicationArgument",
+                    "parameterType": FieldType.ApplicationArgument,
                     "usage": FieldUsage.NoPort,
                 }
             ]
@@ -1011,8 +1025,8 @@ def create_construct_node(node_type: str, node: dict) -> dict:
                 [],
                 False,
                 False,
-                "Specifies the number of inputs "
-                "that that the gather construct will merge. "
+                "The number of inputs "
+                "the gather construct will merge. "
                 "If it is less than the available number of "
                 "inputs, the translator will automatically "
                 "generate additional gathers.",
