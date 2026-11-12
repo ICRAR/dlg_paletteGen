@@ -750,6 +750,22 @@ def create_construct_node(node_type: str, node: dict) -> dict:
                 "usage": "NoPort",
             },
             {
+                "name": "base_name",
+                "value": "simple",
+                "defaultValue": "simple",
+                "description": "",
+                "readonly": False,
+                "type": "String",
+                "precious": False,
+                "options": [],
+                "positional": False,
+                "changeable": False,
+                "encoding": "pickle",
+                "id": str(uuid.uuid4()),
+                "parameterType": "ComponentParameter",
+                "usage": "NoPort"
+            },
+            {
                 "name": "execution_time",
                 "value": 5,
                 "defaultValue": "0",
@@ -793,6 +809,29 @@ def create_construct_node(node_type: str, node: dict) -> dict:
                 "id": str(uuid.uuid4()),
                 "parameterType": "ComponentParameter",
                 "usage": "NoPort",
+            },
+            {
+                "name": "log-level",
+                "value": "NOTSET",
+                "defaultValue": "NOTSET",
+                "description": "Log-level to be used for this appplication. If empty or NOTSET, the global setting will be used.",
+                "readonly": False,
+                "type": "Select",
+                "precious": False,
+                "options": [
+                    "NOTSET",
+                    "DEBUG",
+                    "INFO",
+                    "WARNING",
+                    "ERROR",
+                    "CRITICAL"
+                ],
+                "positional": False,
+                "changeable": False,
+                "keyAttribute": False,
+                "id": str(uuid.uuid4()),
+                "parameterType": "ComponentParameter",
+                "usage": "NoPort"
             },
         ]
     )
@@ -915,7 +954,7 @@ def create_construct_node(node_type: str, node: dict) -> dict:
         construct_params["inputAppFields"].extend(  # type: ignore
             [
                 {
-                    "name": "content",
+                    "name": "input",
                     "value": None,
                     "defaultValue": None,
                     "description": "",
@@ -927,7 +966,37 @@ def create_construct_node(node_type: str, node: dict) -> dict:
                     "keyAttribute": False,
                     "id": str(uuid.uuid4()),
                     "parameterType": "ApplicationArgument",
-                    "usage": "InputOutput",
+                    "usage": FieldUsage.InputPort,
+                },
+                {
+                    "name": "output",
+                    "value": None,
+                    "defaultValue": None,
+                    "description": "",
+                    "readonly": False,
+                    "type": "String",
+                    "precious": False,
+                    "options": [],
+                    "positional": False,
+                    "keyAttribute": False,
+                    "id": str(uuid.uuid4()),
+                    "parameterType": "ApplicationArgument",
+                    "usage": FieldUsage.OutputPort,
+                },
+                {
+                    "name": "n_effective_inputs",
+                    "value": -1,
+                    "defaultValue": -1,
+                    "description": "Minimum number of inputs to reach completed state (-1 means all)",
+                    "readonly": False,
+                    "type": "Integer",
+                    "precious": False,
+                    "options": [],
+                    "positional": False,
+                    "keyAttribute": False,
+                    "id": str(uuid.uuid4()),
+                    "parameterType": "ApplicationArgument",
+                    "usage": FieldUsage.NoPort,
                 }
             ]
         )
@@ -961,6 +1030,7 @@ def create_construct_node(node_type: str, node: dict) -> dict:
         + " construct for the "
         + node["text"]
         + " component.",
+        "id": str(uuid.uuid4()),
         "fields": add_fields,
         "applicationArgs": [],
         "repositoryUrl": GITREPO,
